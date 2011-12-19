@@ -1,0 +1,19 @@
+digraph "First graph" {
+  k2 [label=" k2[., .] "]
+  k [label=" k[0, 0] "]
+  k0 [label=" k0[100, 100] "]
+  k1 [label=" k1[., .] "]
+  377000 [shape=box,label =" + "]
+  k0 -> 377000
+  k -> 377000
+  377000 -> k1
+
+  376960 [shape=box,label ="+(1)"]
+  k1 -> 376960
+  376960 -> k2
+
+  377480 [shape=box,label =""]
+  k2 -> 377480
+  377480 -> k
+
+}

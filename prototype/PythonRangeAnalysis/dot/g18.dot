@@ -1,0 +1,19 @@
+digraph "After cropping analysis" {
+  i1 [label=" i1[0, 101] "]
+  i0 [label=" i0[0, 0] "]
+  i2 [label=" i2[1, 101] "]
+  it [label=" it[0, 100] "]
+  380320 [shape=box,label =" phi "]
+  i0 -> 380320
+  i2 -> 380320
+  380320 -> i1
+
+  380800 [shape=box,label ="+(1)"]
+  it -> 380800
+  380800 -> i2
+
+  380560 [shape=box,label ="INT[0, 100]"]
+  i1 -> 380560
+  380560 -> it
+
+}

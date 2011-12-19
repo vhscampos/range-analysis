@@ -1,0 +1,14 @@
+digraph "After cropping analysis" {
+  i1 [label=" i1[-, +] "]
+  i0 [label=" i0[0, 0] "]
+  i2 [label=" i2[-, +] "]
+  417880 [shape=box,label =" phi "]
+  i0 -> 417880
+  i2 -> 417880
+  417880 -> i1
+
+  417920 [shape=box,label ="*(-1) +(1)"]
+  i1 -> 417920
+  417920 -> i2
+
+}

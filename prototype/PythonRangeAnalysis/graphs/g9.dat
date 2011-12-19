@@ -1,0 +1,29 @@
+# Graph 9:
+Variables = {
+  'k0': VarNode('k0', Interval(0, 0)),
+  'k1': VarNode('k1', BottomInterval()),
+  'i0': VarNode('i0', Interval(0, 0)),
+  'j0': VarNode('j0', BottomInterval()),
+  'i1': VarNode('i1', BottomInterval()),
+  'j1': VarNode('j1', BottomInterval()),
+  'i2': VarNode('i2', BottomInterval()),
+  'j2': VarNode('j2', BottomInterval()),
+  'k2': VarNode('k2', BottomInterval()),
+  'kt': VarNode('kt', BottomInterval()),
+  'it': VarNode('it', BottomInterval()),
+  'jt': VarNode('jt', BottomInterval())
+}
+Operations = [
+  PhiOp(Variables['k0'], Variables['k2'], Variables['k1']),
+  PhiOp(Variables['i0'], Variables['i2'], Variables['i1']),
+  PhiOp(Variables['j0'], Variables['j2'], Variables['j1']),
+  UnaryOp(Variables['kt'], Variables['j0']),
+  UnaryOp(Variables['it'], Variables['i2'], 1, 1),
+  UnaryOp(Variables['jt'], Variables['j2'], 1, -1),
+  UnaryOp(Variables['kt'], Variables['k2'], 1, 1),
+  UnaryOp(Variables['k1'],  Variables['kt'], 1, 0, Interval('-', 99)),
+  UnaryOp(Variables['i1'],  Variables['it'], 1, 0, SymbolicInterval(Variables
+['j1'], '<')),
+  UnaryOp(Variables['j1'],  Variables['jt'], 1, 0, SymbolicInterval(Variables
+['i1'], '>='))
+]

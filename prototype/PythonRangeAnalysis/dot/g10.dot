@@ -1,0 +1,41 @@
+digraph "After cropping analysis" {
+  i1 [label=" i1[0, 99] "]
+  i0 [label=" i0[0, 0] "]
+  i2 [label=" i2[1, 99] "]
+  j0 [label=" j0[0, 99] "]
+  j1 [label=" j1[-1, 99] "]
+  j2 [label=" j2[-1, 98] "]
+  it [label=" it[0, 98] "]
+  jt [label=" jt[0, 99] "]
+  kt [label=" kt[0, 99] "]
+  409728 [shape=box,label =" phi "]
+  i0 -> 409728
+  i2 -> 409728
+  409728 -> i1
+
+  409768 [shape=box,label =" phi "]
+  j0 -> 409768
+  j2 -> 409768
+  409768 -> j1
+
+  409808 [shape=box,label =""]
+  kt -> 409808
+  409808 -> j0
+
+  409848 [shape=box,label ="+(1)"]
+  it -> 409848
+  409848 -> i2
+
+  409888 [shape=box,label ="+(-1)"]
+  jt -> 409888
+  409888 -> j2
+
+  409968 [shape=box,label ="INT[-, 98]"]
+  i1 -> 409968
+  409968 -> it
+
+  410048 [shape=box,label ="INT[0, +]"]
+  j1 -> 410048
+  410048 -> jt
+
+}

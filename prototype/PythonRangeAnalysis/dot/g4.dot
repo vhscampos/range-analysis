@@ -1,0 +1,29 @@
+digraph "After cropping analysis" {
+  a [label=" a[-, +] "]
+  c [label=" c[-, +] "]
+  b [label=" b[-, 10] "]
+  e [label=" e[-, 10] "]
+  d [label=" d[3, 7] "]
+  380560 [shape=box,label ="+(-1)"]
+  c -> 380560
+  380560 -> a
+
+  380600 [shape=box,label =" + "]
+  a -> 380600
+  b -> 380600
+  380600 -> c
+
+  380680 [shape=box,label ="INT[3, 7]"]
+  c -> 380680
+  380680 -> d
+
+  380760 [shape=box,label ="INT[-, 10]"]
+  c -> 380760
+  380760 -> e
+
+  380800 [shape=box,label =" phi "]
+  d -> 380800
+  e -> 380800
+  380800 -> b
+
+}

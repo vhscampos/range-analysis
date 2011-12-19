@@ -1,0 +1,42 @@
+digraph "First graph" {
+  i1 [label=" i1[., .] "]
+  i0 [label=" i0[0, 0] "]
+  i2 [label=" i2[., .] "]
+  j0 [label=" j0[., .] "]
+  j1 [label=" j1[., .] "]
+  j2 [label=" j2[., .] "]
+  k2 [label=" k2[., .] "]
+  k1 [label=" k1[., .] "]
+  k0 [label=" k0[0, 0] "]
+  420840 [shape=box,label =" phi "]
+  k0 -> 420840
+  k2 -> 420840
+  420840 -> k1
+
+  420880 [shape=box,label =" phi "]
+  i0 -> 420880
+  i2 -> 420880
+  420880 -> i1
+
+  420920 [shape=box,label =" phi "]
+  j0 -> 420920
+  j2 -> 420920
+  420920 -> j1
+
+  420960 [shape=box,label =""]
+  k1 -> 420960
+  420960 -> j0
+
+  421000 [shape=box,label ="+(1)"]
+  i1 -> 421000
+  421000 -> i2
+
+  421040 [shape=box,label ="+(-1)"]
+  j1 -> 421040
+  421040 -> j2
+
+  421080 [shape=box,label ="+(1)"]
+  k1 -> 421080
+  421080 -> k2
+
+}

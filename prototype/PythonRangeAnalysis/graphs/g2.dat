@@ -1,0 +1,16 @@
+Variables = {
+  'i': VarNode('i', Interval(0, 0)),
+  'i1': VarNode('i1', BottomInterval()),
+  'i2': VarNode('i2', BottomInterval()),
+  'j': VarNode('j', Interval(100, 100)),
+  'j1': VarNode('j1', BottomInterval()),
+  'j2': VarNode('j2', BottomInterval()),
+}
+Operations = [
+  UnaryOp(Variables['i'],  Variables['i1'], 1, 0, SymbolicInterval(Variables['j'], '<')),
+  UnaryOp(Variables['i1'], Variables['i2'], b=1),
+  UnaryOp(Variables['i2'], Variables['i']),
+  UnaryOp(Variables['j'],  Variables['j1'], 1, 0, SymbolicInterval(Variables['i'], '>')),
+  UnaryOp(Variables['j1'], Variables['j2'], b = -1),
+  UnaryOp(Variables['j2'], Variables['j'])
+]

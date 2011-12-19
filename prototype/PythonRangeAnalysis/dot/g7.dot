@@ -1,0 +1,25 @@
+digraph "First graph" {
+  a [label=" a[., .] "]
+  c [label=" c[., .] "]
+  b [label=" b[., .] "]
+  e [label=" e[., .] "]
+  d [label=" d[1, 1] "]
+  423776 [shape=box,label =" phi "]
+  d -> 423776
+  c -> 423776
+  423776 -> a
+
+  423816 [shape=box,label =" phi "]
+  b -> 423816
+  a -> 423816
+  423816 -> e
+
+  423896 [shape=box,label ="+(2) INT[0, 500]"]
+  e -> 423896
+  423896 -> b
+
+  423976 [shape=box,label ="+(-3) INT[3, 800]"]
+  e -> 423976
+  423976 -> c
+
+}

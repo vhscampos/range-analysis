@@ -1,0 +1,14 @@
+Variables = {
+  'i0': VarNode('i0', Interval(0, 0)),
+  'i1': VarNode('i1', BottomInterval()),
+  'i2': VarNode('i2', BottomInterval()),
+  'i3': VarNode('i3', BottomInterval()),
+  'i4': VarNode('i4', BottomInterval())
+}
+
+Operations = [
+  PhiOp(Variables['i0'], Variables['i4'], Variables['i1']),
+  UnaryOp(Variables['i1'], Variables['i2'], 1, 0, Interval('-', 1000)),
+  UnaryOp(Variables['i2'], Variables['i3'], 1, 0, Interval('-', 8)),
+  UnaryOp(Variables['i3'], Variables['i4'], 1, 1)
+]

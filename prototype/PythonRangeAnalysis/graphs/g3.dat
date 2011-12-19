@@ -1,0 +1,10 @@
+Variables = {
+  'a': VarNode('a', BottomInterval()),
+  'b': VarNode('b', Interval(0, 0)),
+  'c': VarNode('c', BottomInterval())
+}
+Operations = [
+  UnaryOp(Variables['a'],  Variables['b'], 1, 0, Interval('-', 100)),
+  UnaryOp(Variables['b'],  Variables['c'], 1, 0),
+  UnaryOp(Variables['c'],  Variables['a'], 1, 1)
+]

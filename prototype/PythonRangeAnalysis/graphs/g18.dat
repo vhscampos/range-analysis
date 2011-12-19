@@ -1,0 +1,12 @@
+# Graph 9:
+Variables = {
+  'i0': VarNode('i0', Interval(0, 0)),
+  'i1': VarNode('i1', BottomInterval()),
+  'i2': VarNode('i2', BottomInterval()),
+  'it': VarNode('it', BottomInterval())
+}
+Operations = [
+  PhiOp(Variables['i0'], Variables['i2'], Variables['i1']),
+  UnaryOp(Variables['it'], Variables['i2'], 1, 1),
+  UnaryOp(Variables['i1'],  Variables['it'], 1, 0, Interval(0, 100))
+]

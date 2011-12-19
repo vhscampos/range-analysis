@@ -1,0 +1,57 @@
+\relax 
+\citation{Bodik00}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}}
+\newlabel{sec:intro}{{1}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{1}}
+\newlabel{sec:bck}{{2}{1}}
+\newlabel{def:rcp}{{2.1}{1}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  The valuation function.}}{1}}
+\newlabel{fig:eval_function}{{1}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Polynomial Time Range Analysis}{1}}
+\newlabel{sec:algo}{{3}{1}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Choosing a Program Representation}{1}}
+\newlabel{sub:rep}{{3.1}{1}}
+\citation{Barik06,Tallam03,Pereira08}
+\citation{Cong05,Mahlke01,Stephenson00}
+\citation{Ferrante87}
+\citation{Ferrante87}
+\citation{Ferrante87}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  (a) Example program. (b) Control Flow Graph (CFG) in SSA form. (c) Constraints that we extract from the program. (d) A possible solution to the range analysis problem.}}{2}}
+\newlabel{fig:ex1}{{2}{2}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces  Our algorithm to solve the range analysis problem. Rounded boxes are optional steps.}}{2}}
+\newlabel{fig:algorithm}{{3}{2}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces  The control flow graph from Figure\nobreakspace  {}2\hbox {}(b) converted to standard e-SSA form.}}{2}}
+\newlabel{fig:ex_standard_eSSA}{{4}{2}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Extracting Constraints}{2}}
+\newlabel{sub:constraints}{{3.2}{2}}
+\citation{Cousot77}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces  (a) Example program. (b) Standard e-SSA form. (c) Non-pruned e-SSA form.}}{3}}
+\newlabel{fig:ex_non_pruned}{{5}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Example of constraint derivation rules. We let $c$ denote a positive constant, $\{v, v_1, v_2\}$ are program variables and $\{V, V_1, V_2\} \subset \cal  {V}$.}}{3}}
+\newlabel{fig:constraints}{{6}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces  The dependence graph that we build to the program in Figure\nobreakspace  {}4\hbox {}.}}{3}}
+\newlabel{fig:ex_graph}{{7}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}The Dependence Graph}{3}}
+\newlabel{sub:graph}{{3.3}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Finding Ranges: the Macro Algorithm}{3}}
+\newlabel{sub:macro}{{3.4}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces  (Left) The lattice of the widening analysis. (Right) Cousot and Cousot's widening operator. We evaluate the rules from top to bottom, and stop upon finding a pattern matching.}}{3}}
+\newlabel{fig:growth_analysis}{{8}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Finding Ranges: the Micro Algorithm}{3}}
+\newlabel{sub:micro}{{3.5}{3}}
+\@writefile{toc}{\contentsline {paragraph}{Widening Analysis.}{3}}
+\@writefile{toc}{\contentsline {paragraph}{Fixing futures.}{3}}
+\citation{Cousot77}
+\bibstyle{plain}
+\bibdata{../../../bibtex/references}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Rules to replace futures by actual bounds. $S$ is the interval bound to each variable after the widening analysis.}}{4}}
+\newlabel{fig:fix_intersects}{{9}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Cousot and Cousot's narrowing operator.}}{4}}
+\newlabel{fig:crop_analysis}{{10}{4}}
+\@writefile{toc}{\contentsline {paragraph}{Narrowing Analysis.}{4}}
+\@writefile{toc}{\contentsline {paragraph}{Example}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Alternative Narrowing Operators}{4}}
+\newlabel{sub:alt}{{3.6}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces  Four snapshots of the last SCC of Figure\nobreakspace  {}11\hbox {}. (a) After removing control dependence edges, immediately before applying Cousot and Cousot's operators. (b) After running the widening analysis. (c) After fixing the intersections. (d) After running the narrowing analysis.}}{4}}
+\newlabel{fig:ex_partition_grow_crop}{{11}{4}}
+\newlabel{sigplanconf@finalpage}{{3.6}{4}}

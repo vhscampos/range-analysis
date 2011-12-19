@@ -1,0 +1,162 @@
+digraph "After cropping analysis" {
+  w0 [label=" w0[0, 390] "]
+  j0 [label=" j0[-1, 99] "]
+  j1 [label=" j1[-1, 99] "]
+  j2 [label=" j2[1, 99] "]
+  j3 [label=" j3[-1, 97] "]
+  b0 [label=" b0[100, 100] "]
+  b1 [label=" b1[-1, 100] "]
+  b2 [label=" b2[0, 100] "]
+  b3 [label=" b3[-1, 99] "]
+  y1 [label=" y1[-1, 97] "]
+  y0 [label=" y0[-1, 97] "]
+  y3 [label=" y3[0, 94] "]
+  y2 [label=" y2[3, 97] "]
+  y4 [label=" y4[3, 97] "]
+  s2 [label=" s2[0, 193] "]
+  s1 [label=" s1[6, 193] "]
+  s0 [label=" s0[0, 0] "]
+  i1 [label=" i1[1, 100] "]
+  i0 [label=" i0[1, 100] "]
+  i3 [label=" i3[3, 100] "]
+  i2 [label=" i2[1, 98] "]
+  a1 [label=" a1[0, 100] "]
+  a0 [label=" a0[0, 0] "]
+  a3 [label=" a3[1, 100] "]
+  a2 [label=" a2[0, 99] "]
+  x2 [label=" x2[3, 96] "]
+  x3 [label=" x3[6, 99] "]
+  x0 [label=" x0[3, 100] "]
+  x1 [label=" x1[3, 100] "]
+  x4 [label=" x4[3, 96] "]
+  t2 [label=" t2[0, 197] "]
+  t0 [label=" t0[0, 0] "]
+  t1 [label=" t1[2, 197] "]
+  466616 [shape=box,label =" phi "]
+  a3 -> 466616
+  a0 -> 466616
+  466616 -> a1
+
+  466656 [shape=box,label =" phi "]
+  b3 -> 466656
+  b0 -> 466656
+  466656 -> b1
+
+  466696 [shape=box,label =" phi "]
+  i3 -> 466696
+  i0 -> 466696
+  466696 -> i1
+
+  466736 [shape=box,label =" phi "]
+  j3 -> 466736
+  j0 -> 466736
+  466736 -> j1
+
+  466776 [shape=box,label =" phi "]
+  x3 -> 466776
+  x0 -> 466776
+  466776 -> x1
+
+  466816 [shape=box,label =" phi "]
+  y3 -> 466816
+  y0 -> 466816
+  466816 -> y1
+
+  466856 [shape=box,label =" phi "]
+  s1 -> 466856
+  s0 -> 466856
+  466856 -> s2
+
+  466896 [shape=box,label =" phi "]
+  t1 -> 466896
+  t0 -> 466896
+  466896 -> t2
+
+  417880 [shape=box,label ="INT[-, 99]"]
+  a1 -> 417880
+  417880 -> a2
+
+  417960 [shape=box,label ="INT[0, +]"]
+  b1 -> 417960
+  417960 -> b2
+
+  418040 [shape=box,label ="INT[-, 98]"]
+  i1 -> 418040
+  418040 -> i2
+
+  418120 [shape=box,label ="INT[1, +]"]
+  j1 -> 418120
+  418120 -> j2
+
+  418200 [shape=box,label ="INT[-, 96]"]
+  x1 -> 418200
+  418200 -> x2
+
+  418280 [shape=box,label ="INT[3, +]"]
+  y1 -> 418280
+  418280 -> y2
+
+  418360 [shape=box,label ="INT[-, 96]"]
+  x1 -> 418360
+  418360 -> x4
+
+  418440 [shape=box,label ="INT[3, +]"]
+  y1 -> 418440
+  418440 -> y4
+
+  418480 [shape=box,label ="+(1)"]
+  a2 -> 418480
+  418480 -> a3
+
+  418520 [shape=box,label ="+(-1)"]
+  b2 -> 418520
+  418520 -> b3
+
+  418560 [shape=box,label =""]
+  a3 -> 418560
+  418560 -> i0
+
+  418600 [shape=box,label =""]
+  b3 -> 418600
+  418600 -> j0
+
+  418640 [shape=box,label ="+(2)"]
+  i2 -> 418640
+  418640 -> i3
+
+  418680 [shape=box,label ="+(-2)"]
+  j2 -> 418680
+  418680 -> j3
+
+  418720 [shape=box,label =""]
+  i3 -> 418720
+  418720 -> x0
+
+  418760 [shape=box,label =""]
+  j3 -> 418760
+  418760 -> y0
+
+  418800 [shape=box,label ="+(3)"]
+  x2 -> 418800
+  418800 -> x3
+
+  418840 [shape=box,label ="+(-3)"]
+  y2 -> 418840
+  418840 -> y3
+
+  418880 [shape=box,label =" + "]
+  i3 -> 418880
+  j3 -> 418880
+  418880 -> t1
+
+  418920 [shape=box,label =" + "]
+  x4 -> 418920
+  y4 -> 418920
+  418920 -> s1
+
+  418960 [shape=box,label =" + "]
+  s2 -> 418960
+  t2 -> 418960
+  418960 -> w0
+
+}

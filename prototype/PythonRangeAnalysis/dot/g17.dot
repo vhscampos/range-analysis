@@ -1,0 +1,24 @@
+digraph "After cropping analysis" {
+  i1 [label=" i1[0, 9] "]
+  i0 [label=" i0[0, 0] "]
+  i3 [label=" i3[0, 8] "]
+  i2 [label=" i2[0, 9] "]
+  i4 [label=" i4[1, 9] "]
+  380320 [shape=box,label =" phi "]
+  i0 -> 380320
+  i4 -> 380320
+  380320 -> i1
+
+  380800 [shape=box,label ="INT[-, 1000]"]
+  i1 -> 380800
+  380800 -> i2
+
+  380560 [shape=box,label ="INT[-, 8]"]
+  i2 -> 380560
+  380560 -> i3
+
+  409648 [shape=box,label ="+(1)"]
+  i3 -> 409648
+  409648 -> i4
+
+}

@@ -1,0 +1,17 @@
+digraph "First graph" {
+  a [label=" a[., .] "]
+  c [label=" c[., .] "]
+  b [label=" b[0, 0] "]
+  408232 [shape=box,label ="INT[-, 100]"]
+  a -> 408232
+  408232 -> b
+
+  408272 [shape=box,label =""]
+  b -> 408272
+  408272 -> c
+
+  408312 [shape=box,label ="+(1)"]
+  c -> 408312
+  408312 -> a
+
+}

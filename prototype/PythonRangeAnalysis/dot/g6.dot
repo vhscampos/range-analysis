@@ -1,0 +1,35 @@
+digraph "First graph" {
+  b4 [label=" b4[., .] "]
+  b5 [label=" b5[1, 1] "]
+  b6 [label=" b6[., .] "]
+  b0 [label=" b0[., .] "]
+  b1 [label=" b1[., .] "]
+  b2 [label=" b2[., .] "]
+  b3 [label=" b3[., .] "]
+  422976 [shape=box,label =" phi "]
+  b5 -> 422976
+  b4 -> 422976
+  422976 -> b2
+
+  423016 [shape=box,label =" phi "]
+  b3 -> 423016
+  b2 -> 423016
+  423016 -> b6
+
+  423096 [shape=box,label ="+(2)"]
+  b6 -> 423096
+  423096 -> b1
+
+  423176 [shape=box,label ="+(-1)"]
+  b6 -> 423176
+  423176 -> b0
+
+  423256 [shape=box,label ="INT[-300, 800]"]
+  b0 -> 423256
+  423256 -> b4
+
+  423336 [shape=box,label ="INT[-100, 500]"]
+  b1 -> 423336
+  423336 -> b3
+
+}

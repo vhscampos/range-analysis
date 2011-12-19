@@ -1,0 +1,20 @@
+# Graph 16:
+Variables = {
+  'i0': VarNode('i0', Interval(5, 5)),
+  'i1': VarNode('i1', BottomInterval()),
+  'i2': VarNode('i2', BottomInterval()),
+  'i3': VarNode('i3', BottomInterval()),
+  'i4': VarNode('i4', BottomInterval()),
+  'i5': VarNode('i5', BottomInterval()),
+  'i6': VarNode('i6', BottomInterval()),
+  'i7': VarNode('i7', BottomInterval())
+}
+Operations = [
+  PhiOp(Variables['i0'], Variables['i4'], Variables['i5']),
+  PhiOp(Variables['i5'], Variables['i6'], Variables['i7']),
+  UnaryOp(Variables['i7'], Variables['i1'], 1, 0, Interval(2, 11)),
+  UnaryOp(Variables['i1'], Variables['i2'], 1, 0, Interval(1, 10)),
+  UnaryOp(Variables['i2'], Variables['i3'], 1, 0, Interval(3, 12)),
+  UnaryOp(Variables['i3'], Variables['i4'], 1, -1),
+  UnaryOp(Variables['i3'], Variables['i6'], 1, 1)
+]

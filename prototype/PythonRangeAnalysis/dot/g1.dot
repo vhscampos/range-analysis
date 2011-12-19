@@ -1,0 +1,22 @@
+digraph "First graph" {
+  k3 [label=" k3[7, 7] "]
+  k2 [label=" k2[., .] "]
+  k1 [label=" k1[5, 5] "]
+  k0 [label=" k0[3, 3] "]
+  k4 [label=" k4[., .] "]
+  377440 [shape=box,label =" + "]
+  k0 -> 377440
+  k1 -> 377440
+  377440 -> k2
+
+  378760 [shape=box,label =" + "]
+  k1 -> 378760
+  k3 -> 378760
+  378760 -> k4
+
+  407112 [shape=box,label =" + "]
+  k2 -> 407112
+  k4 -> 407112
+  407112 -> k3
+
+}
