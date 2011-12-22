@@ -23,7 +23,7 @@ STATISTIC(totalInstructions, "Number of instructions of the function.");
 STATISTIC(evaluatedInstructions, "Number of evaluated instructions.");
 STATISTIC(percentReduction, "Percentage of reduction of the number of bits.");
 
-// The number of bits needed to store the largest variable of the function.
+// The number of bits needed to store the largest variable of the function (APInt).
 unsigned MAX_BIT_INT = 1;
 
 // This map is used to store the number of times that the widen_meet 
@@ -35,8 +35,28 @@ DenseMap<const Value*, unsigned> FerMap;
 // ========================================================================== //
 
 // The min and max integer values for a given bit width.
-static APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
-static APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
+APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
+APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
+
+const std::string sigmaString = "SSI_sigma";
+
+std::string pestring;
+raw_string_ostream pseudoEdgesString(pestring);
+
+static void printVarName(const Value *V, raw_ostream& OS) {
+	const Argument *A = NULL;
+	const Instruction *I = NULL;
+	
+	if ((A = dyn_cast<Argument>(V))) {
+		OS << A->getParent()->getName() << "." << A->getName() << " ";
+	}
+	else if ((I = dyn_cast<Instruction>(V))) {
+		OS << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName() << " ";
+	}
+	else {
+		OS << V->getName() << " ";
+	}
+}
 
 /// Selects the instructions that we are going to evaluate.
 static bool isValidInstruction(const Instruction* I) {
@@ -46,25 +66,27 @@ static bool isValidInstruction(const Instruction* I) {
 	}
 
 	switch (I->getOpcode()) {
-	case Instruction::Add:   return true;
-	case Instruction::Sub:   return true;
-	case Instruction::Mul:   return true;
-	case Instruction::UDiv:  return true;
-	case Instruction::SDiv:  return true;
-	case Instruction::URem:  return true;
-	case Instruction::SRem:  return true;
-	case Instruction::Shl:   return true;
-	case Instruction::LShr:  return true;
-	case Instruction::AShr:  return true;
-	case Instruction::And:   return true;
-	case Instruction::Or:    return true;
-	case Instruction::Xor:   return true;
-	case Instruction::Trunc: return true;
-	case Instruction::ZExt:  return true;
-	case Instruction::SExt:  return true;
-	case Instruction::Load:  return true;
-	case Instruction::Store: return true;
-	default: return false;
+	case Instruction::Add:   
+	case Instruction::Sub:   
+	case Instruction::Mul:   
+	case Instruction::UDiv:  
+	case Instruction::SDiv:  
+	case Instruction::URem:  
+	case Instruction::SRem:  
+	case Instruction::Shl:   
+	case Instruction::LShr:  
+	case Instruction::AShr:  
+	case Instruction::And:   
+	case Instruction::Or:    
+	case Instruction::Xor:   
+	case Instruction::Trunc: 
+	case Instruction::ZExt:  
+	case Instruction::SExt:  
+	case Instruction::Load:  
+	case Instruction::Store: 
+		return true;
+	default: 
+		return false;
 	}
 
   assert(false && "It should not be here.");
@@ -106,44 +128,8 @@ void RangeAnalysis::getMaxBitWidth(const Function& F) {
 	Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 }
 
-
-/// Iterates through all BasicBlocks, if the Terminator Instruction
-/// uses an Comparator Instruction, all operands of this comparator
-/// are sent to be transformed to SSI. Only Instruction operands are
-/// transformed.
-/// It is used here just to convert the program 
-// to the e-SSA form inside of our pass.
-void RangeAnalysis::createESSA(Function &F) {
-//	SSI *ssi = &getAnalysis<SSI> ();
-	SmallVector<Instruction *, 16> Insts;
-
-	for (Function::iterator bgn = F.begin(), end = F.end(); bgn != end; ++bgn) {
-		BasicBlock *BB = bgn;
-		TerminatorInst *TI = BB->getTerminator();
-		if (TI->getNumOperands() == 0) {
-			continue;
-		}
-
-		if (ICmpInst *ICI = dyn_cast<ICmpInst>(TI->getOperand(0))) {
-			if (Instruction *I = dyn_cast<Instruction>(ICI->getOperand(0))) {
-				Insts.push_back(I);
-			}
-			if (Instruction *I = dyn_cast<Instruction>(ICI->getOperand(1))) {
-				Insts.push_back(I);
-			}
-		}
-	}
-
-//	ssi->createSSI(Insts);
-}
-
 bool RangeAnalysis::runOnFunction(Function &F) {
-	createESSA(F);
 	getMaxBitWidth(F);
-
-	// Just to be sure that the values are correctly initialized.
-	Min = APInt::getSignedMinValue(MAX_BIT_INT);
-	Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 
   // The data structures
 	DenseMap<const Value*, VarNode*> VNodes;
@@ -792,20 +778,31 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 void SymbInterval::print(raw_ostream& OS) const {
 	switch (this->getOperation()) {
 	case ICmpInst::ICMP_EQ: // equal
-		OS << "[lb(" << getBound()->getName() << "), ub("
-		   << getBound()->getName() << ")]";
+		OS << "[lb(";
+		printVarName(getBound(), OS);
+		OS << "), ub(";
+		printVarName(getBound(), OS);
+		OS << ")]";
 		break;
 	case ICmpInst::ICMP_SLE: // sign less or equal
-		OS << "[-inf, ub(" << getBound()->getName() << ")]";
+		OS << "[-inf, ub(";
+		printVarName(getBound(), OS);
+		OS << ")]";
 		break;
 	case ICmpInst::ICMP_SLT: // sign less than
-		OS << "[-inf, ub(" << getBound()->getName() << ") - 1]";
+		OS << "[-inf, ub(";
+		printVarName(getBound(), OS);
+		OS << ") - 1]";
 		break;
 	case ICmpInst::ICMP_SGE: // sign greater or equal
-		OS << "[lb(" << getBound()->getName() << "), +inf]";
+		OS << "[lb(";
+		printVarName(getBound(), OS);
+		OS << "), +inf]";
 		break;
 	case ICmpInst::ICMP_SGT: // sign greater than
-		OS << "[lb(" << getBound()->getName() << " - 1), +inf]";
+		OS << "[lb(";
+		printVarName(getBound(), OS);
+		OS << " - 1), +inf]";
 		break;
 	default:
 		OS << "Unknown Instruction.\n";
@@ -843,7 +840,7 @@ void VarNode::print(raw_ostream& OS) const {
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(this->getValue())) {
 		OS << C->getValue() << " ";
 	} else {
-		OS << this->getValue()->getNameStr() << " ";
+		printVarName(this->getValue(), OS);
 	}
 
 	this->getRange().print(OS);
@@ -862,9 +859,10 @@ raw_ostream& operator<<(raw_ostream& OS, const VarNode* VN) {
 
 /// We can not want people creating objects of this class,
 /// but we want to inherit of it.
-BasicOp::BasicOp(BasicInterval* intersect, VarNode* sink) :
+BasicOp::BasicOp(BasicInterval* intersect, VarNode* sink, const Instruction *inst) :
         				 intersect(intersect),
-				         sink(sink) {}
+				         sink(sink),
+				         inst(inst) {}
 
 
 /// We can not want people creating objects of this class,
@@ -885,7 +883,7 @@ void BasicOp::fixIntersects(VarNode* V) {
 // ========================================================================== //
 
 ControlDep::ControlDep(VarNode* sink, VarNode* source) :
-          					   BasicOp(new BasicInterval(), sink),
+          					   BasicOp(new BasicInterval(), sink, NULL),
 					             source(source) {}
 
 ControlDep::~ControlDep() {}
@@ -902,9 +900,10 @@ void ControlDep::print(raw_ostream& OS) const {}
 
 UnaryOp::UnaryOp(BasicInterval* intersect,
         				 VarNode* sink,
+        				 const Instruction *inst,
         				 VarNode* source,
         				 unsigned int opcode) :
-        				 BasicOp(intersect, sink),
+        				 BasicOp(intersect, sink, inst),
         				 source(source),
         				 opcode(opcode) {}
 
@@ -947,19 +946,75 @@ Range UnaryOp::eval() const {
 void UnaryOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
 	OS << " " << quot << this << quot << " [label =\"";
+	
+	this->getIntersect()->print(OS);
+	OS << "\"]\n";
+	
+	const Value* V = this->getSource()->getValue();
+	if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
+		OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
+	} else {
+		OS << " " << quot;
+		printVarName(V, OS);
+		OS << quot << " -> " << quot << this << quot << "\n";
+	}
+
+	const Value* VS = this->getSink()->getValue();
+	OS << " " << quot << this << quot << " -> " << quot;
+	printVarName(VS, OS);
+	OS << quot << "\n";
+}
+
+
+// ========================================================================== //
+// SigmaOp
+// ========================================================================== //
+
+SigmaOp::SigmaOp(BasicInterval* intersect,
+        				 VarNode* sink,
+        				 const Instruction *inst,
+        				 VarNode* source,
+        				 unsigned int opcode) :
+        				 UnaryOp(intersect, sink, inst, source, opcode) {}
+
+
+// The dtor.
+SigmaOp::~SigmaOp() {}
+
+/// Computes the interval of the sink based on the interval of the sources,
+/// the operation and the interval associated to the operation.
+Range SigmaOp::eval() const {
+	Range result = this->getSource()->getRange();
+
+	if (!getIntersect()->getRange().isMaxRange()) {
+		result = result.intersectWith(getIntersect()->getRange());
+	}
+
+	return result;
+}
+
+
+/// Prints the content of the operation. I didn't it an operator overload
+/// because I had problems to access the members of the class outside it.
+void SigmaOp::print(raw_ostream& OS) const {
+	const char* quot = "\"";
+	OS << " " << quot << this << quot << " [label =\"";
 	this->getIntersect()->print(OS);
 	OS << "\"]\n";
 	const Value* V = this->getSource()->getValue();
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
 		OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
 	} else {
-		OS << " " << quot << V->getNameStr() << quot
-		   << " -> " << quot << this << quot << "\n";
+		OS << " " << quot;
+		printVarName(V, OS);
+		OS << quot << " -> " << quot << this << quot << "\n";
 	}
 
 	const Value* VS = this->getSink()->getValue();
 	OS << " " << quot << this << quot << " -> "
-	   << quot << VS->getNameStr() << quot << "\n";
+	   << quot;
+	printVarName(VS, OS);
+	OS << quot << "\n";
 }
 
 // ========================================================================== //
@@ -969,10 +1024,11 @@ void UnaryOp::print(raw_ostream& OS) const {
 // The ctor.
 BinaryOp::BinaryOp(BasicInterval* intersect,
         				   VarNode* sink,
+        				   const Instruction* inst,
         				   VarNode* source1,
         				   VarNode* source2,
         				   unsigned int opcode) :
-        				   BasicOp(intersect, sink),
+        				   BasicOp(intersect, sink, inst),
         				   source1(source1),
         				   source2(source2),
         				   opcode(opcode) {}
@@ -1053,21 +1109,25 @@ void BinaryOp::print(raw_ostream& OS) const {
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(V1)) {
 		OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
 	} else {
-		OS << " " << quot << V1->getNameStr() << quot
-		   << " -> " << quot << this << quot << "\n";
+		OS << " " << quot;
+		printVarName(V1, OS);
+		OS << quot << " -> " << quot << this << quot << "\n";
 	}
 
 	const Value* V2 = this->getSource2()->getValue();
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(V2)) {
 		OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
 	} else {
-		OS << " " << quot << V2->getNameStr() << quot
-		   << " -> " << quot << this << quot << "\n";
+		OS << " " << quot;
+		printVarName(V2, OS);
+		OS << quot << " -> " << quot << this << quot << "\n";
 	}
 
 	const Value* VS = this->getSink()->getValue();
 	OS << " " << quot << this << quot << " -> "
-	   << quot << VS->getNameStr() << quot << "\n";
+	   << quot;
+	printVarName(VS, OS);
+	OS << quot << "\n";
 }
 
 
@@ -1079,21 +1139,28 @@ void BinaryOp::print(raw_ostream& OS) const {
 // The ctor.
 PhiOp::PhiOp(BasicInterval* intersect,
 			       VarNode* sink,
-      			 VarNode* source,
+			       const Instruction* inst,
 			       unsigned int opcode) :
-			       UnaryOp(intersect, sink, source, opcode) {}
+			       BasicOp(intersect, sink, inst), opcode(opcode) {}
 
 /// The dtor.
 PhiOp::~PhiOp() {}
+
+// Add source to the vector of sources
+void PhiOp::addSource(const VarNode* newsrc)
+{
+	this->sources.push_back(newsrc);
+}
 
 /// Computes the interval of the sink based on the interval of the sources.
 /// The result of evaluating a phi-function is the union of the ranges of
 /// every variable used in the phi.
 Range PhiOp::eval() const {
-	Range result = this->getSource()->getRange();
+	Range result = this->getSource(0)->getRange();
 
-	if (!getIntersect()->getRange().isMaxRange()) {
-		result = result.intersectWith(getIntersect()->getRange());
+	// Iterate over the sources of the phiop
+	for (SmallVectorImpl<const VarNode*>::const_iterator sit = sources.begin()+1, send = sources.end(); sit != send; ++sit) {
+		result = result.unionWith((*sit)->getRange());
 	}
 
 	return result;
@@ -1105,19 +1172,25 @@ Range PhiOp::eval() const {
 void PhiOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
 	OS << " " << quot << this << quot << " [label =\"";
-	this->getIntersect()->print(OS);
+	OS << "phi";
 	OS << "\"]\n";
-	const Value* V = this->getSource()->getValue();
-	if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
-		OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
-	} else {
-		OS << " " << quot << V->getNameStr() << quot
-		   << " -> " << quot << this << quot << "\n";
+	
+	for (SmallVectorImpl<const VarNode*>::const_iterator sit = sources.begin(), send = sources.end(); sit != send; ++sit) {
+		const Value* V = (*sit)->getValue();
+		if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
+			OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
+		} else {
+			OS << " " << quot;
+			printVarName(V, OS);
+			OS << quot << " -> " << quot << this << quot << "\n";
+		}
 	}
 
 	const Value* VS = this->getSink()->getValue();
 	OS << " " << quot << this << quot << " -> "
-	   << quot << VS->getNameStr() << quot << "\n";
+	   << quot;
+	printVarName(VS, OS);
+	OS << quot << "\n";
 }
 
 // ========================================================================== //
@@ -1190,7 +1263,7 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	}
 
 	// Create the operation using the intersect to constrain sink's interval.
-	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, source, I->getOpcode());
+	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, I, source, I->getOpcode());
 	this->oprs->insert(UOp);
 
 	// Inserts the sources of the operation in the use map list.
@@ -1201,7 +1274,7 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 void ConstraintGraph::addUnaryOp(VarNode* sink, VarNode* source) {
 	// Create the operation using the intersect to constrain sink's interval.
   // I'm using zero as the opcode because it doesn't matter here.
-	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, source, 0); 
+	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, NULL, source, 0); 
 	this->oprs->insert(UOp);
 
 	// Inserts the sources of the operation in the use map list.
@@ -1223,7 +1296,7 @@ void ConstraintGraph::addBinaryOp(const Instruction* I) {
 
 	// Create the operation using the intersect to constrain sink's interval.
 	BasicInterval* BI = new BasicInterval();
-	BinaryOp* BOp = new BinaryOp(BI, sink, source1, source2, I->getOpcode());
+	BinaryOp* BOp = new BinaryOp(BI, sink, I, source1, source2, I->getOpcode());
 
 	// Insert the operation in the graph.
 	this->oprs->insert(BOp);
@@ -1234,39 +1307,62 @@ void ConstraintGraph::addBinaryOp(const Instruction* I) {
 }
 
 
-/// Adds a PhiOp in the graph.
-void ConstraintGraph::addPhiOp(const PHINode* Phi) {
+/// Add a phi node (actual phi, does not include sigmas)
+void ConstraintGraph::addPhiOp(const PHINode* Phi)
+{
 	// Create the sink.
 	VarNode* sink = addVarNode(Phi);
-	BasicInterval* BItv = NULL;
-	PhiOp* phiOp = NULL;
+	
+	PhiOp* phiOp = new PhiOp(new BasicInterval(), sink, Phi, Phi->getOpcode());
+	
+	// Insert the operation in the graph.
+	this->oprs->insert(phiOp);
+
 
 	// Create the sources.
 	for (unsigned int i = 0; i < Phi->getNumOperands(); i += 2) {
 		VarNode* source = addVarNode(Phi->getOperand(i));
+		
+		phiOp->addSource(source);
+		
+		// Inserts the sources of the operation in the use map list.
+		this->useMap->find(source->getValue())->second.insert(phiOp);
+	}
+}
+
+void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
+{
+	// Create the sink.
+	VarNode* sink = addVarNode(Sigma);
+	BasicInterval* BItv = NULL;
+	SigmaOp* sigmaOp = NULL;
+
+	// Create the sources.
+	for (unsigned int i = 0; i < Sigma->getNumOperands(); i += 2) {
+		VarNode* source = addVarNode(Sigma->getOperand(i));
 		// Create the operation.
-		if (this->valuesBranchMap->count(Phi->getOperand(i))) {
-			ValueBranchMap VBM = this->valuesBranchMap->find(Phi->getOperand(i))->second;
-			if (Phi->getParent() == VBM.getBBTrue()) {
+		if (this->valuesBranchMap->count(Sigma->getOperand(i))) {
+			ValueBranchMap VBM = this->valuesBranchMap->find(Sigma->getOperand(i))->second;
+			if (Sigma->getParent() == VBM.getBBTrue()) {
 				BItv = VBM.getItvT();
 			} else {
-				if (Phi->getParent() == VBM.getBBFalse()) {
+				if (Sigma->getParent() == VBM.getBBFalse()) {
 					BItv = VBM.getItvF();
 				}
 			}
 		}
 
 		if (BItv == NULL) {
-			phiOp = new PhiOp(new BasicInterval(), sink, source, Phi->getOpcode());
+			sigmaOp = new SigmaOp(new BasicInterval(), sink, Sigma, source, Sigma->getOpcode());
 		} else {
-			phiOp = new PhiOp(BItv, sink, source, Phi->getOpcode());
+			sigmaOp = new SigmaOp(BItv, sink, Sigma, source, Sigma->getOpcode());
 		}
 
 		// Insert the operation in the graph.
-		this->oprs->insert(phiOp);
+		this->oprs->insert(sigmaOp);
 
 		// Inserts the sources of the operation in the use map list.
-		this->useMap->find(source->getValue())->second.insert(phiOp);
+		this->useMap->find(source->getValue())->second.insert(sigmaOp);
 	}
 }
 
@@ -1277,10 +1373,17 @@ void ConstraintGraph::buildOperations(const Instruction* I) {
 	} else {
 		// Handle Phi functions.
 		if (const PHINode* Phi = dyn_cast<PHINode>(I)) {
-			addPhiOp(Phi);
+			if (Phi->getName().startswith(sigmaString)) {
+				addSigmaOp(Phi);
+			}
+			else {
+				addPhiOp(Phi);
+			}
 		}
-		// We have an unary instruction to handle.
-		addUnaryOp(I);
+		else {
+			// We have an unary instruction to handle.
+			addUnaryOp(I);
+		}
 	}
 }
 
@@ -1320,12 +1423,28 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 			// Calculate the range of values that would satisfy the comparison.
 			ConstantRange CR(CI->getValue(), CI->getValue() + 1);
 			unsigned int pred = ICI->getPredicate();
+			
+			// TODO: Fix this interval to saturate on sums
 			ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
-			Range TValues = Range(tmpT.getSignedMin(), tmpT.getSignedMax(), false);
+			APInt sigMin = tmpT.getSignedMin();
+			APInt sigMax = tmpT.getSignedMax();
+
+			if (sigMax.slt(sigMin)) {
+				sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+			}
+			
+			Range TValues = Range(sigMin, sigMax, false);
 
 			// If we're interested in the false dest, invert the condition.
 			ConstantRange tmpF = tmpT.inverse();
-			Range FValues = Range(tmpF.getLower(), tmpF.getUpper(), false);
+			sigMin = tmpF.getSignedMin();
+			sigMax = tmpF.getSignedMax();
+			
+			if (sigMax.slt(sigMin)) {
+				sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+			}
+			
+			Range FValues = Range(sigMin, sigMax, false);
 
 			// Create the interval using the intersection in the branch.
 			BasicInterval* BT = new BasicInterval(TValues);
@@ -1501,7 +1620,14 @@ void ConstraintGraph::findIntervals(const Function& F) {
 		
 		errs() << component.size() << "\n";
 		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
-			errs() << (*p)->getValue()->getName() << "\n";
+			const ConstantInt *CI = NULL;
+			
+			if ((CI = dyn_cast<ConstantInt>((*p)->getValue()))) {
+				errs() << CI->getValue() << "\n";
+			}
+			else {
+				errs() << (*p)->getValue()->getName() << "\n";
+			}
 		}
 		
 		
@@ -1555,6 +1681,11 @@ void ConstraintGraph::findIntervals(const Function& F) {
 			VarNode *var = *cit;
 			const Value *V = var->getValue();
 			
+			const ConstantInt* CI = dyn_cast<ConstantInt>(V);
+			if (CI) {
+				continue;
+			}
+			
 			activeVars.insert(V);
 		}
 		
@@ -1562,6 +1693,15 @@ void ConstraintGraph::findIntervals(const Function& F) {
 		
 		// TODO: PROPAGAR PARA O PROXIMO SCC
 		propagateToNextSCC(component);
+		
+		for (VarNodes::iterator vit = vars->begin(), vend = vars->end(); vit != vend; ++vit) {
+			const VarNode *vn = vit->second;
+			const Value *v = vit->first;
+			
+			errs() << v->getName() << " [" << vn->getRange().getLower() << ", " << vn->getRange().getUpper() << "]\n";
+		}
+		
+		errs() << "\n";
 	}
 */
 
@@ -1581,6 +1721,14 @@ void ConstraintGraph::findIntervals(const Function& F) {
 
 	// Fernando's findInterval method
 	update(entryPoints, widenMeet);
+	
+	errs() << "==========================Widen============================\n";
+	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+		errs() << vbgn->first->getName() << " ";
+		vbgn->second->getRange().print(errs());
+		errs() << "\n";
+	}
+	errs() << "===========================================================\n";
 
 	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
 	for (; obgn != oend; ++obgn) {
@@ -1669,7 +1817,9 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 		if (const ConstantInt* C = dyn_cast<ConstantInt>(bgn->first)) {
 			OS << " " << C->getValue();
 		} else {
-			OS << " " << quot << bgn->first->getNameStr() << quot;
+			OS << quot;
+			printVarName(bgn->first, OS);
+			OS << quot;
 		}
 
 		OS << " [label=\"";
@@ -1682,6 +1832,8 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 		(*B)->print(OS);
 		OS << "\n";
 	}
+	
+	OS << pseudoEdgesString.str();
 
 	// Print the footer of the .dot file.
 	OS << "}\n";
@@ -1832,7 +1984,7 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 			
 			BasicOp *cdedge = new ControlDep(source, (*opit)->getSink());
 			
-			(*useMap)[interval->getBound()].insert(cdedge);
+			(*useMap)[(*opit)->getSink()->getValue()].insert(cdedge);
 		}
 	}
 }
@@ -1844,20 +1996,44 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap)
 {
 	for (UseMap::iterator it = useMap->begin(), end = useMap->end(); it != end; ++it) {
 		
-		std::deque<BasicOp*> ops;
+		std::deque<ControlDep*> ops;
 		
 		if (!ops.empty()) {
 			errs() << "Erro na lista\n";
 		}
 		
 		for (SmallPtrSetIterator<BasicOp*> sit = it->second.begin(), send = it->second.end(); sit != send; ++sit) {
-			if (isa<ControlDep>(*sit)) {
-				ops.push_back(*sit);
+			ControlDep *op = NULL;
+			
+			if ((op = dyn_cast<ControlDep>(*sit))) {
+				ops.push_back(op);
 			}
 		}
 		
-		for (std::deque<BasicOp*>::iterator dit = ops.begin(), dend = ops.end(); dit != dend; ++dit) {
-			it->second.erase(*dit);
+		for (std::deque<ControlDep*>::iterator dit = ops.begin(), dend = ops.end(); dit != dend; ++dit) {
+			ControlDep *op = *dit;
+			
+			
+			// Add pseudo edge to the string
+			const Value* V = op->getSource()->getValue();
+			if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
+				pseudoEdgesString << " " << C->getValue() << " -> ";
+			} else {
+				pseudoEdgesString << " " << '"';
+				printVarName(V, pseudoEdgesString);
+				pseudoEdgesString << '"' << " -> ";
+			}
+
+			const Value* VS = op->getSink()->getValue();
+			pseudoEdgesString << '"';
+			printVarName(VS, pseudoEdgesString);
+			pseudoEdgesString << '"';
+			
+			pseudoEdgesString << " [style=dashed]\n";
+			
+			
+			// Remove pseudo edge from the map
+			it->second.erase(op);
 		}
 	}
 }

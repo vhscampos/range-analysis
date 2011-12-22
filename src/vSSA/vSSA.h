@@ -10,10 +10,10 @@
 
 namespace llvm {
 
-	class DominatorTree;
-//	class PHINode;
-	class Instruction;
-	class CmpInst;
+	//class DominatorTree;
+	//class PHINode;
+	//class Instruction;
+	//class CmpInst;
 
 	class vSSA : public FunctionPass {
 		public:

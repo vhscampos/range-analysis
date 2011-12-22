@@ -70,12 +70,6 @@ private:
 	/// used in the function.
 	void getMaxBitWidth(const Function& F);
 
-  /// Iterates through all BasicBlocks. If the Terminator Instruction
-	/// uses an Comparator Instruction, all operands of this comparator
-	/// are sent to be transformed to e-SSA. Only Instruction operands are
-	/// transformed.
-	void createESSA(Function &F);
-
 }; // end of class RangeAnalysis
 
 
@@ -284,6 +278,7 @@ public:
 
 enum OperationId {
 	UnaryOpId,
+	SigmaOpId,
 	BinaryOpId,
 	PhiOpId,
 	ControlDepId
@@ -305,11 +300,14 @@ private:
 	// The target of the operation, that is, the node which
 	// will store the result of the operation.
 	VarNode* sink;
+	
+	// The instruction that originated this op node
+	const Instruction *inst;
 
 protected:
     /// We do not want people creating objects of this class,
     /// but we want to inherit from it.
-    BasicOp(BasicInterval* intersect, VarNode* sink);
+    BasicOp(BasicInterval* intersect, VarNode* sink, const Instruction *inst);
 
 public:
   	/// The dtor. Its virtual because this is a base class.
@@ -323,6 +321,9 @@ public:
     /// Given the input of the operation and the operation that will be
     /// performed, evaluates the result of the operation.
     virtual Range eval() const = 0;
+    
+    /// Return the instruction that originated this op node
+    const Instruction *getInstruction() const {return inst;}
 
     /// Replace symbolic intervals with hard-wired constants.
     void fixIntersects(VarNode* V);
@@ -365,6 +366,7 @@ public:
 	/// The ctor.
   UnaryOp(BasicInterval* intersect,
       		VarNode* sink,
+      		const Instruction* inst,
       		VarNode* source,
       		unsigned int opcode);
 
@@ -377,7 +379,7 @@ public:
 	static inline bool classof(UnaryOp const *) {return true;}
 
 	static inline bool classof(BasicOp const *BO) {
-		return BO->getValueId() == UnaryOpId || BO->getValueId() == PhiOpId;
+		return BO->getValueId() == UnaryOpId ||  BO->getValueId() == SigmaOpId;
 	}
 
   /// Return the opcode of the operation.
@@ -390,6 +392,44 @@ public:
   /// because I had problems to access the members of the class outside it.
   void print(raw_ostream& OS) const;
 };
+
+// Specific type of UnaryOp used to represent sigma functions
+class SigmaOp: public UnaryOp {
+private:
+
+	/// Computes the interval of the sink based on the interval of the sources,
+	/// the operation and the interval associated to the operation.
+	Range eval() const;
+
+public:
+	/// The ctor.
+  SigmaOp(BasicInterval* intersect,
+      		VarNode* sink,
+      		const Instruction* inst,
+      		VarNode* source,
+      		unsigned int opcode);
+
+  /// The dtor.
+  ~SigmaOp();
+	
+	// Methods for RTTI
+	virtual OperationId getValueId() const {return SigmaOpId;}
+	
+	static inline bool classof(SigmaOp const *) {return true;}
+	
+	static inline bool classof(UnaryOp const *UO) {
+		return UO->getValueId() == SigmaOpId;
+	}
+
+	static inline bool classof(BasicOp const *BO) {
+		return BO->getValueId() == SigmaOpId;
+	}
+
+  /// Prints the content of the operation. I didn't it an operator overload
+  /// because I had problems to access the members of the class outside it.
+  void print(raw_ostream& OS) const;
+};
+
 
 // Specific type of BasicOp used in Nuutila
 class ControlDep : public BasicOp {
@@ -419,8 +459,13 @@ public:
 };
 
 /// A constraint like sink = phi(src1, src2, ..., srcN)
-class PhiOp : public UnaryOp {
+class PhiOp : public BasicOp {
 private:
+	// Vector of sources
+	SmallVector<const VarNode*, 2> sources;
+	
+	// The opcode of the operation.
+	unsigned int opcode;
 
 	/// Computes the interval of the sink based on the interval of the sources,
 	/// the operation and the interval associated to the operation.
@@ -430,21 +475,23 @@ public:
 	/// The ctor.
   PhiOp(BasicInterval* intersect,
       	  VarNode* sink,
-      	  VarNode* source,
+      	  const Instruction* inst,
       	  unsigned int opcode);
 
 	/// The dtor.
 	~PhiOp();
+	
+	// Add source to the vector of sources
+	void addSource(const VarNode* newsrc);
+	
+	// Return source identified by index
+	const VarNode *getSource(unsigned index) const {return sources[index];}
 	
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return PhiOpId;}
 	
 	static inline bool classof(PhiOp const *) {
 		return true;
-	}
-
-	static inline bool classof(UnaryOp const *UO) {
-		return UO->getValueId() == PhiOpId;
 	}
 
 	static inline bool classof(BasicOp const *BO) {
@@ -477,6 +524,7 @@ public:
 	// The ctor.
     BinaryOp(BasicInterval* intersect,
         		 VarNode* sink,
+        		 const Instruction* inst,
         		 VarNode* source1,
         		 VarNode* source2,
         		 unsigned int opcode);
@@ -613,6 +661,9 @@ private:
 
 	/// Adds a PhiOp in the graph.
 	void addPhiOp(const PHINode* Phi);
+	
+	// Adds a SigmaOp to the graph.
+	void addSigmaOp(const PHINode* Sigma);
 
 	/// Takes an intruction and creates an operation.
 	void buildOperations(const Instruction* I);
