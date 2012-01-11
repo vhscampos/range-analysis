@@ -19,7 +19,6 @@ void vSSA::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool vSSA::runOnFunction(Function &F) {
-	//errs() << F.getName() << "\n";
 	DT_ = &getAnalysis<DominatorTree>();
 	DF_ = &getAnalysis<DominanceFrontier>();
 	
@@ -28,19 +27,16 @@ bool vSSA::runOnFunction(Function &F) {
 		createSigmasIfNeeded(Fit);
 	}
 	
-	//errs() << numsigmas << " " << numphis << "\n\n";
-	
 	return false;
-}	
+}
 
 void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 {
 	TerminatorInst *ti = BB->getTerminator();
-
 	// If the condition used in the terminator instruction is a Comparison instruction: for each operand of the CmpInst, create sigmas, depending on some conditions		
 	for (unsigned i = 0, e = ti->getNumOperands(); i < e; ++i) {
 		CmpInst *comparison = dyn_cast<CmpInst>(ti->getOperand(i));
-		
+
 		if (comparison) {
 			for (unsigned j = 0, f = comparison->getNumOperands(); j < f; ++j) {
 				Value *V = comparison->getOperand(j);
@@ -51,6 +47,22 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 			}
 		}
 	}
+	
+//	if(isa<BranchInst>(ti)){
+//		BranchInst * bc = cast<BranchInst>(ti);
+//		if(bc->isConditional()){
+//			Value * cond = bc->getCondition();
+//			CmpInst *comparison = dyn_cast<CmpInst>(cond);
+//			for (unsigned j = 0, f = comparison->getNumOperands(); j < f; ++j) {
+//				Value *V = comparison->getOperand(j);
+//				if (isa<Instruction>(V) || isa<Argument>(V)) {
+//					insertSigmas(ti, V);
+//				}
+//			}
+//		}
+//	}else{
+//		//TODO: Implement the switch if necessary in the future
+//	}
 }
 
 /*
@@ -61,7 +73,6 @@ void vSSA::insertSigmas(TerminatorInst *TI, Value *V)
 {
 	// Basic Block of the Terminator Instruction
 	BasicBlock *BB = TI->getParent();
-	
 	// Vector that contains all vSSA_PHI nodes created in the process of creating sigmas for V
 	SmallVector<PHINode*, 25> vssaphi_created;
 	
@@ -69,18 +80,17 @@ void vSSA::insertSigmas(TerminatorInst *TI, Value *V)
 	
 	// Iterate over all successors of BB, checking if a sigma is needed
 	for (unsigned i = 0, e = TI->getNumSuccessors(); i < e; ++i) {
-	
+		
 		// Next Basic Block
 		BasicBlock *BB_next = TI->getSuccessor(i);
-		
+
 		// If the successor is not BB itself and BB dominates the successor
 		if (BB_next != BB && BB_next->getSinglePredecessor() != NULL && dominateOrHasInFrontier(BB, BB_next, V)) {
 			// Create the sigma function (but before, verify if there is already an identical sigma function)
 			if (verifySigmaExistance(V, BB_next, BB))
 				continue;
 			
-			//FIXME: Check the Create call parameters
-			PHINode *sigma = PHINode::Create(V->getType(), 1, Twine(vSSA_SIG), &(BB_next->front())/*BB_next->begin()*/);
+			PHINode *sigma = PHINode::Create(V->getType(), 1, Twine(vSSA_SIG), &(BB_next->front()));
 			sigma->addIncoming(V, BB);
 			
 			++numsigmas;
@@ -137,7 +147,7 @@ void vSSA::insertSigmas(TerminatorInst *TI, Value *V)
 void vSSA::renameUsesToSigma(Value *V, PHINode *sigma)
 {
 	BasicBlock *BB_next = sigma->getParent();
-	
+
 	// Get the dominance frontier of the successor
 	DominanceFrontier::iterator DF_BB = DF_->find(BB_next);
 	
@@ -145,40 +155,37 @@ void vSSA::renameUsesToSigma(Value *V, PHINode *sigma)
 	// This auxiliary vector of pointers is used because the use_iterators are invalidated when we do the renaming
 	SmallVector<Instruction*, 25> usepointers;
 	unsigned i = 0, n = V->getNumUses();
-	 
 	usepointers.resize(n);
-	 
-	//FIXME: I changed Instruction to Instruction*
+	
 	for (Value::use_iterator uit = V->use_begin(), uend = V->use_end(); uit != uend; ++uit, ++i)
-		usepointers[i] = cast<Instruction*>(uit);
-	 
-	 
+		usepointers[i] = dyn_cast<Instruction>(*uit);
+	
 	for (i = 0; i < n; ++i) {
-	 	BasicBlock *BB_user = usepointers[i]->getParent();
-	 	
+		BasicBlock *BB_user = usepointers[i]->getParent();
+		
 		if (usepointers[i] == sigma)
-	 		continue;
-	 	
+			continue;
+		
 		// Check if the use is in the dominator tree of sigma(V)
-		if (DT_->dominates(BB_next, BB_user)) {
-	 		usepointers[i]->replaceUsesOfWith(V, sigma);
-	 	}
-	 	// Check if the use is in the dominance frontier of sigma(V)
-	 	else if (DF_BB->second.find(BB_user) != DF_BB->second.end()) {
-	 		// Check if the user is a PHI node (it has to be, but only for precaution)
-	 		if (PHINode *phi = dyn_cast<PHINode>(usepointers[i])) {
-	 			for (unsigned i = 0, e = phi->getNumIncomingValues(); i < e; ++i) {
-	 				Value *operand = phi->getIncomingValue(i);
-	 				
-	 				if (operand != V)
-	 					continue;
-	 				
-	 				if (DT_->dominates(BB_next, phi->getIncomingBlock(i))) {
-	 					phi->setIncomingValue(i, sigma);
-	 				}
-	 			}
-	 		}
-	 	}
+		if (DT_->dominates(BB_next, BB_user)){
+			usepointers[i]->replaceUsesOfWith(V, sigma);
+		}
+		// Check if the use is in the dominance frontier of sigma(V)
+		else if (DF_BB->second.find(BB_user) != DF_BB->second.end()) {
+			// Check if the user is a PHI node (it has to be, but only for precaution)
+			if (PHINode *phi = dyn_cast<PHINode>(usepointers[i])) {
+				for (unsigned i = 0, e = phi->getNumIncomingValues(); i < e; ++i) {
+					Value *operand = phi->getIncomingValue(i);
+					
+					if (operand != V)
+						continue;
+					
+					if (DT_->dominates(BB_next, phi->getIncomingBlock(i))) {
+						phi->setIncomingValue(i, sigma);
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -229,9 +236,8 @@ SmallVector<PHINode*, 25> vSSA::insertPhisForSigma(Value *V, PHINode *sigma)
 			}
 			
 			// Create the vSSA_PHI, and put the phi node in the deques
-			//FIXME: Check the Create call parameters
 			//NumReservedValues is a hint for the number of incoming edges that this phi node will have (use 0 if you really have no idea).
-			PHINode *vssaphi = PHINode::Create(V->getType(), 1, Twine(vSSA_PHI), &(BB_infrontier->front())/*BB_infrontier->begin()*/);
+			PHINode *vssaphi = PHINode::Create(V->getType(), 1, Twine(vSSA_PHI), &(BB_infrontier->front()));
 		
 			phiscreated.push_back(vssaphi);
 			
@@ -288,8 +294,7 @@ void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 			}
 			
 			// Create the vSSA_PHI, and put the phi node in the deques
-			//FIXME: Check the Create call parameters
-			PHINode *vssaphi = PHINode::Create(V->getType(), 1, Twine(vSSA_PHI), &(BB_infrontier->front())/*BB_infrontier->begin()*/);
+			PHINode *vssaphi = PHINode::Create(V->getType(), 1, Twine(vSSA_PHI), &(BB_infrontier->front()));
 		
 			phiscreated.push_back(vssaphi);
 			
@@ -302,7 +307,6 @@ void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 			
 			// Rename uses of V to phi
 			renameUsesToPhi(V, vssaphi);
-			
 			
 			// Insertion of vSSA_phi functions may require the creation of vSSA_phi functions too, so we call this function recursively
 			insertPhisForPhi(V, vssaphi);
@@ -335,10 +339,8 @@ void vSSA::renameUsesToPhi(Value *V, PHINode *phi)
 	// Get the dominance frontier of the successor
 	DominanceFrontier::iterator DF_BB = DF_->find(BB_next);
 	
-	 
-	//FIXME: before was Instruction instead of Instruction*
 	for (Value::use_iterator uit = V->use_begin(), uend = V->use_end(); uit != uend; ++uit, ++i)
-		usepointers[i] = cast<Instruction*>(uit);
+		usepointers[i] = dyn_cast<Instruction>(*uit);
 	
 	BasicBlock *BB_parent = phi->getParent();
 	 
@@ -389,9 +391,8 @@ void vSSA::renameUsesToPhi(Value *V, PHINode *phi)
 		
 		unsigned i = 0;
 		
-		//FIXME: before was Instruction instead of Instruction*
 		for (Value::use_iterator uit = V->use_begin(), uend = V->use_end(); uit != uend; ++uit, ++i)
-			usepointers[i] = cast<Instruction*>(uit);
+			usepointers[i] = dyn_cast<Instruction>(*uit);
 		 
 		for (i = 0; i < n; ++i) {
 			// Check if the use is in the dominator tree of vSSA_PHI
@@ -551,18 +552,20 @@ bool vSSA::dominateAny(BasicBlock *BB, Value *value) {
  */
 bool vSSA::dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *value) {
 	DominanceFrontier::iterator DF_BB = DF_->find(BB_next);
-	
+
 	for (Value::use_iterator begin = value->use_begin(), end = value->use_end(); begin != end; ++begin) {
 		Instruction *I = dyn_cast<Instruction>(*begin);
 		BasicBlock *BB_father = I->getParent();
 		if (BB_next == BB_father && isa<PHINode>(I))
 			continue;
-		if (DT_->dominates(BB_next, BB_father)) {
+		
+		if (DT_->dominates(BB_next, BB_father))
 			return true;
-		}
-		if ((BB_father != BB) && (DF_BB->second.find(BB_father) != DF_BB->second.end())) {
+		
+		//If the BB_father is in the dominance frontier of BB then we need to create a sigma in BB_next 
+		//to split the lifetime of variables
+		if ((BB_father != BB) && (DF_BB->second.find(BB_father) != DF_BB->second.end()))
 			return true;
-		}
 	}
 	return false;
 }

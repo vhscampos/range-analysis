@@ -10,36 +10,32 @@
 
 namespace llvm {
 
-	//class DominatorTree;
-	//class PHINode;
-	//class Instruction;
-	//class CmpInst;
+class vSSA : public FunctionPass {
+	public:
+		static char ID; // Pass identification, replacement for typeid.
+		vSSA() : FunctionPass(ID) {}
 
-	class vSSA : public FunctionPass {
-		public:
-			static char ID; // Pass identification, replacement for typeid.
-			vSSA() : FunctionPass(ID) {}
+		void getAnalysisUsage(AnalysisUsage &AU) const;
 
-			void getAnalysisUsage(AnalysisUsage &AU) const;
+		bool runOnFunction(Function&);
 
-			bool runOnFunction(Function&);
+	private:
+		// Variables always live
+		DominatorTree *DT_;
+		DominanceFrontier *DF_;
 
-		private:
-			// Variables always live
-			DominatorTree *DT_;
-			DominanceFrontier *DF_;
+		void createSigmasIfNeeded(BasicBlock *BB);
+		void insertSigmas(TerminatorInst *TI, Value *V);
+		void renameUsesToSigma(Value *V, PHINode *sigma);
+		SmallVector<PHINode*, 25> insertPhisForSigma(Value *V, PHINode *sigma);
+		void insertPhisForPhi(Value *V, PHINode *phi);
+		void renameUsesToPhi(Value *V, PHINode *phi);
+		void insertSigmaAsOperandOfPhis(SmallVector<PHINode*, 25> &vssaphi_created, PHINode *sigma);
+		void populatePhis(SmallVector<PHINode*, 25> &vssaphi_created, Value *V);
 
-			void createSigmasIfNeeded(BasicBlock *BB);
-			void insertSigmas(TerminatorInst *TI, Value *V);
-			void renameUsesToSigma(Value *V, PHINode *sigma);
-			SmallVector<PHINode*, 25> insertPhisForSigma(Value *V, PHINode *sigma);
-			void insertPhisForPhi(Value *V, PHINode *phi);
-			void renameUsesToPhi(Value *V, PHINode *phi);
-			void insertSigmaAsOperandOfPhis(SmallVector<PHINode*, 25> &vssaphi_created, PHINode *sigma);
-			void populatePhis(SmallVector<PHINode*, 25> &vssaphi_created, Value *V);
+		bool dominateAny(BasicBlock *BB, Value *value);
+		bool dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *value);
+		bool verifySigmaExistance(Value *V, BasicBlock *BB, BasicBlock *from);
+};
 
-			bool dominateAny(BasicBlock *BB, Value *value);
-			bool dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *value);
-			bool verifySigmaExistance(Value *V, BasicBlock *BB, BasicBlock *from);
-	};
 }
