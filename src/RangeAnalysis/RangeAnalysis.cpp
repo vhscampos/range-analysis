@@ -40,6 +40,7 @@ APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 
 const std::string sigmaString = "vSSA_sigma";
 
+// Used to print pseudo-edges in the Constraint Graph dot
 std::string pestring;
 raw_string_ostream pseudoEdgesString(pestring);
 
@@ -142,7 +143,7 @@ bool RangeAnalysis::runOnFunction(Function &F) {
 	CG.buildGraph(F);
 //	CG.print(F, errs());
 	CG.printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
-	CG.findIntervals(F);
+	CG.findIntervals(/*F*/);
 	CG.printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
 	return false;
 }
@@ -865,7 +866,9 @@ BasicOp::BasicOp(BasicInterval* intersect, VarNode* sink, const Instruction *ins
 
 /// We can not want people creating objects of this class,
 /// but we want to inherit of it.
-BasicOp::~BasicOp() {}
+BasicOp::~BasicOp() {
+	delete intersect;
+}
 
 
 /// Replace symbolic intervals with hard-wired constants.
@@ -1206,6 +1209,19 @@ ValueBranchMap::ValueBranchMap(const Value* V,
 
 ValueBranchMap::~ValueBranchMap() {}
 
+void ValueBranchMap::clear() {
+/*	if (ItvT) {
+		delete ItvT;
+		ItvT = NULL;
+	}
+	
+	if (ItvF) {
+		delete ItvF;
+		ItvF = NULL;
+	}
+*/
+}
+
 
 // ========================================================================== //
 // ConstraintGraph
@@ -1222,7 +1238,17 @@ ConstraintGraph::ConstraintGraph(VarNodes *varNodes,
 }
 
 /// The dtor.
-ConstraintGraph::~ConstraintGraph() {}
+ConstraintGraph::~ConstraintGraph() {
+	delete symbMap;
+	
+	for (VarNodes::iterator vit = vars->begin(), vend = vars->end(); vit != vend; ++vit) {
+		delete vit->second;
+	}
+	
+	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend; ++oit) {
+		delete *oit;
+	}
+}
 
 /// Adds a VarNode to the graph.
 VarNode* ConstraintGraph::addVarNode(const Value* V) {
@@ -1558,7 +1584,8 @@ static bool narrowMeet(BasicOp* op) {
 }
 
 
-void ConstraintGraph::update(std::set<const Value*>& actv, bool (*meet)(BasicOp* op)) {
+void ConstraintGraph::update(const UseMap &compUseMap, std::set<const Value*>& actv, bool (*meet)(BasicOp* op)) {
+	/*
 	if (actv.empty()) {
 		return;
 	}
@@ -1567,7 +1594,7 @@ void ConstraintGraph::update(std::set<const Value*>& actv, bool (*meet)(BasicOp*
 	actv.erase(V);
 
 	// The use list.
-	SmallPtrSet<BasicOp*, 8> L = useMap->find(V)->second;
+	SmallPtrSet<BasicOp*, 8> L = compUseMap.find(V)->second;
 	SmallPtrSet<BasicOp*, 8>::iterator bgn = L.begin(),	end = L.end();
 	for (; bgn != end; ++bgn) {
 		if (meet(*bgn)) {
@@ -1580,14 +1607,33 @@ void ConstraintGraph::update(std::set<const Value*>& actv, bool (*meet)(BasicOp*
 		}
 	}
 
-	update(actv, meet);
+	update(compUseMap, actv, meet);
+	*/
+	
+	
+	while (!actv.empty()) {
+		const Value* V = *actv.begin();
+		actv.erase(V);
+		
+		// The use list.
+		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
+		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
+		
+		for (; bgn != end; ++bgn) {
+			if (meet(*bgn)) {
+				// I want to use it as a set, but I also want
+				// keep an order or insertions and removals.
+				actv.insert((*bgn)->getSink()->getValue());
+			}
+		}
+	}
 }
 
 
 /// Finds the intervals of the variables in the graph.
 // FIXME: Remove the parameter
-void ConstraintGraph::findIntervals(const Function& F) {
-/*
+void ConstraintGraph::findIntervals(/*const Function& F*/) {
+
 	// Builds symbMap
 	buildSymbolicIntersectMap();
 	
@@ -1602,6 +1648,65 @@ void ConstraintGraph::findIntervals(const Function& F) {
 		
 		
 		errs() << component.size() << "\n";
+		
+		
+		
+		// DEBUG
+		/*
+		if (component.size() == 16) {
+			std::string errors;
+			std::string filename = "16";
+			filename += ".dot";
+
+			raw_fd_ostream output(filename.c_str(), errors);
+			
+			const char* quot = "\"";
+			// Print the header of the .dot file.
+			output << "digraph dotgraph {\n";
+			output << "label=\"Constraint Graph for \"\n";
+			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
+
+			// Print the body of the .dot file.
+			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
+					output << " " << C->getValue();
+				} else {
+					output << quot;
+					printVarName((*bgn)->getValue(), output);
+					output << quot;
+				}
+
+				output << " [label=\"";
+				(*bgn)->print(output);
+				output << " \"]\n";
+			}
+			
+			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+				VarNode *var = *bgn;
+				
+				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
+				
+				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
+					if (component.count((*useit)->getSink())) {
+						(*useit)->print(output);
+						output << "\n";
+					}
+				}
+			}			
+			
+			//output << pseudoEdgesString.str();
+
+			// Print the footer of the .dot file.
+			output << "}\n";
+
+			output.close();
+			
+		}
+		*/
+		
+		
+		
+		/*
 		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
 			const ConstantInt *CI = NULL;
 			
@@ -1612,7 +1717,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 				errs() << (*p)->getValue()->getName() << "\n";
 			}
 		}
-		
+		*/
 		
 		UseMap compUseMap = buildUseMap(component);
 		
@@ -1686,9 +1791,9 @@ void ConstraintGraph::findIntervals(const Function& F) {
 		
 		errs() << "\n";
 	}
-*/
 
 
+/*
 	// Get the entry points of the SCC
 	std::set<const Value*> entryPoints;
 	//FIXME: Collect these variables automatically. 
@@ -1774,7 +1879,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 	double needB = needBits;
 	double reduction = (double) (totalB - needB) * 100 / totalB;
 	percentReduction = (unsigned int) reduction;
-
+*/
 }
 
 // TODO: To implement it.
@@ -2093,8 +2198,26 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap)
  *  control dependence edges in the contraint graph. These edges are removed
  *  after the class is done computing the SCCs.
  */
-Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap)
+Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single)
 {
+
+if (single) {
+	/* FERNANDO */
+	SmallPtrSet<VarNode*, 32> SCC;
+	for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+			SCC.insert(vit->second);
+	}
+
+	for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+			Value *V = const_cast<Value*>(vit->first);
+			components[V] = SCC;
+	}
+
+	this->worklist.push_back(const_cast<Value*>(varNodes->begin()->first));
+}
+else {
+	
+
 	// Copy structures
 	this->variables = varNodes;
 	this->index = 0;
@@ -2126,4 +2249,5 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap)
 	
 	// Self-explanatory
 	delControlDependenceEdges(useMap);
+}
 }

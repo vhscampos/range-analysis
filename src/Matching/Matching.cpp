@@ -24,7 +24,7 @@ namespace {
 	struct MTCH: public ModulePass {
 		static char ID; // Pass identification, replacement for typeid
 		MTCH() :
-			ModulePass(&ID) {
+			ModulePass(ID) {
 		}
 
 		bool runOnModule(Module &M);

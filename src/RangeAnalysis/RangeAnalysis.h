@@ -472,6 +472,8 @@ public:
 	inline void setItvF(BasicInterval *Itv) {
 		this->ItvF = Itv;
 	}
+	/// Clear memory allocated
+	void clear();
 };
 
 // The VarNodes type.
@@ -518,9 +520,9 @@ private:
 	void buildOperations(const Instruction* I);
 	void buildValueBranchMap(const Function& F);
 	// Perform the widening and narrowing operations
-	void update(std::set<const Value*>& actv, bool (*meet)(BasicOp* op));
-	//void update(const UseMap &compUseMap,
-	//	SmallPtrSet<const Value*, 32>& actv, bool (*meet)(BasicOp* op));
+	//void update(std::set<const Value*>& actv, bool (*meet)(BasicOp* op));
+	void update(const UseMap &compUseMap,
+		std::set<const Value*>& actv, bool (*meet)(BasicOp* op));
 
 public:
 	/// I'm doing this because I want to use this analysis in an
@@ -541,7 +543,7 @@ public:
 	UseMap buildUseMap(const SmallPtrSet<VarNode*, 32> &component);
 	void propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &component);
 	/// Finds the intervals of the variables in the graph.
-	void findIntervals(const Function& F); // FIXME: Remove the parameter.
+	void findIntervals(/*const Function& F*/); // FIXME: Remove the parameter.
 	/// Releases the memory used by the graph.
 	void clear();
 	/// Prints the content of the graph in dot format. For more informations
@@ -563,7 +565,7 @@ public:
 	std::deque<Value*> worklist;
 	
 public:
-	Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap);
+	Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single = false);
 	void addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNodes* vars);
 	void delControlDependenceEdges(UseMap *useMap);
 	void visit(Value *V, std::stack<Value*> &stack, UseMap *useMap);
