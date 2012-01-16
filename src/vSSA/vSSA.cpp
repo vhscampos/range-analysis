@@ -35,6 +35,7 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 	TerminatorInst *ti = BB->getTerminator();
 	// If the condition used in the terminator instruction is a Comparison instruction:
 	//for each operand of the CmpInst, create sigmas, depending on some conditions
+	/*
 	if(isa<BranchInst>(ti)){
 		BranchInst * bc = cast<BranchInst>(ti);
 		if(bc->isConditional()){
@@ -47,8 +48,36 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 				}
 			}
 		}
-	}else{
-		//TODO: Implement the switch if necessary in the future
+	}
+	*/
+	
+	// CASE 1: Branch Instruction
+	BranchInst *bi = NULL;
+	SwitchInst *si = NULL;
+	if ((bi = dyn_cast<BranchInst>(ti))) {
+		if (bi->isConditional()) {
+			Value *condition = bi->getCondition();
+			
+			ICmpInst *comparison = dyn_cast<ICmpInst>(condition);
+			
+			if (comparison) {
+				for (User::const_op_iterator opit = comparison->op_begin(), opend = comparison->op_end(); opit != opend; ++opit) {
+					Value *operand = *opit;
+					
+					if (isa<Instruction>(operand) || isa<Argument>(operand)) {
+						insertSigmas(ti, operand);
+					}
+				}
+			}
+		}
+	}
+	// CASE 2: Switch Instruction
+	else if ((si = dyn_cast<SwitchInst>(ti))) {
+		Value *condition = si->getCondition();
+		
+		if (isa<Instruction>(condition) || isa<Argument>(condition)) {
+			insertSigmas(ti, condition);
+		}
 	}
 }
 
@@ -60,6 +89,7 @@ void vSSA::insertSigmas(TerminatorInst *TI, Value *V)
 {
 	// Basic Block of the Terminator Instruction
 	BasicBlock *BB = TI->getParent();
+	
 	// Vector that contains all vSSA_PHI nodes created in the process of creating sigmas for V
 	SmallVector<PHINode*, 25> vssaphi_created;
 	
