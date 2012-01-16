@@ -38,7 +38,7 @@ DenseMap<const Value*, unsigned> FerMap;
 APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
 APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 
-const std::string sigmaString = "SSI_sigma";
+const std::string sigmaString = "vSSA_sigma";
 
 std::string pestring;
 raw_string_ostream pseudoEdgesString(pestring);
@@ -89,7 +89,7 @@ static bool isValidInstruction(const Instruction* I) {
 		return false;
 	}
 
-  assert(false && "It should not be here.");
+	assert(false && "It should not be here.");
 	return false;
 }
 
@@ -131,13 +131,13 @@ void RangeAnalysis::getMaxBitWidth(const Function& F) {
 bool RangeAnalysis::runOnFunction(Function &F) {
 	getMaxBitWidth(F);
 
-  // The data structures
+	// The data structures
 	DenseMap<const Value*, VarNode*> VNodes;
 	SmallPtrSet<BasicOp*, 64> GOprs;
 	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
 	DenseMap<const Value*, ValueBranchMap> VBMap;
 	ConstraintGraph CG(&VNodes, &GOprs, &UMap, &VBMap);
-  
+
 	// Build the graph and find the intervals of the variables.
 	CG.buildGraph(F);
 //	CG.print(F, errs());
@@ -328,7 +328,6 @@ Range Range::sdiv(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -362,7 +361,6 @@ Range Range::urem(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -396,7 +394,6 @@ Range Range::srem(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -1374,12 +1371,10 @@ void ConstraintGraph::buildOperations(const Instruction* I) {
 		if (const PHINode* Phi = dyn_cast<PHINode>(I)) {
 			if (Phi->getName().startswith(sigmaString)) {
 				addSigmaOp(Phi);
-			}
-			else {
+			} else {
 				addPhiOp(Phi);
 			}
-		}
-		else {
+		} else {
 			// We have an unary instruction to handle.
 			addUnaryOp(I);
 		}
@@ -1714,7 +1709,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 			entryPoints.insert(vbgn->first);
 		}
 	}
-	errs() << "Entrypoints.size="<< entryPoints.size();
+
 	// Fernando's findInterval method
 	update(entryPoints, widenMeet);
 	
