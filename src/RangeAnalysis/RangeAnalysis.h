@@ -43,7 +43,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ConstantRange.h"
-//#include "llvm/Transforms/Utils/SSI.h"
 #include <deque>
 #include <stack>
 #include <set>
@@ -88,73 +87,42 @@ private:
 /// in our algorithm.
 class Range {
 private:
-  APInt l;    // The lower bound of the range.
-  APInt u;    // The upper bound of the range.
-  bool isEmpty;
+	APInt l;    // The lower bound of the range.
+	APInt u;    // The upper bound of the range.
+	bool isEmpty;
 
 public:
-  Range();
-
-  Range(APInt lb, APInt ub, bool isEmpty);
-
-  ~Range();
-
-  inline APInt getLower() const {return l;}
-
-  inline APInt getUpper() const {return u;}
-
-  inline void setLower(const APInt& newl) {this->l = newl;}
-
-  inline void setUpper(const APInt& newu) {this->u = newu;}
-
-  inline void setEmptySet(bool isEmptySet) {this->isEmpty = isEmptySet;}
-
-  inline bool isEmptySet() const {return isEmpty;}
-
-  bool isMaxRange() const;
-
-  void print(raw_ostream& OS) const;
-
-  Range add(const Range& other);
-
-  Range sub(const Range& other);
-
-  Range mul(const Range& other);
-
-  Range udiv(const Range& other);
-
-  Range sdiv(const Range& other);
-
-  Range urem(const Range& other);
-
-  Range srem(const Range& other);
-
-  Range shl(const Range& other);
-
-  Range lshr(const Range& other);
-
-  Range ashr(const Range& other);
-
-  Range And(const Range& other);
-
-  Range Or(const Range& other);
-
-  Range Xor(const Range& other);
-
-  Range truncate(unsigned bitwidht) const;
-
-  Range sextOrTrunc(unsigned bitwidht) const;
-
-  Range zextOrTrunc(unsigned bitwidht) const;
-
-  Range intersectWith(const Range& other) const;
-
-  Range unionWith(const Range& other) const;
-
-  bool operator==(const Range& other) const;
-
-  bool operator!=(const Range& other) const;
-
+	Range();
+	Range(APInt lb, APInt ub, bool isEmpty);
+	~Range();
+	inline APInt getLower() const {return l;}
+	inline APInt getUpper() const {return u;}
+	inline void setLower(const APInt& newl) {this->l = newl;}
+	inline void setUpper(const APInt& newu) {this->u = newu;}
+	inline void setEmptySet(bool isEmptySet) {this->isEmpty = isEmptySet;}
+	inline bool isEmptySet() const {return isEmpty;}
+	bool isMaxRange() const;
+	void print(raw_ostream& OS) const;
+	Range add(const Range& other);
+	Range sub(const Range& other);
+	Range mul(const Range& other);
+	Range udiv(const Range& other);
+	Range sdiv(const Range& other);
+	Range urem(const Range& other);
+	Range srem(const Range& other);
+	Range shl(const Range& other);
+	Range lshr(const Range& other);
+	Range ashr(const Range& other);
+	Range And(const Range& other);
+	Range Or(const Range& other);
+	Range Xor(const Range& other);
+	Range truncate(unsigned bitwidht) const;
+	Range sextOrTrunc(unsigned bitwidht) const;
+	Range zextOrTrunc(unsigned bitwidht) const;
+	Range intersectWith(const Range& other) const;
+	Range unionWith(const Range& other) const;
+	bool operator==(const Range& other) const;
+	bool operator!=(const Range& other) const;
 };
 
 
@@ -168,30 +136,21 @@ private:
 	Range interval;
 
 public:
-	/// The ctor.
 	VarNode(const Value* V);
-
-	/// The dtor.
 	~VarNode();
-
 	/// Initializes the value of the node.
 	void init();
-
 	/// Returns the range of the variable represented by this node.
-  inline Range getRange() const {return interval;}
-
-  /// Returns the variable represented by this node.
-  inline const Value *getValue() const {return V;}
-
-  /// Changes the status of the variable represented by this node.
-  inline void setRange(const Range& newInterval) {
- 		this->interval = newInterval;
-  }
-
-  /// Pretty print.
-  void print(raw_ostream& OS) const;
+	inline Range getRange() const {return interval;}
+	/// Returns the variable represented by this node.
+	inline const Value *getValue() const {return V;}
+	/// Changes the status of the variable represented by this node.
+	inline void setRange(const Range& newInterval) {
+		this->interval = newInterval;
+	}
+	/// Pretty print.
+	void print(raw_ostream& OS) const;
 };
-
 
 enum IntervalId {
 	BasicIntervalId,
@@ -204,34 +163,23 @@ enum IntervalId {
 class BasicInterval {
 private:
 	Range range;
+
 public:
-	/// The ctor
 	BasicInterval(const Range& range);
-
-	/// The ctor
 	BasicInterval(const APInt& l, const APInt& u);
-
-	/// The ctor
 	BasicInterval();
-
-	/// The dtor
 	virtual ~BasicInterval(); // This is a base class.
-
 	// Methods for RTTI
 	virtual IntervalId getValueId() const {return BasicIntervalId;}
-	
 	static inline bool classof(BasicInterval const *) {return true;}
-
 	/// Returns the range of this interval.
 	inline const Range& getRange() const {return this->range;}
-
 	/// Sets the range of this interval to another range.
 	inline void setRange(const Range& newRange) {
 		this->range = newRange;
 	}
-
-  /// Pretty print.
-  virtual void print(raw_ostream& OS) const;
+	/// Pretty print.
+	virtual void print(raw_ostream& OS) const;
 };
 
 /// This is an interval that contains a symbolic limit, which is
@@ -240,41 +188,29 @@ class SymbInterval : public BasicInterval {
 private:
 	// The bound. It is a node which limits the interval of this range.
 	const Value* bound;
-
 	// The predicate of the operation in which this interval takes part.
 	// It is useful to know how we can constrain this interval
 	// after we fix the intersects.
 	CmpInst::Predicate pred;
 
 public:
-	// The ctor.
 	SymbInterval(const Range& range, const Value* bound, CmpInst::Predicate pred);
-
-	/// The dtor.
-	~SymbInterval();	
-	
+	~SymbInterval();
 	// Methods for RTTI
 	virtual IntervalId getValueId() const {return SymbIntervalId;}
-	
 	static inline bool classof(SymbInterval const *) {return true;}
-
 	static inline bool classof(BasicInterval const *BI) {
 		return BI->getValueId() == SymbIntervalId;
 	}
-
 	/// Returns the opcode of the operation that create this interval.
 	inline CmpInst::Predicate getOperation() const {return this->pred;}
-
 	/// Returns the node which is the bound of this interval.
 	const Value* getBound() const {return this->bound;}
-
 	/// Replace symbolic intervals with hard-wired constants.
 	Range fixIntersects(VarNode* bound, VarNode* sink);
-
-  /// Prints the content of the interval.
-  void print(raw_ostream& OS) const;
+	/// Prints the content of the interval.
+	void print(raw_ostream& OS) const;
 };
-
 
 enum OperationId {
 	UnaryOpId,
@@ -289,171 +225,128 @@ class BasicOp {
 private:
 	// We do not want people creating objects of this class.
 	void operator=(const BasicOp&);
-
-  BasicOp(const BasicOp&);
-
+	BasicOp(const BasicOp&);
 	// The range of the operation. Each operation has a range associated to it.
 	// This range is obtained by inspecting the branches in the source program
 	// and extracting its condition and intervals.
 	BasicInterval* intersect;
-
 	// The target of the operation, that is, the node which
 	// will store the result of the operation.
 	VarNode* sink;
-	
 	// The instruction that originated this op node
 	const Instruction *inst;
 
 protected:
-    /// We do not want people creating objects of this class,
-    /// but we want to inherit from it.
-    BasicOp(BasicInterval* intersect, VarNode* sink, const Instruction *inst);
+	/// We do not want people creating objects of this class,
+	/// but we want to inherit from it.
+	BasicOp(BasicInterval* intersect, VarNode* sink, const Instruction *inst);
 
 public:
-  	/// The dtor. Its virtual because this is a base class.
-    virtual ~BasicOp();
-    
-    // Methods for RTTI
-    virtual OperationId getValueId() const = 0;
-    
-    static inline bool classof(BasicOp const *) {return true;}
-
-    /// Given the input of the operation and the operation that will be
-    /// performed, evaluates the result of the operation.
-    virtual Range eval() const = 0;
-    
-    /// Return the instruction that originated this op node
-    const Instruction *getInstruction() const {return inst;}
-
-    /// Replace symbolic intervals with hard-wired constants.
-    void fixIntersects(VarNode* V);
-
-    /// Returns the range of the operation.
-    inline BasicInterval* getIntersect() const {return intersect;}
-
-    /// Changes the interval of the operation.
-    inline void setIntersect(const Range& newIntersect) {
-    	this->intersect->setRange(newIntersect);
-    }
-
-    /// Returns the target of the operation, that is,
-    /// where the result will be stored.
-    inline const VarNode* getSink() const {return sink;}
-
-    /// Returns the target of the operation, that is,
-    /// where the result will be stored.
-    inline VarNode* getSink() {return sink;}
-
-    /// Prints the content of the operation.
-    virtual void print(raw_ostream& OS) const = 0;
+	/// The dtor. Its virtual because this is a base class.
+	virtual ~BasicOp();
+	// Methods for RTTI
+	virtual OperationId getValueId() const = 0;
+	static inline bool classof(BasicOp const *) {return true;}
+	/// Given the input of the operation and the operation that will be
+	/// performed, evaluates the result of the operation.
+	virtual Range eval() const = 0;
+	/// Return the instruction that originated this op node
+	const Instruction *getInstruction() const {return inst;}
+	/// Replace symbolic intervals with hard-wired constants.
+	void fixIntersects(VarNode* V);
+	/// Returns the range of the operation.
+	inline BasicInterval* getIntersect() const {return intersect;}
+	/// Changes the interval of the operation.
+	inline void setIntersect(const Range& newIntersect) {
+		this->intersect->setRange(newIntersect);
+	}
+	/// Returns the target of the operation, that is,
+	/// where the result will be stored.
+	inline const VarNode* getSink() const {return sink;}
+	/// Returns the target of the operation, that is,
+	/// where the result will be stored.
+	inline VarNode* getSink() {return sink;}
+	/// Prints the content of the operation.
+	virtual void print(raw_ostream& OS) const = 0;
 };
-
 
 /// A constraint like sink = operation(source) \intersec [l, u]
 class UnaryOp : public BasicOp {
 private:
 	// The source node of the operation.
 	VarNode* source;
-
 	// The opcode of the operation.
 	unsigned int opcode;
-
 	/// Computes the interval of the sink based on the interval of the sources,
 	/// the operation and the interval associated to the operation.
 	Range eval() const;
 
 public:
-	/// The ctor.
-  UnaryOp(BasicInterval* intersect,
-      		VarNode* sink,
-      		const Instruction* inst,
-      		VarNode* source,
-      		unsigned int opcode);
-
-  /// The dtor.
-  ~UnaryOp();
-	
+	UnaryOp(BasicInterval* intersect,
+		VarNode* sink,
+		const Instruction* inst,
+		VarNode* source,
+		unsigned int opcode);
+	~UnaryOp();
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return UnaryOpId;}
-	
 	static inline bool classof(UnaryOp const *) {return true;}
-
 	static inline bool classof(BasicOp const *BO) {
 		return BO->getValueId() == UnaryOpId ||  BO->getValueId() == SigmaOpId;
 	}
-
-  /// Return the opcode of the operation.
-  inline unsigned int getOpcode() const {return opcode;}
-
+	/// Return the opcode of the operation.
+	inline unsigned int getOpcode() const {return opcode;}
 	/// Returns the source of the operation.
 	VarNode *getSource() const {return source;}
-
-  /// Prints the content of the operation. I didn't it an operator overload
-  /// because I had problems to access the members of the class outside it.
-  void print(raw_ostream& OS) const;
+	/// Prints the content of the operation. I didn't it an operator overload
+	/// because I had problems to access the members of the class outside it.
+	void print(raw_ostream& OS) const;
 };
 
 // Specific type of UnaryOp used to represent sigma functions
 class SigmaOp: public UnaryOp {
 private:
-
 	/// Computes the interval of the sink based on the interval of the sources,
 	/// the operation and the interval associated to the operation.
 	Range eval() const;
 
 public:
-	/// The ctor.
-  SigmaOp(BasicInterval* intersect,
-      		VarNode* sink,
-      		const Instruction* inst,
-      		VarNode* source,
-      		unsigned int opcode);
-
-  /// The dtor.
-  ~SigmaOp();
-	
+	SigmaOp(BasicInterval* intersect,
+		VarNode* sink,
+		const Instruction* inst,
+		VarNode* source,
+		unsigned int opcode);
+	~SigmaOp();
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return SigmaOpId;}
-	
 	static inline bool classof(SigmaOp const *) {return true;}
-	
 	static inline bool classof(UnaryOp const *UO) {
 		return UO->getValueId() == SigmaOpId;
 	}
-
 	static inline bool classof(BasicOp const *BO) {
 		return BO->getValueId() == SigmaOpId;
 	}
-
-  /// Prints the content of the operation. I didn't it an operator overload
-  /// because I had problems to access the members of the class outside it.
-  void print(raw_ostream& OS) const;
+	/// Prints the content of the operation. I didn't it an operator overload
+	/// because I had problems to access the members of the class outside it.
+	void print(raw_ostream& OS) const;
 };
-
 
 // Specific type of BasicOp used in Nuutila
 class ControlDep : public BasicOp {
 private:
 	VarNode *source;
-	
 	Range eval() const;
-	    
-  void print(raw_ostream& OS) const;
-	
+	void print(raw_ostream& OS) const;
+
 public:
 	ControlDep(VarNode* sink, VarNode *source);
-	
 	~ControlDep();
-	
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return ControlDepId;}
-	
 	static inline bool classof(ControlDep const *) {return true;}
-	
-  static inline bool classof(BasicOp const *BO) {
+	static inline bool classof(BasicOp const *BO) {
 		return BO->getValueId() == ControlDepId;
 	}
-	
 	/// Returns the source of the operation.
 	VarNode *getSource() const {return source;}
 };
@@ -463,99 +356,73 @@ class PhiOp : public BasicOp {
 private:
 	// Vector of sources
 	SmallVector<const VarNode*, 2> sources;
-	
 	// The opcode of the operation.
 	unsigned int opcode;
-
 	/// Computes the interval of the sink based on the interval of the sources,
 	/// the operation and the interval associated to the operation.
 	Range eval() const;
 
 public:
-	/// The ctor.
-  PhiOp(BasicInterval* intersect,
-      	  VarNode* sink,
-      	  const Instruction* inst,
-      	  unsigned int opcode);
-
-	/// The dtor.
+	PhiOp(BasicInterval* intersect,
+		VarNode* sink,
+		const Instruction* inst,
+		unsigned int opcode);
 	~PhiOp();
-	
 	// Add source to the vector of sources
 	void addSource(const VarNode* newsrc);
-	
 	// Return source identified by index
 	const VarNode *getSource(unsigned index) const {return sources[index];}
-	
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return PhiOpId;}
-	
 	static inline bool classof(PhiOp const *) {
 		return true;
 	}
-
 	static inline bool classof(BasicOp const *BO) {
 		return BO->getValueId() == PhiOpId;
 	}
-
-  /// Prints the content of the operation. I didn't it an operator overload
-  /// because I had problems to access the members of the class outside it.
-  void print(raw_ostream& OS) const;
+	/// Prints the content of the operation. I didn't it an operator overload
+	/// because I had problems to access the members of the class outside it.
+	void print(raw_ostream& OS) const;
 };
-
 
 /// A constraint like sink = source1 operation source2 intersect [l, u].
 class BinaryOp : public BasicOp {
 private:
 	// The first operand.
 	VarNode* source1;
-
 	// The second operand.
 	VarNode* source2;
-
 	// The opcode of the operation.
 	unsigned int opcode;
-
 	/// Computes the interval of the sink based on the interval of the sources,
 	/// the operation and the interval associated to the operation.
 	Range eval() const;
 
 public:
-	// The ctor.
-    BinaryOp(BasicInterval* intersect,
-        		 VarNode* sink,
-        		 const Instruction* inst,
-        		 VarNode* source1,
-        		 VarNode* source2,
-        		 unsigned int opcode);
-
-	/// The dtor.
+	BinaryOp(BasicInterval* intersect,
+		VarNode* sink,
+		const Instruction* inst,
+		VarNode* source1,
+		VarNode* source2,
+		unsigned int opcode);
 	~BinaryOp();
-	
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return BinaryOpId;}
-	
 	static inline bool classof(BinaryOp const *) {
 		return true;
 	}
-
 	static inline bool classof(BasicOp const *BO) {
 		return BO->getValueId() == BinaryOpId;
 	}
-
-  /// Return the opcode of the operation.
-  inline unsigned int getOpcode() const {return opcode;}
-
-  /// Returns the first operand of this operation.
-  inline VarNode *getSource1() const {return source1;}
-
-  /// Returns the second operand of this operation.
-  inline VarNode *getSource2() const {return source2;}
-
-  /// Prints the content of the operation. I didn't it an operator overload
-  /// because I had problems to access the members of the class outside it.
-  void print(raw_ostream& OS) const;
-
+	/// Return the opcode of the operation.
+	inline unsigned int getOpcode() const {return opcode;}
+	/// Returns the first operand of this operation.
+	inline VarNode *getSource1() const {return source1;}
+	/// Returns the second operand of this operation.
+	inline VarNode *getSource2() const {return source2;}
+	/// Prints the content of the operation. I didn't it an operator overload
+	/// because I had problems to access the members of the class outside it.
+	void print(raw_ostream& OS) const;
 };
 
 /// This class is used to store the intersections that we get in the branches.
@@ -572,48 +439,39 @@ private:
 
 public:
 	ValueBranchMap(const Value* V,
-		      		   const BasicBlock* BBTrue,
-		      		   const BasicBlock* BBFalse,
-		      		   BasicInterval* ItvT,
-		      		   BasicInterval* ItvF);
-
+		const BasicBlock* BBTrue,
+		const BasicBlock* BBFalse,
+		BasicInterval* ItvT,
+		BasicInterval* ItvF);
 	~ValueBranchMap();
-
-  /// Get the "false side" of the branch
-  inline const BasicBlock *getBBFalse() const {
+	/// Get the "false side" of the branch
+	inline const BasicBlock *getBBFalse() const {
 		return BBFalse;
 	}
-
-  /// Get the "true side" of the branch
+	/// Get the "true side" of the branch
 	inline const BasicBlock *getBBTrue() const {
 		return BBTrue;
 	}
-
-  /// Get the interval associated to the true side of the branch
+	/// Get the interval associated to the true side of the branch
 	inline BasicInterval *getItvT() const {
 		return ItvT;
 	}
-
-  /// Get the interval associated to the false side of the branch
+	/// Get the interval associated to the false side of the branch
 	inline BasicInterval *getItvF() const {
 		return ItvF;
 	}
-
-  /// Get the value associated to the branch.
+	/// Get the value associated to the branch.
 	inline const Value *getV() const {
 		return V;
 	}
-
-  /// Change the interval associated to the true side of the branch
+	/// Change the interval associated to the true side of the branch
 	inline void setItvT(BasicInterval *Itv) {
 		this->ItvT = Itv;
 	}
-
-  /// Change the interval associated to the false side of the branch
+	/// Change the interval associated to the false side of the branch
 	inline void setItvF(BasicInterval *Itv) {
 		this->ItvF = Itv;
 	}
-
 };
 
 // The VarNodes type.
@@ -638,88 +496,61 @@ typedef DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
 /// perform all computations in our analysis.
 class ConstraintGraph {
 private:
-
 	// The variables of the source program and the nodes which represent them.
 	VarNodes* vars;
-
 	// The operations of the source program and the nodes which represent them.
 	GenOprs* oprs;
-
 	// A map from variables to the operations where these variables are used.
 	UseMap* useMap;
-	
 	// A map from variables to the operations where these 
-  // variables are present as bounds
+	// variables are present as bounds
 	SymbMap* symbMap;
-
-  // This data structure is used to store intervals, basic blocks and intervals
-  // obtained in the branches.
+	// This data structure is used to store intervals, basic blocks and intervals
+	// obtained in the branches.
 	ValuesBranchMap* valuesBranchMap;
-
 	/// Adds a BinaryOp in the graph.
 	void addBinaryOp(const Instruction* I);
-
 	/// Adds a PhiOp in the graph.
 	void addPhiOp(const PHINode* Phi);
-	
 	// Adds a SigmaOp to the graph.
 	void addSigmaOp(const PHINode* Sigma);
-
 	/// Takes an intruction and creates an operation.
 	void buildOperations(const Instruction* I);
-
 	void buildValueBranchMap(const Function& F);
-
-  // Perform the widening and narrowing operations
+	// Perform the widening and narrowing operations
 	void update(std::set<const Value*>& actv, bool (*meet)(BasicOp* op));
-
-
 	//void update(const UseMap &compUseMap,
-  //	    SmallPtrSet<const Value*, 32>& actv, bool (*meet)(BasicOp* op));
+	//	SmallPtrSet<const Value*, 32>& actv, bool (*meet)(BasicOp* op));
 
 public:
-
 	/// I'm doing this because I want to use this analysis in an
 	/// inter-procedural pass. So, I have to receive these data structures as
 	// parameters.
 	ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
-        					ValuesBranchMap *valuesBranchMap);
-
-	/// The dtor.
+		ValuesBranchMap *valuesBranchMap);
 	~ConstraintGraph();
-
 	/// Adds a VarNode in the graph.
 	VarNode* addVarNode(const Value* V);
-
 	/// Adds an UnaryOp to the graph.
 	void addUnaryOp(VarNode* sink, VarNode* source);
-
 	/// Adds an UnaryOp to the graph.
 	void addUnaryOp(const Instruction* I);
-
 	/// Iterates through all instructions in the function and builds the graph.
 	void buildGraph(const Function& F);
-
 	void buildSymbolicIntersectMap();
-
 	UseMap buildUseMap(const SmallPtrSet<VarNode*, 32> &component);
-	
 	void propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &component);
-
 	/// Finds the intervals of the variables in the graph.
 	void findIntervals(const Function& F); // FIXME: Remove the parameter.
-
 	/// Releases the memory used by the graph.
 	void clear();
-
 	/// Prints the content of the graph in dot format. For more informations
 	/// about the dot format, see: http://www.graphviz.org/pdf/dotguide.pdf
 	void print(const Function& F, raw_ostream& OS) const;
-
+	void printToFile(const Function& F, Twine FileName);
 	/// Allow easy printing of graphs from the debugger.
 	void dump(const Function& F) const {print(F, dbgs()); dbgs() << '\n'; };
 };
-
 
 class Nuutila {
 public:
@@ -736,16 +567,12 @@ public:
 	void addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNodes* vars);
 	void delControlDependenceEdges(UseMap *useMap);
 	void visit(Value *V, std::stack<Value*> &stack, UseMap *useMap);
-	
 	typedef std::deque<Value*>::reverse_iterator iterator;
-	
 	iterator begin() {return worklist.rbegin();}
 	iterator end() {return worklist.rend();}
 };
 
-
 } // end namespace
 
 #endif /* LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_ */
-
 

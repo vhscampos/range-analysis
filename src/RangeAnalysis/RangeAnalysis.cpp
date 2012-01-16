@@ -140,14 +140,15 @@ bool RangeAnalysis::runOnFunction(Function &F) {
   
 	// Build the graph and find the intervals of the variables.
 	CG.buildGraph(F);
-	CG.print(F, errs());
+//	CG.print(F, errs());
+	CG.printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
 	CG.findIntervals(F);
+	CG.printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
 	return false;
 }
 
 void RangeAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-//  AU.addRequired<SSI> ();
+	AU.setPreservesAll();
 }
 
 
@@ -161,9 +162,9 @@ static RegisterPass<RangeAnalysis> Y("range-analysis", "Range Analysis");
 Range::Range() : l(Min), u(Max), isEmpty(false) {}
 
 Range::Range(APInt lb, APInt ub, bool isEmpty = false) :
-    		     l(lb.sextOrTrunc(MAX_BIT_INT)),
-		         u(ub.sextOrTrunc(MAX_BIT_INT)),
-		         isEmpty(isEmpty) {}
+	l(lb.sextOrTrunc(MAX_BIT_INT)),
+	u(ub.sextOrTrunc(MAX_BIT_INT)),
+	isEmpty(isEmpty) {}
 
 Range::~Range() {}
 
@@ -1312,17 +1313,14 @@ void ConstraintGraph::addPhiOp(const PHINode* Phi)
 {
 	// Create the sink.
 	VarNode* sink = addVarNode(Phi);
-	
 	PhiOp* phiOp = new PhiOp(new BasicInterval(), sink, Phi, Phi->getOpcode());
 	
 	// Insert the operation in the graph.
 	this->oprs->insert(phiOp);
 
-
 	// Create the sources.
-	for (unsigned int i = 0; i < Phi->getNumOperands(); i += 2) {
-		VarNode* source = addVarNode(Phi->getOperand(i));
-		
+	for (User::const_op_iterator it = Phi->op_begin(), e = Phi->op_end(); it != e; ++it) {
+		VarNode* source = addVarNode(*it);
 		phiOp->addSource(source);
 		
 		// Inserts the sources of the operation in the use map list.
@@ -1338,11 +1336,12 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 	SigmaOp* sigmaOp = NULL;
 
 	// Create the sources.
-	for (unsigned int i = 0; i < Sigma->getNumOperands(); i += 2) {
-		VarNode* source = addVarNode(Sigma->getOperand(i));
+	for (User::const_op_iterator it = Sigma->op_begin(), e = Sigma->op_end(); it != e; ++it) {
+		Value *operand = *it;
+		VarNode* source = addVarNode(operand);
 		// Create the operation.
-		if (this->valuesBranchMap->count(Sigma->getOperand(i))) {
-			ValueBranchMap VBM = this->valuesBranchMap->find(Sigma->getOperand(i))->second;
+		if (this->valuesBranchMap->count(operand)) {
+			ValueBranchMap VBM = this->valuesBranchMap->find(operand)->second;
 			if (Sigma->getParent() == VBM.getBBTrue()) {
 				BItv = VBM.getItvT();
 			} else {
@@ -1387,9 +1386,7 @@ void ConstraintGraph::buildOperations(const Instruction* I) {
 	}
 }
 
-
 void ConstraintGraph::buildValueBranchMap(const Function& F) {
-
 	// Fix the intersects using the ranges obtained in the branches.
 	for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
 		// If the terminator is not a conditional branch
@@ -1407,12 +1404,12 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 			continue;
 		}
 
+		//FIXME: handle switch case later
 		const Type* op0Type = ICI->getOperand(0)->getType();
 		const Type* op1Type = ICI->getOperand(1)->getType();
 		if (!op0Type->isIntegerTy() || !op1Type->isIntegerTy()) {
 			continue;
 		}
-
 
 		// Gets the successors of the current basic block.
 		const BasicBlock *TBlock = Br->getSuccessor(0);
@@ -1473,7 +1470,6 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 		}
 	}
 }
-
 
 /// Iterates through all instructions in the function and builds the graph.
 void ConstraintGraph::buildGraph(const Function& F) {
@@ -1706,7 +1702,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 */
 
 
-	// Gets the entry points of the SCC
+	// Get the entry points of the SCC
 	std::set<const Value*> entryPoints;
 	//FIXME: Collect these variables automatically. 
 	// Victor will do it on the SCCs part.
@@ -1718,7 +1714,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 			entryPoints.insert(vbgn->first);
 		}
 	}
-
+	errs() << "Entrypoints.size="<< entryPoints.size();
 	// Fernando's findInterval method
 	update(entryPoints, widenMeet);
 	
@@ -1754,7 +1750,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 
 	update(activeVars, narrowMeet);
 
-	errs() << "===========================================================\n";
+	errs() << "======================Narrow===============================\n";
 	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
 		errs() << vbgn->first->getName() << " ";
 		vbgn->second->getRange().print(errs());
@@ -1793,7 +1789,6 @@ void ConstraintGraph::findIntervals(const Function& F) {
 	percentReduction = (unsigned int) reduction;
 
 }
-
 
 // TODO: To implement it.
 /// Releases the memory used by the graph.
@@ -1837,6 +1832,13 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 
 	// Print the footer of the .dot file.
 	OS << "}\n";
+}
+
+void ConstraintGraph::printToFile(const Function& F, Twine FileName){
+	std::string ErrorInfo;
+	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo);
+	print(F,file);
+	file.close();
 }
 
 /*
