@@ -33,36 +33,23 @@ bool vSSA::runOnFunction(Function &F) {
 void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 {
 	TerminatorInst *ti = BB->getTerminator();
-	// If the condition used in the terminator instruction is a Comparison instruction: for each operand of the CmpInst, create sigmas, depending on some conditions		
-	for (unsigned i = 0, e = ti->getNumOperands(); i < e; ++i) {
-		CmpInst *comparison = dyn_cast<CmpInst>(ti->getOperand(i));
-
-		if (comparison) {
-			for (unsigned j = 0, f = comparison->getNumOperands(); j < f; ++j) {
-				Value *V = comparison->getOperand(j);
-				
-				if (isa<Instruction>(V) || isa<Argument>(V)) {
-					insertSigmas(ti, V);
+	// If the condition used in the terminator instruction is a Comparison instruction:
+	//for each operand of the CmpInst, create sigmas, depending on some conditions
+	if(isa<BranchInst>(ti)){
+		BranchInst * bc = cast<BranchInst>(ti);
+		if(bc->isConditional()){
+			Value * cond = bc->getCondition();
+			CmpInst *comparison = dyn_cast<CmpInst>(cond);
+			for (User::const_op_iterator it = comparison->op_begin(), e = comparison->op_end(); it != e; ++it) {
+				Value *operand = *it;
+				if (isa<Instruction>(operand) || isa<Argument>(operand)) {
+					insertSigmas(ti, operand);
 				}
 			}
 		}
+	}else{
+		//TODO: Implement the switch if necessary in the future
 	}
-	
-//	if(isa<BranchInst>(ti)){
-//		BranchInst * bc = cast<BranchInst>(ti);
-//		if(bc->isConditional()){
-//			Value * cond = bc->getCondition();
-//			CmpInst *comparison = dyn_cast<CmpInst>(cond);
-//			for (unsigned j = 0, f = comparison->getNumOperands(); j < f; ++j) {
-//				Value *V = comparison->getOperand(j);
-//				if (isa<Instruction>(V) || isa<Argument>(V)) {
-//					insertSigmas(ti, V);
-//				}
-//			}
-//		}
-//	}else{
-//		//TODO: Implement the switch if necessary in the future
-//	}
 }
 
 /*
