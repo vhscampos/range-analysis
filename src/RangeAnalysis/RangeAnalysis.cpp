@@ -66,24 +66,24 @@ static bool isValidInstruction(const Instruction* I) {
 	}
 
 	switch (I->getOpcode()) {
-	case Instruction::Add:   
-	case Instruction::Sub:   
-	case Instruction::Mul:   
-	case Instruction::UDiv:  
-	case Instruction::SDiv:  
-	case Instruction::URem:  
-	case Instruction::SRem:  
-	case Instruction::Shl:   
-	case Instruction::LShr:  
-	case Instruction::AShr:  
-	case Instruction::And:   
-	case Instruction::Or:    
-	case Instruction::Xor:   
-	case Instruction::Trunc: 
-	case Instruction::ZExt:  
-	case Instruction::SExt:  
-	case Instruction::Load:  
-	case Instruction::Store: 
+	case Instruction::Add:
+	case Instruction::Sub:
+	case Instruction::Mul:
+	case Instruction::UDiv:
+	case Instruction::SDiv:
+	case Instruction::URem:
+	case Instruction::SRem:
+	case Instruction::Shl:
+	case Instruction::LShr:
+	case Instruction::AShr:
+	case Instruction::And:
+	case Instruction::Or:
+	case Instruction::Xor:
+	case Instruction::Trunc:
+	case Instruction::ZExt:
+	case Instruction::SExt:
+	case Instruction::Load:
+	case Instruction::Store:
 		return true;
 	default: 
 		return false;
@@ -1383,38 +1383,30 @@ void ConstraintGraph::buildOperations(const Instruction* I) {
 
 void ConstraintGraph::buildValueBranchMap(const Function& F) {
 	// Fix the intersects using the ranges obtained in the branches.
-	for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-		// If the terminator is not a conditional branch
-		// then move on to the next instruction.
-		const TerminatorInst* Tr = I->getParent()->getTerminator();
-		const BranchInst *Br = dyn_cast<BranchInst> (Tr);
-		if (!Br || !Br->isConditional()) {
-			continue;
-		}
-
-		// If the instruction is not a comparator instruction,
-		// then move on to the next instruction.
-		ICmpInst *ICI = dyn_cast<ICmpInst> (Br->getCondition());
-		if (!ICI) {
-			continue;
-		}
+	for (Function::const_iterator iBB = F.begin(), eBB = F.end(); iBB != eBB; ++iBB){
+		const TerminatorInst* ti = iBB->getTerminator();
+		if(!isa<BranchInst>(ti))	continue;
+		const BranchInst * br = cast<BranchInst>(ti);
+		if(!br->isConditional())	continue;
+		ICmpInst *ici = dyn_cast<ICmpInst> (br->getCondition());
+		if(!ici) continue;
 
 		//FIXME: handle switch case later
-		const Type* op0Type = ICI->getOperand(0)->getType();
-		const Type* op1Type = ICI->getOperand(1)->getType();
+		const Type* op0Type = ici->getOperand(0)->getType();
+		const Type* op1Type = ici->getOperand(1)->getType();
 		if (!op0Type->isIntegerTy() || !op1Type->isIntegerTy()) {
 			continue;
 		}
 
 		// Gets the successors of the current basic block.
-		const BasicBlock *TBlock = Br->getSuccessor(0);
-		const BasicBlock *FBlock = Br->getSuccessor(1);
+		const BasicBlock *TBlock = br->getSuccessor(0);
+		const BasicBlock *FBlock = br->getSuccessor(1);
 
 		// We have a Variable-Constant comparison.
-		if (ConstantInt *CI = dyn_cast<ConstantInt>(ICI->getOperand(1))) {
+		if (ConstantInt *CI = dyn_cast<ConstantInt>(ici->getOperand(1))) {
 			// Calculate the range of values that would satisfy the comparison.
 			ConstantRange CR(CI->getValue(), CI->getValue() + 1);
-			unsigned int pred = ICI->getPredicate();
+			unsigned int pred = ici->getPredicate();
 			
 			// TODO: Fix this interval to saturate on sums
 			ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
@@ -1441,27 +1433,27 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 			// Create the interval using the intersection in the branch.
 			BasicInterval* BT = new BasicInterval(TValues);
 			BasicInterval* BF = new BasicInterval(FValues);
-			ValueBranchMap VBM(ICI->getOperand(0), TBlock, FBlock, BT, BF);
-			valuesBranchMap->insert(std::make_pair(ICI->getOperand(0), VBM));
+			ValueBranchMap VBM(ici->getOperand(0), TBlock, FBlock, BT, BF);
+			valuesBranchMap->insert(std::make_pair(ici->getOperand(0), VBM));
 		} else {
 			// Create the interval using the intersection in the branch.
-			CmpInst::Predicate pred = ICI->getPredicate();
-			CmpInst::Predicate invPred = ICI->getInversePredicate();
+			CmpInst::Predicate pred = ici->getPredicate();
+			CmpInst::Predicate invPred = ici->getInversePredicate();
 			Range CR(Min, Max, false);
-			const Value* Op1 = ICI->getOperand(1);
+			const Value* Op1 = ici->getOperand(1);
 
 			// Symbolic intervals for op0
-			const Value* Op0 = ICI->getOperand(0);
+			const Value* Op0 = ici->getOperand(0);
 			SymbInterval* STOp0 = new SymbInterval(CR, Op1, pred);
 			SymbInterval* SFOp0 = new SymbInterval(CR, Op1, invPred);
 			ValueBranchMap VBMOp0(Op0, TBlock, FBlock, STOp0, SFOp0);
-			valuesBranchMap->insert(std::make_pair(ICI->getOperand(0), VBMOp0));
+			valuesBranchMap->insert(std::make_pair(ici->getOperand(0), VBMOp0));
 
 			// Symbolic intervals for op1
 			SymbInterval* STOp1 = new SymbInterval(CR, Op0, invPred);
 			SymbInterval* SFOp1 = new SymbInterval(CR, Op0, pred);
 			ValueBranchMap VBMOp1(Op1, TBlock, FBlock, STOp1, SFOp1);
-			valuesBranchMap->insert(std::make_pair(ICI->getOperand(1), VBMOp1));
+			valuesBranchMap->insert(std::make_pair(ici->getOperand(1), VBMOp1));
 		}
 	}
 }
