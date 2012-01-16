@@ -237,7 +237,7 @@ SmallVector<PHINode*, 25> vSSA::insertPhisForSigma(Value *V, PHINode *sigma)
 			
 			// Create the vSSA_PHI, and put the phi node in the deques
 			//NumReservedValues is a hint for the number of incoming edges that this phi node will have (use 0 if you really have no idea).
-			PHINode *vssaphi = PHINode::Create(V->getType(), 1, Twine(vSSA_PHI), &(BB_infrontier->front()));
+			PHINode *vssaphi = PHINode::Create(V->getType(), 0, Twine(vSSA_PHI), &(BB_infrontier->front()));
 		
 			phiscreated.push_back(vssaphi);
 			
@@ -294,7 +294,7 @@ void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 			}
 			
 			// Create the vSSA_PHI, and put the phi node in the deques
-			PHINode *vssaphi = PHINode::Create(V->getType(), 1, Twine(vSSA_PHI), &(BB_infrontier->front()));
+			PHINode *vssaphi = PHINode::Create(V->getType(), 0, Twine(vSSA_PHI), &(BB_infrontier->front()));
 		
 			phiscreated.push_back(vssaphi);
 			
