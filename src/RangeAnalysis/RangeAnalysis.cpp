@@ -145,7 +145,7 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	CG.buildGraph(F);
 //	CG.print(F, errs());
 	CG.printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
-	CG.findIntervals(/*F*/);
+	CG.findIntervals(F);
 	CG.printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
 	return false;
 }
@@ -1691,8 +1691,7 @@ void ConstraintGraph::update(const UseMap &compUseMap, std::set<const Value*>& a
 
 
 /// Finds the intervals of the variables in the graph.
-// FIXME: Remove the parameter
-void ConstraintGraph::findIntervals(/*const Function& F*/) {
+void ConstraintGraph::findIntervals() {
 
 	// Builds symbMap
 	buildSymbolicIntersectMap();
@@ -1706,11 +1705,8 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end(); nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
 		
-		
 		errs() << component.size() << "\n";
-		
-		
-		
+
 		// DEBUG
 		/*
 		if (component.size() == 16) {
@@ -1783,81 +1779,46 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 		
 		// Get the entry points of the SCC
 		std::set<const Value*> entryPoints;
-		
-		if (!entryPoints.empty()) {
-			errs() << "Set não vazio\n";
-		}
-		
-		// Iterate over the varnodes in the component
-		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
-			VarNode *var = *cit;
-			const Value *V = var->getValue();
-			
-			// TODO: Verificar a condição para ser um entry point
-			if (!var->getRange().isEmptySet()) {
-				entryPoints.insert(V);
-			}
-		}
-		
+		generateEntryPoints(component, entryPoints);
 		// Primeiro iterate till fix point
 		update(compUseMap, entryPoints, Meet::widen);
-		
-		// Iterate again over the varnodes in the component
-		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
-			VarNode *var = *cit;
-			const Value *V = var->getValue();
-			
-			SymbMap::iterator sit = symbMap->find(V);
-			
-			if (sit != symbMap->end()) {
-				for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend = sit->second.end(); opit != opend; ++opit) {
-					BasicOp *op = *opit;
-					
-					op->fixIntersects(var);
-				}
-			}
-		}
-		
+		fixIntersects(component);
 		// Segundo iterate till fix point
 		std::set<const Value*> activeVars;
-		
-		if (!activeVars.empty()) {
-			errs() << "Set não vazio\n";
-		}
-		
-		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
-			VarNode *var = *cit;
-			const Value *V = var->getValue();
-			
-			const ConstantInt* CI = dyn_cast<ConstantInt>(V);
-			if (CI) {
-				continue;
-			}
-			
-			activeVars.insert(V);
-		}
-		
+		generateActivesVars(component, activeVars);
 		update(compUseMap, activeVars, Meet::narrow);
 		
 		// TODO: PROPAGAR PARA O PROXIMO SCC
 		propagateToNextSCC(component);
 		
-		for (VarNodes::iterator vit = vars->begin(), vend = vars->end(); vit != vend; ++vit) {
-			const VarNode *vn = vit->second;
-			const Value *v = vit->first;
-			
-			errs() << v->getName() << " [" << vn->getRange().getLower() << ", " << vn->getRange().getUpper() << "]\n";
-		}
-		
-		errs() << "\n";
+		printResultIntervals();
 	}
+	
+	computeStats();
+}
 
+void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &entryPoints){
+	if (!entryPoints.empty()) {
+		errs() << "Set não vazio\n";
+	}
+	
+	// Iterate over the varnodes in the component
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+		VarNode *var = *cit;
+		const Value *V = var->getValue();
+		
+		// TODO: Verificar a condição para ser um entry point
+		if (!var->getRange().isEmptySet()) {
+			entryPoints.insert(V);
+		}
+	}
+}
 
-/*
-	// Get the entry points of the SCC
-	std::set<const Value*> entryPoints;
-	//FIXME: Collect these variables automatically. 
-	// Victor will do it on the SCCs part.
+void ConstraintGraph::generateEntryPoints(std::set<const Value*> &entryPoints){
+	if (!entryPoints.empty()) {
+		errs() << "Set não vazio\n";
+	}
+	
 	VarNodes::iterator vbgn = this->vars->begin(), vend = this->vars->end();
 	for (; vbgn != vend; ++vbgn) {
 		vbgn->second->init();
@@ -1866,32 +1827,50 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 			entryPoints.insert(vbgn->first);
 		}
 	}
+}
 
-	// Fernando's findInterval method
-	update(entryPoints, Meet::widen);
-	
-	errs() << "==========================Widen============================\n";
-	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-		errs() << vbgn->first->getName() << " ";
-		vbgn->second->getRange().print(errs());
-		errs() << "\n";
-	}
-	errs() << "===========================================================\n";
-
-	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
-	for (; obgn != oend; ++obgn) {
-
-		if (SymbInterval* SI = dyn_cast<SymbInterval>((*obgn)->getIntersect())) {
-			if (!this->vars->count(SI->getBound())) {
-				continue;
+void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
+	// Iterate again over the varnodes in the component
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+		VarNode *var = *cit;
+		const Value *V = var->getValue();
+		
+		SymbMap::iterator sit = symbMap->find(V);
+		
+		if (sit != symbMap->end()) {
+			for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend = sit->second.end(); opit != opend; ++opit) {
+				BasicOp *op = *opit;
+				
+				op->fixIntersects(var);
 			}
-
-			(*obgn)->fixIntersects(this->vars->find(SI->getBound())->second);
 		}
 	}
+}
 
-	std::set<const Value*> activeVars;
-	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &activeVars){
+	if (!activeVars.empty()) {
+		errs() << "Set não vazio\n";
+	}
+	
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+		VarNode *var = *cit;
+		const Value *V = var->getValue();
+		
+		const ConstantInt* CI = dyn_cast<ConstantInt>(V);
+		if (CI) {
+			continue;
+		}
+		
+		activeVars.insert(V);
+	}
+}
+
+void ConstraintGraph::generateActivesVars(std::set<const Value*> &activeVars){
+	if (!activeVars.empty()) {
+		errs() << "Set não vazio\n";
+	}
+
+	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
 		const ConstantInt* CI = dyn_cast<ConstantInt>(vbgn->first);
 		if (CI) {
 			continue;
@@ -1899,47 +1878,56 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 
 		activeVars.insert(vbgn->first);
 	}
+}
 
-	update(activeVars, Meet::narrow);
+void ConstraintGraph::findIntervals(const Function& F) {
+	// Builds symbMap
+//	buildSymbolicIntersectMap();
+//	
+//	// Get the entry points of the SCC
+//	std::set<const Value*> entryPoints;
+//	generateEntryPoints(entryPoints);
 
-	errs() << "======================Narrow===============================\n";
-	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-		errs() << vbgn->first->getName() << " ";
-		vbgn->second->getRange().print(errs());
-		errs() << "\n";
-	}
-	errs() << "===========================================================\n";
+//	// Fernando's findInterval method
+//	update(entryPoints, Meet::widen);
+//	
+//	errs() << "==========================Widen============================\n";
+//	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+//		errs() << vbgn->first->getName() << " ";
+//		vbgn->second->getRange().print(errs());
+//		errs() << "\n";
+//	}
+//	errs() << "===========================================================\n";
+
+//	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
+//	for (; obgn != oend; ++obgn) {
+
+//		if (SymbInterval* SI = dyn_cast<SymbInterval>((*obgn)->getIntersect())) {
+//			if (!this->vars->count(SI->getBound())) {
+//				continue;
+//			}
+
+//			(*obgn)->fixIntersects(this->vars->find(SI->getBound())->second);
+//		}
+//	}
+
+//	std::set<const Value*> activeVars;
+//	generateActivesVars(activeVars);
+//	update(activeVars, Meet::narrow);
+
+//	errs() << "======================Narrow===============================\n";
+//	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+//		errs() << vbgn->first->getName() << " ";
+//		vbgn->second->getRange().print(errs());
+//		errs() << "\n";
+//	}
+//	errs() << "===========================================================\n";
 
 
 	// ==================================== //
 	// Get the stats
 	// ==================================== //
-
-	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-		// We only count the instructions that have uses.
-		if (vbgn->first->getNumUses() == 0) {
-			continue;
-		}
-
-		unsigned total = vbgn->first->getType()->getPrimitiveSizeInBits();
-		usedBits += total;
-		Range CR = vbgn->second->getRange();
-		unsigned lb = CR.getLower().getActiveBits();
-		unsigned ub = CR.getUpper().getActiveBits();
-		unsigned nBits = lb > ub ? lb : ub;
-
-		if ((lb != 0 || ub != 0) && nBits < total) {
-			needBits += nBits;
-		} else {
-			needBits += total;
-		}
-	}
-
-	double totalB = usedBits;
-	double needB = needBits;
-	double reduction = (double) (totalB - needB) * 100 / totalB;
-	percentReduction = (unsigned int) reduction;
-*/
+//	computeStats();
 }
 
 // TODO: To implement it.
@@ -1991,6 +1979,43 @@ void ConstraintGraph::printToFile(const Function& F, Twine FileName){
 	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo);
 	print(F,file);
 	file.close();
+}
+
+void ConstraintGraph::printResultIntervals(){
+	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+		errs() << vbgn->first->getName() << " ";
+		vbgn->second->getRange().print(errs());
+		errs() << "\n";
+	}
+
+	errs() << "\n";
+}
+
+void ConstraintGraph::computeStats(){
+	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+		// We only count the instructions that have uses.
+		if (vbgn->first->getNumUses() == 0) {
+			continue;
+		}
+
+		unsigned total = vbgn->first->getType()->getPrimitiveSizeInBits();
+		usedBits += total;
+		Range CR = vbgn->second->getRange();
+		unsigned lb = CR.getLower().getActiveBits();
+		unsigned ub = CR.getUpper().getActiveBits();
+		unsigned nBits = lb > ub ? lb : ub;
+
+		if ((lb != 0 || ub != 0) && nBits < total) {
+			needBits += nBits;
+		} else {
+			needBits += total;
+		}
+	}
+
+	double totalB = usedBits;
+	double needB = needBits;
+	double reduction = (double) (totalB - needB) * 100 / totalB;
+	percentReduction = (unsigned int) reduction;
 }
 
 /*

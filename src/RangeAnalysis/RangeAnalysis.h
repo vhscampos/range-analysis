@@ -547,8 +547,20 @@ public:
 	void buildSymbolicIntersectMap();
 	UseMap buildUseMap(const SmallPtrSet<VarNode*, 32> &component);
 	void propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &component);
+	
 	/// Finds the intervals of the variables in the graph.
-	void findIntervals(/*const Function& F*/); // FIXME: Remove the parameter.
+	/// Intra-procedural analysis
+	void findIntervals(const Function& F);
+	void generateEntryPoints(std::set<const Value*> &entryPoints);
+	void fixIntersects();
+	void generateActivesVars(std::set<const Value*> &activeVars);
+	
+	/// Inter-procedural analysis
+	void findIntervals();
+	void generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &entryPoints);
+	void fixIntersects(SmallPtrSet<VarNode*, 32> &component);
+	void generateActivesVars(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &activeVars);
+	
 	/// Releases the memory used by the graph.
 	void clear();
 	/// Prints the content of the graph in dot format. For more informations
@@ -557,10 +569,18 @@ public:
 	void printToFile(const Function& F, Twine FileName);
 	/// Allow easy printing of graphs from the debugger.
 	void dump(const Function& F) const {print(F, dbgs()); dbgs() << '\n'; };
+	void printResultIntervals();
+	void computeStats();
+};
+
+class Cousot: public ConstraintGraph {
+public:
+	Cousot(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
+		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 
+		usemap, valuesBranchMap) {}
 };
 
 class CropDFS: public ConstraintGraph{
-
 public:
 	CropDFS(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 
