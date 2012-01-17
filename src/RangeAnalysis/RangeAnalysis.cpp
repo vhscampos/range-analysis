@@ -99,7 +99,8 @@ static bool isValidInstruction(const Instruction* I) {
 // Range Analysis
 // ========================================================================== //
 
-void RangeAnalysis::getMaxBitWidth(const Function& F) {
+template <class CGT>
+void RangeAnalysis<CGT>::getMaxBitWidth(const Function& F) {
 	unsigned int InstBitSize = 0, opBitSize = 0;
 	MAX_BIT_INT = 1;
 
@@ -129,7 +130,8 @@ void RangeAnalysis::getMaxBitWidth(const Function& F) {
 	Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 }
 
-bool RangeAnalysis::runOnFunction(Function &F) {
+template <class CGT>
+bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	getMaxBitWidth(F);
 
 	// The data structures
@@ -137,7 +139,7 @@ bool RangeAnalysis::runOnFunction(Function &F) {
 	SmallPtrSet<BasicOp*, 64> GOprs;
 	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
 	DenseMap<const Value*, ValueBranchMap> VBMap;
-	ConstraintGraph CG(&VNodes, &GOprs, &UMap, &VBMap);
+	CGT CG(&VNodes, &GOprs, &UMap, &VBMap);
 
 	// Build the graph and find the intervals of the variables.
 	CG.buildGraph(F);
@@ -148,13 +150,17 @@ bool RangeAnalysis::runOnFunction(Function &F) {
 	return false;
 }
 
-void RangeAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+template <class CGT>
+void RangeAnalysis<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.setPreservesAll();
 }
 
 
-char RangeAnalysis::ID = 0;
-static RegisterPass<RangeAnalysis> Y("range-analysis", "Range Analysis");
+template <class CGT>
+char RangeAnalysis<CGT>::ID = 0;
+
+static RegisterPass<RangeAnalysis<ConstraintGraph> > Y("range-analysis", "Range Analysis with Cousot");
+static RegisterPass<RangeAnalysis<CropDFS> > Z("range-analysis-crop", "Range Analysis with CropDFS");
 
 // ========================================================================== //
 // Range
@@ -845,6 +851,19 @@ void VarNode::print(raw_ostream& OS) const {
 	this->getRange().print(OS);
 }
 
+void VarNode::storeAbstractState(){
+	if(this->interval.getLower().eq(Min))
+		if(this->interval.getUpper().eq(Max))
+			this->abstractState = '?';
+		else
+			this->abstractState = '-';
+	else 
+		if (this->interval.getLower().eq(Max))
+			this->abstractState = '+';
+		else
+			this->abstractState = '0';
+}
+
 
 raw_ostream& operator<<(raw_ostream& OS, const VarNode* VN) {
 	VN->print(OS);
@@ -1514,7 +1533,7 @@ void ConstraintGraph::buildGraph(const Function& F) {
 /// a constant interval, e.g., [3, 15]. After this analysis runs, there will
 /// be no undefined interval. Each variable will be either bound to a
 /// constant interval, or to [-, c], or to [c, +], or to [-, +].
-static bool widenMeet(BasicOp* op) {
+bool Meet::widen(BasicOp* op) {
 
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
@@ -1544,12 +1563,53 @@ static bool widenMeet(BasicOp* op) {
 	return oldInterval != sinkInterval;
 }
 
+bool Meet::crop(BasicOp* op){
+	Range oldInterval = op->getSink()->getRange();
+	Range newInterval = op->eval();
+	
+	bool hasChanged = false;
+	char abstractState = op->getSink()->getAbstractState();
+	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
+		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper(), false));
+		hasChanged = true;
+	}
+	
+	if((abstractState == '+' || abstractState == '?') && newInterval.getUpper().slt(oldInterval.getUpper())){
+		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), newInterval.getUpper(), false));
+		hasChanged = true;
+	}
+	
+	return hasChanged;
+}
+
+bool Meet::growth(BasicOp* op){
+	Range oldInterval = op->getSink()->getRange();
+	Range newInterval = op->eval();
+	if (oldInterval.isEmptySet())
+		op->getSink()->setRange(newInterval);
+	else{
+		APInt oldLower = oldInterval.getLower();
+		APInt oldUpper = oldInterval.getUpper();
+		APInt newLower = newInterval.getLower();
+		APInt newUpper = newInterval.getUpper();
+		if(newLower.slt(oldLower))
+			if(newUpper.sgt(oldUpper))
+				op->getSink()->setRange(Range());
+			else
+				op->getSink()->setRange(Range(Min,oldLower));
+		else 
+			if(newUpper.sgt(oldUpper))
+				op->getSink()->setRange(Range(oldUpper,Max));
+	}
+	Range sinkInterval = op->getSink()->getRange();
+	return oldInterval != sinkInterval;
+}
 
 /// This is the meet operator of the cropping analysis. Whereas the growth
 /// analysis expands the bounds of each variable, regardless of intersections
 /// in the constraint graph, the cropping analysis shyrinks these bounds back
 /// to ranges that respect the intersections.
-static bool narrowMeet(BasicOp* op) {
+bool Meet::narrow(BasicOp* op) {
 	APInt oLower = op->getSink()->getRange().getLower();
 	APInt oUpper = op->getSink()->getRange().getUpper();
 	Range newInterval = op->eval();
@@ -1740,7 +1800,7 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 		}
 		
 		// Primeiro iterate till fix point
-		update(compUseMap, entryPoints, widenMeet);
+		update(compUseMap, entryPoints, Meet::widen);
 		
 		// Iterate again over the varnodes in the component
 		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
@@ -1777,7 +1837,7 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 			activeVars.insert(V);
 		}
 		
-		update(compUseMap, activeVars, narrowMeet);
+		update(compUseMap, activeVars, Meet::narrow);
 		
 		// TODO: PROPAGAR PARA O PROXIMO SCC
 		propagateToNextSCC(component);
@@ -1808,7 +1868,7 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 	}
 
 	// Fernando's findInterval method
-	update(entryPoints, widenMeet);
+	update(entryPoints, Meet::widen);
 	
 	errs() << "==========================Widen============================\n";
 	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
@@ -1840,7 +1900,7 @@ void ConstraintGraph::findIntervals(/*const Function& F*/) {
 		activeVars.insert(vbgn->first);
 	}
 
-	update(activeVars, narrowMeet);
+	update(activeVars, Meet::narrow);
 
 	errs() << "======================Narrow===============================\n";
 	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {

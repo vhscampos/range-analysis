@@ -50,6 +50,7 @@
 
 namespace llvm {
 
+template <class CGT>
 class RangeAnalysis: public FunctionPass {
 
 public:
@@ -134,7 +135,10 @@ private:
 	// A Range associated to the variable, that is,
 	// its interval inferred by the analysis.
 	Range interval;
-
+	// Used by the crop meet operator
+	char abstractState;
+	// The possible states are '0', '+', '-' and '?'.
+	void storeAbstractState();
 public:
 	VarNode(const Value* V);
 	~VarNode();
@@ -150,6 +154,7 @@ public:
 	}
 	/// Pretty print.
 	void print(raw_ostream& OS) const;
+	char getAbstractState(){ return abstractState; }
 };
 
 enum IntervalId {
@@ -554,6 +559,14 @@ public:
 	void dump(const Function& F) const {print(F, dbgs()); dbgs() << '\n'; };
 };
 
+class CropDFS: public ConstraintGraph{
+
+public:
+	CropDFS(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
+		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 
+		usemap, valuesBranchMap) {}
+};
+
 class Nuutila {
 public:
 	VarNodes *variables;
@@ -572,6 +585,14 @@ public:
 	typedef std::deque<Value*>::reverse_iterator iterator;
 	iterator begin() {return worklist.rbegin();}
 	iterator end() {return worklist.rend();}
+};
+
+class Meet{
+public:
+	static bool widen(BasicOp* op);
+	static bool narrow(BasicOp* op);
+	static bool crop(BasicOp* op);
+	static bool growth(BasicOp* op);
 };
 
 } // end namespace
