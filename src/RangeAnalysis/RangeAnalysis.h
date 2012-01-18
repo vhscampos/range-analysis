@@ -118,6 +118,8 @@ public:
 	Range Or(const Range& other);
 	Range Xor(const Range& other);
 	Range truncate(unsigned bitwidht) const;
+	Range signExtend(unsigned bitwidht) const;
+	Range zeroExtend(unsigned bitwidht) const;
 	Range sextOrTrunc(unsigned bitwidht) const;
 	Range zextOrTrunc(unsigned bitwidht) const;
 	Range intersectWith(const Range& other) const;
@@ -525,9 +527,9 @@ private:
 	void buildOperations(const Instruction* I);
 	void buildValueBranchMap(const Function& F);
 	// Perform the widening and narrowing operations
-	//void update(std::set<const Value*>& actv, bool (*meet)(BasicOp* op));
+	//void update(SmallPtrSet<const Value*, 6>>& actv, bool (*meet)(BasicOp* op));
 	void update(const UseMap &compUseMap,
-		std::set<const Value*>& actv, bool (*meet)(BasicOp* op));
+		SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op));
 
 public:
 	/// I'm doing this because I want to use this analysis in an
@@ -551,15 +553,15 @@ public:
 	/// Finds the intervals of the variables in the graph.
 	/// Intra-procedural analysis
 	void findIntervals(const Function& F);
-	void generateEntryPoints(std::set<const Value*> &entryPoints);
+	void generateEntryPoints(SmallPtrSet<const Value*, 6> &entryPoints);
 	void fixIntersects();
-	void generateActivesVars(std::set<const Value*> &activeVars);
+	void generateActivesVars(SmallPtrSet<const Value*, 6> &activeVars);
 	
 	/// Inter-procedural analysis
 	void findIntervals();
-	void generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &entryPoints);
+	void generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &entryPoints);
 	void fixIntersects(SmallPtrSet<VarNode*, 32> &component);
-	void generateActivesVars(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &activeVars);
+	void generateActivesVars(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &activeVars);
 	
 	/// Releases the memory used by the graph.
 	void clear();

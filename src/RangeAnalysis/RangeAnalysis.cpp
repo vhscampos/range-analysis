@@ -619,6 +619,24 @@ Range Range::truncate(unsigned bitwidht) const {
 			     isEmptySet());
 }
 
+Range Range::signExtend(unsigned bitwidht) const {
+	if (isEmptySet()) {
+		return Range(APInt::getSignedMinValue(bitwidht),
+				     APInt::getSignedMaxValue(bitwidht), true);
+	}
+	
+	return Range(getLower().sext(bitwidht), getUpper().sext(bitwidht), isEmptySet());
+}
+
+Range Range::zeroExtend(unsigned bitwidht) const {
+	if (isEmptySet()) {
+		return Range(APInt::getSignedMinValue(bitwidht),
+				     APInt::getSignedMaxValue(bitwidht), true);
+	}
+	
+	return Range(getLower().zext(bitwidht), getUpper().zext(bitwidht), isEmptySet());
+}
+
 
 Range Range::sextOrTrunc(unsigned bitwidht) const {
 	if (this->isEmptySet()) {
@@ -626,9 +644,8 @@ Range Range::sextOrTrunc(unsigned bitwidht) const {
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
 
-	// FIXME
-	return Range(Min, Max, false);
-
+	// FIXME (maybe fixed)
+	return signExtend(bitwidht);
 }
 
 
@@ -1644,7 +1661,7 @@ bool Meet::narrow(BasicOp* op) {
 }
 
 
-void ConstraintGraph::update(const UseMap &compUseMap, std::set<const Value*>& actv, bool (*meet)(BasicOp* op)) {
+void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op)) {
 	/*
 	if (actv.empty()) {
 		return;
@@ -1687,6 +1704,7 @@ void ConstraintGraph::update(const UseMap &compUseMap, std::set<const Value*>& a
 			}
 		}
 	}
+	
 }
 
 
@@ -1762,7 +1780,7 @@ void ConstraintGraph::findIntervals() {
 		
 		
 		
-		/*
+		
 		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
 			const ConstantInt *CI = NULL;
 			
@@ -1773,18 +1791,18 @@ void ConstraintGraph::findIntervals() {
 				errs() << (*p)->getValue()->getName() << "\n";
 			}
 		}
-		*/
+		
 		
 		UseMap compUseMap = buildUseMap(component);
 		
 		// Get the entry points of the SCC
-		std::set<const Value*> entryPoints;
+		SmallPtrSet<const Value*, 6> entryPoints;
 		generateEntryPoints(component, entryPoints);
 		// Primeiro iterate till fix point
 		update(compUseMap, entryPoints, Meet::widen);
 		fixIntersects(component);
 		// Segundo iterate till fix point
-		std::set<const Value*> activeVars;
+		SmallPtrSet<const Value*, 6> activeVars;
 		generateActivesVars(component, activeVars);
 		update(compUseMap, activeVars, Meet::narrow);
 		
@@ -1797,7 +1815,7 @@ void ConstraintGraph::findIntervals() {
 	computeStats();
 }
 
-void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &entryPoints){
+void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &entryPoints){
 	if (!entryPoints.empty()) {
 		errs() << "Set não vazio\n";
 	}
@@ -1814,7 +1832,7 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, 
 	}
 }
 
-void ConstraintGraph::generateEntryPoints(std::set<const Value*> &entryPoints){
+void ConstraintGraph::generateEntryPoints(SmallPtrSet<const Value*, 6> &entryPoints){
 	if (!entryPoints.empty()) {
 		errs() << "Set não vazio\n";
 	}
@@ -1847,7 +1865,7 @@ void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
 	}
 }
 
-void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, std::set<const Value*> &activeVars){
+void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &activeVars){
 	if (!activeVars.empty()) {
 		errs() << "Set não vazio\n";
 	}
@@ -1865,7 +1883,7 @@ void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, 
 	}
 }
 
-void ConstraintGraph::generateActivesVars(std::set<const Value*> &activeVars){
+void ConstraintGraph::generateActivesVars(SmallPtrSet<const Value*, 6> &activeVars){
 	if (!activeVars.empty()) {
 		errs() << "Set não vazio\n";
 	}
@@ -1885,7 +1903,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 //	buildSymbolicIntersectMap();
 //	
 //	// Get the entry points of the SCC
-//	std::set<const Value*> entryPoints;
+//	SmallPtrSet<const Value*, 6> entryPoints;
 //	generateEntryPoints(entryPoints);
 
 //	// Fernando's findInterval method
@@ -1911,7 +1929,7 @@ void ConstraintGraph::findIntervals(const Function& F) {
 //		}
 //	}
 
-//	std::set<const Value*> activeVars;
+//	SmallPtrSet<const Value*, 6> activeVars;
 //	generateActivesVars(activeVars);
 //	update(activeVars, Meet::narrow);
 
@@ -1983,7 +2001,12 @@ void ConstraintGraph::printToFile(const Function& F, Twine FileName){
 
 void ConstraintGraph::printResultIntervals(){
 	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-		errs() << vbgn->first->getName() << " ";
+		if (const ConstantInt* C = dyn_cast<ConstantInt>(vbgn->first)) {
+			errs() << C->getValue() << " ";
+		} else {
+			printVarName(vbgn->first, errs());
+		}
+		
 		vbgn->second->getRange().print(errs());
 		errs() << "\n";
 	}

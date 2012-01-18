@@ -81,7 +81,7 @@ namespace {
 
 
 		// TODO: Fazer o código para imprimir o CG
-		
+		/*
 		Function &F = *(M.begin());
 
 		std::string errors;
@@ -93,7 +93,8 @@ namespace {
 		G.print(F, output);
 
 		output.close();
-		
+		*/
+		G.printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
 
 
 		// Collect statistics
