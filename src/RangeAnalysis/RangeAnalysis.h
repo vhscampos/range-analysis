@@ -139,8 +139,7 @@ private:
 	Range interval;
 	// Used by the crop meet operator
 	char abstractState;
-	// The possible states are '0', '+', '-' and '?'.
-	void storeAbstractState();
+
 public:
 	VarNode(const Value* V);
 	~VarNode();
@@ -157,6 +156,8 @@ public:
 	/// Pretty print.
 	void print(raw_ostream& OS) const;
 	char getAbstractState(){ return abstractState; }
+	// The possible states are '0', '+', '-' and '?'.
+	void storeAbstractState();
 };
 
 enum IntervalId {
@@ -504,9 +505,10 @@ typedef DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
 /// This class represents our constraint graph. This graph is used to
 /// perform all computations in our analysis.
 class ConstraintGraph {
-private:
+protected:
 	// The variables of the source program and the nodes which represent them.
 	VarNodes* vars;
+private:
 	// The operations of the source program and the nodes which represent them.
 	GenOprs* oprs;
 	// A map from variables to the operations where these variables are used.
@@ -527,9 +529,17 @@ private:
 	void buildOperations(const Instruction* I);
 	void buildValueBranchMap(const Function& F);
 	// Perform the widening and narrowing operations
-	//void update(SmallPtrSet<const Value*, 6>>& actv, bool (*meet)(BasicOp* op));
+	
+protected:
+	void update(SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op));
 	void update(const UseMap &compUseMap,
 		SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op));
+
+	virtual void preUpdate(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& entryPoints) = 0;
+	virtual void posUpdate(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& activeVars,
+		const SmallPtrSet<VarNode*, 32> *component = NULL) = 0;
 
 public:
 	/// I'm doing this because I want to use this analysis in an
@@ -576,6 +586,12 @@ public:
 };
 
 class Cousot: public ConstraintGraph {
+private:
+	void preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints);
+	void posUpdate(const UseMap &compUseMap, 
+		SmallPtrSet<const Value*, 6>& activeVars,
+		const SmallPtrSet<VarNode*, 32> *component = NULL);
+
 public:
 	Cousot(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 
@@ -583,6 +599,13 @@ public:
 };
 
 class CropDFS: public ConstraintGraph{
+private:
+	void preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints);
+	void posUpdate(const UseMap &compUseMap, 
+		SmallPtrSet<const Value*, 6>& activeVars,
+		const SmallPtrSet<VarNode*, 32> *component = NULL);
+	void storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component);
+
 public:
 	CropDFS(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 

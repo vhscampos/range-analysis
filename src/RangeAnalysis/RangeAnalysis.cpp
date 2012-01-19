@@ -62,11 +62,12 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 /// Selects the instructions that we are going to evaluate.
 static bool isValidInstruction(const Instruction* I) {
 	// FIXME: How can I reference a Phi function by its opcode?
-	if (dyn_cast<PHINode>(I)) {
-		return true;
-	}
+//	if (dyn_cast<PHINode>(I)) {
+//		return true;
+//	}
 
 	switch (I->getOpcode()) {
+	case Instruction::PHI:
 	case Instruction::Add:
 	case Instruction::Sub:
 	case Instruction::Mul:
@@ -139,14 +140,15 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	SmallPtrSet<BasicOp*, 64> GOprs;
 	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
 	DenseMap<const Value*, ValueBranchMap> VBMap;
-	CGT CG(&VNodes, &GOprs, &UMap, &VBMap);
+	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &UMap, &VBMap);
 
 	// Build the graph and find the intervals of the variables.
-	CG.buildGraph(F);
-//	CG.print(F, errs());
-	CG.printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
-	CG.findIntervals(F);
-	CG.printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
+	CG->buildGraph(F);
+	CG->printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
+	errs() << "Analysing function " << F.getName() << ":\n";
+	CG->findIntervals(F);
+	CG->printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
+	delete CG;
 	return false;
 }
 
@@ -155,12 +157,11 @@ void RangeAnalysis<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.setPreservesAll();
 }
 
-
 template <class CGT>
 char RangeAnalysis<CGT>::ID = 0;
 
-static RegisterPass<RangeAnalysis<ConstraintGraph> > Y("range-analysis", "Range Analysis with Cousot");
-static RegisterPass<RangeAnalysis<CropDFS> > Z("range-analysis-crop", "Range Analysis with CropDFS");
+static RegisterPass<RangeAnalysis<Cousot> > Y("ra-intra-cousot", "Range Analysis with Cousot");
+//static RegisterPass<RangeAnalysis<CropDFS> > Z("ra-intra-crop", "Range Analysis with CropDFS");
 
 // ========================================================================== //
 // Range
@@ -294,7 +295,6 @@ Range Range::udiv(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 Range Range::sdiv(const Range& other) {
@@ -434,7 +434,6 @@ Range Range::shl(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -468,7 +467,6 @@ Range Range::lshr(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -502,7 +500,6 @@ Range Range::ashr(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -536,7 +533,6 @@ Range Range::And(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -570,7 +566,6 @@ Range Range::Or(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -604,7 +599,6 @@ Range Range::Xor(const Range& other) {
 	APInt u = uu.sgt(ul) ? uu : ul;
 
 	return Range(l, u, false);
-
 }
 
 
@@ -657,13 +651,10 @@ Range Range::zextOrTrunc(unsigned bitwidht) const {
 
 	// FIXME
 	return Range(Min, Max, false);
-
-
 }
 
 
 Range Range::intersectWith(const Range& other) const {
-
 	if (this->isEmptySet()) {
 		return other;
 	}
@@ -1543,6 +1534,17 @@ void ConstraintGraph::buildGraph(const Function& F) {
 	}
 }
 
+void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component){
+	if(component==NULL){
+		VarNodes::iterator vbgn = this->vars->begin(), vend = this->vars->end();
+		for (; vbgn != vend; ++vbgn) {
+			vbgn->second->storeAbstractState();
+		}
+	}else{
+	//TODO: to implement
+	}
+}
+
 
 /// This is the meet operator of the growth analysis. The growth analysis
 /// will change the bounds of each variable, if necessary. Initially, each
@@ -1660,6 +1662,36 @@ bool Meet::narrow(BasicOp* op) {
 	return hasChanged;
 }
 
+void Cousot::preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints)
+{
+	update(compUseMap, entryPoints, Meet::widen);
+}
+
+void Cousot::posUpdate(const UseMap &compUseMap, 
+	SmallPtrSet<const Value*, 6>& entryPoints, 
+	const SmallPtrSet<VarNode*, 32> *component)
+{
+	update(compUseMap, entryPoints, Meet::narrow);
+}
+
+void CropDFS::preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints)
+{
+	update(compUseMap, entryPoints, Meet::growth);
+}
+
+void CropDFS::posUpdate(const UseMap &compUseMap, 
+	SmallPtrSet<const Value*, 6>& entryPoints, 
+	const SmallPtrSet<VarNode*, 32> *component)
+{
+	update(compUseMap, entryPoints, Meet::narrow);
+	storeAbstractStates(component);
+//	for op in int_op(CompDefMap.values()):
+//		crop_dfs(CompUseMap, set([op]), set())
+}
+
+void ConstraintGraph::update(SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op)) {
+	update(*useMap, actv, meet);
+}
 
 void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op)) {
 	/*
@@ -1704,7 +1736,6 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 			}
 		}
 	}
-	
 }
 
 
@@ -1792,19 +1823,18 @@ void ConstraintGraph::findIntervals() {
 			}
 		}
 		
-		
 		UseMap compUseMap = buildUseMap(component);
 		
 		// Get the entry points of the SCC
 		SmallPtrSet<const Value*, 6> entryPoints;
 		generateEntryPoints(component, entryPoints);
 		// Primeiro iterate till fix point
-		update(compUseMap, entryPoints, Meet::widen);
+		preUpdate(compUseMap, entryPoints);
 		fixIntersects(component);
 		// Segundo iterate till fix point
 		SmallPtrSet<const Value*, 6> activeVars;
 		generateActivesVars(component, activeVars);
-		update(compUseMap, activeVars, Meet::narrow);
+		posUpdate(compUseMap, activeVars, &component);
 		
 		// TODO: PROPAGAR PARA O PROXIMO SCC
 		propagateToNextSCC(component);
@@ -1865,6 +1895,18 @@ void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
 	}
 }
 
+void ConstraintGraph::fixIntersects(){
+	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
+	for (; obgn != oend; ++obgn) {
+		if (SymbInterval* SI = dyn_cast<SymbInterval>((*obgn)->getIntersect())) {
+			if (!this->vars->count(SI->getBound())) {
+				continue;
+			}
+			(*obgn)->fixIntersects(this->vars->find(SI->getBound())->second);
+		}
+	}
+}
+
 void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &activeVars){
 	if (!activeVars.empty()) {
 		errs() << "Set não vazio\n";
@@ -1900,52 +1942,30 @@ void ConstraintGraph::generateActivesVars(SmallPtrSet<const Value*, 6> &activeVa
 
 void ConstraintGraph::findIntervals(const Function& F) {
 	// Builds symbMap
-//	buildSymbolicIntersectMap();
-//	
-//	// Get the entry points of the SCC
-//	SmallPtrSet<const Value*, 6> entryPoints;
-//	generateEntryPoints(entryPoints);
+	buildSymbolicIntersectMap();
+	
+	// Get the entry points of the SCC
+	SmallPtrSet<const Value*, 6> entryPoints;
+	generateEntryPoints(entryPoints);
 
-//	// Fernando's findInterval method
-//	update(entryPoints, Meet::widen);
-//	
-//	errs() << "==========================Widen============================\n";
-//	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-//		errs() << vbgn->first->getName() << " ";
-//		vbgn->second->getRange().print(errs());
-//		errs() << "\n";
-//	}
-//	errs() << "===========================================================\n";
+	// Fernando's findInterval method
+	preUpdate(*useMap, entryPoints);
+	
+	errs() << "==========================Widen============================\n";
+	printResultIntervals();
+	errs() << "===========================================================\n";
 
-//	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
-//	for (; obgn != oend; ++obgn) {
+	fixIntersects();
 
-//		if (SymbInterval* SI = dyn_cast<SymbInterval>((*obgn)->getIntersect())) {
-//			if (!this->vars->count(SI->getBound())) {
-//				continue;
-//			}
+	SmallPtrSet<const Value*, 6> activeVars;
+	generateActivesVars(activeVars);
+	posUpdate(*useMap, activeVars);
 
-//			(*obgn)->fixIntersects(this->vars->find(SI->getBound())->second);
-//		}
-//	}
+	errs() << "======================Narrow===============================\n";
+	printResultIntervals();
+	errs() << "===========================================================\n";
 
-//	SmallPtrSet<const Value*, 6> activeVars;
-//	generateActivesVars(activeVars);
-//	update(activeVars, Meet::narrow);
-
-//	errs() << "======================Narrow===============================\n";
-//	for (vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-//		errs() << vbgn->first->getName() << " ";
-//		vbgn->second->getRange().print(errs());
-//		errs() << "\n";
-//	}
-//	errs() << "===========================================================\n";
-
-
-	// ==================================== //
-	// Get the stats
-	// ==================================== //
-//	computeStats();
+	computeStats();
 }
 
 // TODO: To implement it.
@@ -2045,28 +2065,28 @@ void ConstraintGraph::computeStats(){
  *	This method builds a map that binds each variable to the operation in
  *  which this variable is defined.
  */
-/*
-DefMap ConstraintGraph::buildDefMap(const std::deque<VarNode*> &component)
-{
-	std::deque<BasicOp*> list;
-	for (GenOprs::iterator opit = oprs->begin(), opend = oprs->end(); opit != opend; ++opit) {
-		BasicOp *op = *opit;
-		
-		if (std::find(component.begin(), component.end(), op->getSink()) != component.end()) {
-			list.push_back(op);
-		}
-	}
-	
-	DefMap defMap;
-	
-	for (std::deque<BasicOp*>::iterator opit = list.begin(), opend = list.end(); opit != opend; ++opit) {
-		BasicOp *op = *opit;
-		defMap[op->getSink()] = op;
-	}
-	
-	return defMap;
-}
-*/
+
+//DefMap ConstraintGraph::buildDefMap(const SmallPtrSet<VarNode*, 32> &component)
+//{
+//	std::deque<BasicOp*> list;
+//	for (GenOprs::iterator opit = oprs->begin(), opend = oprs->end(); opit != opend; ++opit) {
+//		BasicOp *op = *opit;
+//		
+//		if (std::find(component.begin(), component.end(), op->getSink()) != component.end()) {
+//			list.push_back(op);
+//		}
+//	}
+//	
+//	DefMap defMap;
+//	
+//	for (std::deque<BasicOp*>::iterator opit = list.begin(), opend = list.end(); opit != opend; ++opit) {
+//		BasicOp *op = *opit;
+//		defMap[op->getSink()] = op;
+//	}
+//	
+//	return defMap;
+//}
+
 
 /*
  *	This method builds a map that binds each variable label to the operations
