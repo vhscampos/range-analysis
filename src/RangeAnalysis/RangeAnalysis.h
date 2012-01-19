@@ -508,9 +508,10 @@ class ConstraintGraph {
 protected:
 	// The variables of the source program and the nodes which represent them.
 	VarNodes* vars;
-private:
 	// The operations of the source program and the nodes which represent them.
 	GenOprs* oprs;
+
+private:
 	// A map from variables to the operations where these variables are used.
 	UseMap* useMap;
 	// A map from variables to the operations where these 
@@ -539,7 +540,7 @@ protected:
 		SmallPtrSet<const Value*, 6>& entryPoints) = 0;
 	virtual void posUpdate(const UseMap &compUseMap,
 		SmallPtrSet<const Value*, 6>& activeVars,
-		const SmallPtrSet<VarNode*, 32> *component = NULL) = 0;
+		const SmallPtrSet<VarNode*, 32> *component) = 0;
 
 public:
 	/// I'm doing this because I want to use this analysis in an
@@ -561,13 +562,6 @@ public:
 	void propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &component);
 	
 	/// Finds the intervals of the variables in the graph.
-	/// Intra-procedural analysis
-	void findIntervals(const Function& F);
-	void generateEntryPoints(SmallPtrSet<const Value*, 6> &entryPoints);
-	void fixIntersects();
-	void generateActivesVars(SmallPtrSet<const Value*, 6> &activeVars);
-	
-	/// Inter-procedural analysis
 	void findIntervals();
 	void generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &entryPoints);
 	void fixIntersects(SmallPtrSet<VarNode*, 32> &component);
@@ -590,7 +584,7 @@ private:
 	void preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints);
 	void posUpdate(const UseMap &compUseMap, 
 		SmallPtrSet<const Value*, 6>& activeVars,
-		const SmallPtrSet<VarNode*, 32> *component = NULL);
+		const SmallPtrSet<VarNode*, 32> *component);
 
 public:
 	Cousot(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
@@ -603,8 +597,9 @@ private:
 	void preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints);
 	void posUpdate(const UseMap &compUseMap, 
 		SmallPtrSet<const Value*, 6>& activeVars,
-		const SmallPtrSet<VarNode*, 32> *component = NULL);
+		const SmallPtrSet<VarNode*, 32> *component);
 	void storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component);
+	void crop(const UseMap &compUseMap, BasicOp *op);
 
 public:
 	CropDFS(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,

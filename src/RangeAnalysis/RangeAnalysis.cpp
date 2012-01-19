@@ -146,7 +146,7 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	CG->buildGraph(F);
 	CG->printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
 	errs() << "Analysing function " << F.getName() << ":\n";
-	CG->findIntervals(F);
+	CG->findIntervals();
 	CG->printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
 	delete CG;
 	return false;
@@ -161,7 +161,7 @@ template <class CGT>
 char RangeAnalysis<CGT>::ID = 0;
 
 static RegisterPass<RangeAnalysis<Cousot> > Y("ra-intra-cousot", "Range Analysis with Cousot");
-//static RegisterPass<RangeAnalysis<CropDFS> > Z("ra-intra-crop", "Range Analysis with CropDFS");
+static RegisterPass<RangeAnalysis<CropDFS> > Z("ra-intra-crop", "Range Analysis with CropDFS");
 
 // ========================================================================== //
 // Range
@@ -1535,13 +1535,9 @@ void ConstraintGraph::buildGraph(const Function& F) {
 }
 
 void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component){
-	if(component==NULL){
-		VarNodes::iterator vbgn = this->vars->begin(), vend = this->vars->end();
-		for (; vbgn != vend; ++vbgn) {
-			vbgn->second->storeAbstractState();
-		}
-	}else{
-	//TODO: to implement
+	VarNodes::iterator vbgn = this->vars->begin(), vend = this->vars->end();
+	for (; vbgn != vend; ++vbgn) {
+		vbgn->second->storeAbstractState();
 	}
 }
 
@@ -1582,43 +1578,34 @@ bool Meet::widen(BasicOp* op) {
 	return oldInterval != sinkInterval;
 }
 
-bool Meet::crop(BasicOp* op){
-	Range oldInterval = op->getSink()->getRange();
-	Range newInterval = op->eval();
-	
-	bool hasChanged = false;
-	char abstractState = op->getSink()->getAbstractState();
-	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
-		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper(), false));
-		hasChanged = true;
-	}
-	
-	if((abstractState == '+' || abstractState == '?') && newInterval.getUpper().slt(oldInterval.getUpper())){
-		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), newInterval.getUpper(), false));
-		hasChanged = true;
-	}
-	
-	return hasChanged;
-}
-
 bool Meet::growth(BasicOp* op){
+	//old_int = op.sink.interval
 	Range oldInterval = op->getSink()->getRange();
+	//  new_int = op.eval()
 	Range newInterval = op->eval();
+//	if isinstance(old_int, BottomInterval):
 	if (oldInterval.isEmptySet())
+//		op.sink.interval = new_int
 		op->getSink()->setRange(newInterval);
 	else{
 		APInt oldLower = oldInterval.getLower();
 		APInt oldUpper = oldInterval.getUpper();
 		APInt newLower = newInterval.getLower();
 		APInt newUpper = newInterval.getUpper();
+//		elif lt(new_int.l, old_int.l) and gt(new_int.u, old_int.u):
 		if(newLower.slt(oldLower))
 			if(newUpper.sgt(oldUpper))
+//				op.sink.interval = Interval()
 				op->getSink()->setRange(Range());
+//			elif lt(new_int.l, old_int.l):
 			else
-				op->getSink()->setRange(Range(Min,oldLower));
+//				op.sink.interval = Interval('-', old_int.u)
+				op->getSink()->setRange(Range(Min, oldUpper));
 		else 
+//			elif gt(new_int.u, old_int.u):
 			if(newUpper.sgt(oldUpper))
-				op->getSink()->setRange(Range(oldUpper,Max));
+//				op.sink.interval = Interval(old_int.l, '+')
+				op->getSink()->setRange(Range(oldLower,Max));
 	}
 	Range sinkInterval = op->getSink()->getRange();
 	return oldInterval != sinkInterval;
@@ -1662,6 +1649,25 @@ bool Meet::narrow(BasicOp* op) {
 	return hasChanged;
 }
 
+bool Meet::crop(BasicOp* op){
+	Range oldInterval = op->getSink()->getRange();
+	Range newInterval = op->eval();
+	
+	bool hasChanged = false;
+	char abstractState = op->getSink()->getAbstractState();
+	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
+		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper(), false));
+		hasChanged = true;
+	}
+	
+	if((abstractState == '+' || abstractState == '?') && newInterval.getUpper().slt(oldInterval.getUpper())){
+		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), newInterval.getUpper(), false));
+		hasChanged = true;
+	}
+	
+	return hasChanged;
+}
+
 void Cousot::preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints)
 {
 	update(compUseMap, entryPoints, Meet::widen);
@@ -1676,6 +1682,7 @@ void Cousot::posUpdate(const UseMap &compUseMap,
 
 void CropDFS::preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints)
 {
+	errs() << "::CropDFS::preUpdate\n";
 	update(compUseMap, entryPoints, Meet::growth);
 }
 
@@ -1683,10 +1690,47 @@ void CropDFS::posUpdate(const UseMap &compUseMap,
 	SmallPtrSet<const Value*, 6>& entryPoints, 
 	const SmallPtrSet<VarNode*, 32> *component)
 {
-	update(compUseMap, entryPoints, Meet::narrow);
+	errs() << "::CropDFS::posUpdate\n";
 	storeAbstractStates(component);
-//	for op in int_op(CompDefMap.values()):
-//		crop_dfs(CompUseMap, set([op]), set())
+	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
+	for (; obgn != oend; ++obgn) {
+		BasicOp *op = *obgn;
+	
+		if(component->count(op->getSink()))
+			//int_op
+			if(isa<UnaryOp>(op) && (op->getSink()->getRange().getLower().ne(Min) 
+				|| op->getSink()->getRange().getUpper().ne(Max)))
+				crop(compUseMap, op);
+	}
+}
+
+void CropDFS::crop(const UseMap &compUseMap, BasicOp *op){
+	SmallPtrSet<BasicOp*, 8> activeOps;
+	SmallPtrSet<const VarNode*, 8> visitedOps;
+	
+	//init the activeOps only with the op received
+	activeOps.insert(op);
+	
+	while (!activeOps.empty()) {
+		BasicOp* V = *activeOps.begin();
+		activeOps.erase(V);
+		const VarNode* sink = V->getSink();
+		
+		//if the sink has been visited go to the next activeOps
+		if(visitedOps.count(sink))
+			continue;
+		
+		Meet::crop(V);
+		visitedOps.insert(sink);
+		
+		// The use list.of sink
+		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(sink->getValue())->second;
+		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
+		
+		for (; bgn != end; ++bgn) {
+			activeOps.insert(*bgn);
+		}
+	}
 }
 
 void ConstraintGraph::update(SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op)) {
@@ -1719,11 +1763,12 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 	update(compUseMap, actv, meet);
 	*/
 	
-	
+//	int i = 20;
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
-		
+//		i--;
+//		if(i==0) exit(0);
 		// The use list.
 		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
@@ -1862,21 +1907,6 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, 
 	}
 }
 
-void ConstraintGraph::generateEntryPoints(SmallPtrSet<const Value*, 6> &entryPoints){
-	if (!entryPoints.empty()) {
-		errs() << "Set não vazio\n";
-	}
-	
-	VarNodes::iterator vbgn = this->vars->begin(), vend = this->vars->end();
-	for (; vbgn != vend; ++vbgn) {
-		vbgn->second->init();
-		const ConstantInt* CI = dyn_cast<ConstantInt>(vbgn->second->getValue());
-		if (CI) {
-			entryPoints.insert(vbgn->first);
-		}
-	}
-}
-
 void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
 	// Iterate again over the varnodes in the component
 	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
@@ -1891,18 +1921,6 @@ void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
 				
 				op->fixIntersects(var);
 			}
-		}
-	}
-}
-
-void ConstraintGraph::fixIntersects(){
-	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
-	for (; obgn != oend; ++obgn) {
-		if (SymbInterval* SI = dyn_cast<SymbInterval>((*obgn)->getIntersect())) {
-			if (!this->vars->count(SI->getBound())) {
-				continue;
-			}
-			(*obgn)->fixIntersects(this->vars->find(SI->getBound())->second);
 		}
 	}
 }
@@ -1923,49 +1941,6 @@ void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, 
 		
 		activeVars.insert(V);
 	}
-}
-
-void ConstraintGraph::generateActivesVars(SmallPtrSet<const Value*, 6> &activeVars){
-	if (!activeVars.empty()) {
-		errs() << "Set não vazio\n";
-	}
-
-	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
-		const ConstantInt* CI = dyn_cast<ConstantInt>(vbgn->first);
-		if (CI) {
-			continue;
-		}
-
-		activeVars.insert(vbgn->first);
-	}
-}
-
-void ConstraintGraph::findIntervals(const Function& F) {
-	// Builds symbMap
-	buildSymbolicIntersectMap();
-	
-	// Get the entry points of the SCC
-	SmallPtrSet<const Value*, 6> entryPoints;
-	generateEntryPoints(entryPoints);
-
-	// Fernando's findInterval method
-	preUpdate(*useMap, entryPoints);
-	
-	errs() << "==========================Widen============================\n";
-	printResultIntervals();
-	errs() << "===========================================================\n";
-
-	fixIntersects();
-
-	SmallPtrSet<const Value*, 6> activeVars;
-	generateActivesVars(activeVars);
-	posUpdate(*useMap, activeVars);
-
-	errs() << "======================Narrow===============================\n";
-	printResultIntervals();
-	errs() << "===========================================================\n";
-
-	computeStats();
 }
 
 // TODO: To implement it.
