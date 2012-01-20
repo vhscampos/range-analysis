@@ -53,7 +53,7 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 	
 	// CASE 1: Branch Instruction
 	BranchInst *bi = NULL;
-	SwitchInst *si = NULL;
+	//SwitchInst *si = NULL;
 	if ((bi = dyn_cast<BranchInst>(ti))) {
 		if (bi->isConditional()) {
 			Value *condition = bi->getCondition();
@@ -61,17 +61,26 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 			ICmpInst *comparison = dyn_cast<ICmpInst>(condition);
 			
 			if (comparison) {
+				// Create sigmas for ICmp operands
 				for (User::const_op_iterator opit = comparison->op_begin(), opend = comparison->op_end(); opit != opend; ++opit) {
 					Value *operand = *opit;
 					
 					if (isa<Instruction>(operand) || isa<Argument>(operand)) {
 						insertSigmas(ti, operand);
+						
+						// If the operand is a result of a indirect instruction (e.g. ZExt, SExt, Trunc),
+						// Create sigmas for the operands of the operands too
+						CastInst *cinst = NULL;
+						if ((cinst = dyn_cast<CastInst>(operand))) {
+							insertSigmas(ti, cinst->getOperand(0));
+						}
 					}
 				}
 			}
 		}
 	}
 	// CASE 2: Switch Instruction
+	/*
 	else if ((si = dyn_cast<SwitchInst>(ti))) {
 		Value *condition = si->getCondition();
 		
@@ -79,6 +88,7 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 			insertSigmas(ti, condition);
 		}
 	}
+	*/
 }
 
 /*

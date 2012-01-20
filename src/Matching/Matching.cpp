@@ -43,7 +43,7 @@ namespace {
 		
 		// Constraint Graph
 		//ConstraintGraph G(&VarNodes, &GenOprs, &UseMap, &SymbMap, &ValuesBranchMap);
-		ConstraintGraph G(&VarNodes, &GenOprs, &UseMap, &ValuesBranchMap);
+		ConstraintGraph *G = new Cousot(&VarNodes, &GenOprs, &UseMap, &ValuesBranchMap);
 
 		// Search through the functions for the max int bitwidth
 		for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
@@ -69,19 +69,18 @@ namespace {
 			if (I->isDeclaration() || I->isVarArg())
 				continue;
 
-			G.buildGraph(*I);
+			G->buildGraph(*I);
 
-			MatchParametersAndReturnValues(*I, G);
+			MatchParametersAndReturnValues(*I, *G);
 		}
 		
-		//G.init();
-		G.findIntervals();
+		G->findIntervals();
 
 
 
 
 		// TODO: Fazer o código para imprimir o CG
-		/*
+		
 		Function &F = *(M.begin());
 
 		std::string errors;
@@ -90,17 +89,18 @@ namespace {
 
 		raw_fd_ostream output(filename.c_str(), errors);
 
-		G.print(F, output);
+		G->print(F, output);
 
 		output.close();
-		*/
-		G.printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
+		
 
 
 		// Collect statistics
 		numVars = VarNodes.size();
 		numOps = GenOprs.size();
-
+		
+		
+		delete G;
 
 
 		// FIXME: Não sei se tem que retornar true ou false

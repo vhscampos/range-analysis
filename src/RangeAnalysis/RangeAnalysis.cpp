@@ -607,10 +607,11 @@ Range Range::truncate(unsigned bitwidht) const {
 		return Range(APInt::getSignedMinValue(bitwidht),
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
-
-	return Range(getLower().trunc(bitwidht),
-			     getUpper().trunc(bitwidht),
-			     isEmptySet());
+	
+	Range result(APInt::getSignedMinValue(bitwidht),
+				     APInt::getSignedMaxValue(bitwidht), false);
+	
+	return result.intersectWith(*this);
 }
 
 Range Range::signExtend(unsigned bitwidht) const {
@@ -768,16 +769,16 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 		return Range(l, u, false);
 		break;
 	case ICmpInst::ICMP_SLE: // signed less or equal
-		return Range(lower, u + 1, false);
-		break;
-	case ICmpInst::ICMP_SLT: // signed less than
 		return Range(lower, u, false);
 		break;
+	case ICmpInst::ICMP_SLT: // signed less than
+		return Range(lower, u-1, false);
+		break;
 	case ICmpInst::ICMP_SGE: // signed greater or equal
-		return Range(l + 1, upper, false);
+		return Range(l, upper, false);
 		break;
 	case ICmpInst::ICMP_SGT: // signed greater than
-		return Range(l, upper, false);
+		return Range(l+1, upper, false);
 		break;
 	default:
 		return Range(Min, Max, false);
@@ -975,7 +976,25 @@ void UnaryOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
 	OS << " " << quot << this << quot << " [label =\"";
 	
-	this->getIntersect()->print(OS);
+	// Instruction bitwidth
+	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
+	
+	switch (this->opcode) {
+		case Instruction::Trunc:
+			OS << "trunc i" << bw;
+			break;
+		case Instruction::ZExt:
+			OS << "zext i" << bw;
+			break;
+		case Instruction::SExt:
+			OS << "sext i" << bw;
+			break;
+		default:
+			// Phi functions, Loads and Stores are handled here.
+			this->getIntersect()->print(OS);
+			break;
+	}
+	
 	OS << "\"]\n";
 	
 	const Value* V = this->getSource()->getValue();
@@ -1461,7 +1480,6 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 			ConstantRange CR(CI->getValue(), CI->getValue() + 1);
 			unsigned int pred = ici->getPredicate();
 			
-			// TODO: Fix this interval to saturate on sums
 			ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
 			APInt sigMin = tmpT.getSignedMin();
 			APInt sigMax = tmpT.getSignedMax();
@@ -1486,8 +1504,19 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 			// Create the interval using the intersection in the branch.
 			BasicInterval* BT = new BasicInterval(TValues);
 			BasicInterval* BF = new BasicInterval(FValues);
-			ValueBranchMap VBM(ici->getOperand(0), TBlock, FBlock, BT, BF);
-			valuesBranchMap->insert(std::make_pair(ici->getOperand(0), VBM));
+			
+			const Value *Op0 = ici->getOperand(0);
+			ValueBranchMap VBM(Op0, TBlock, FBlock, BT, BF);
+			valuesBranchMap->insert(std::make_pair(Op0, VBM));
+			
+			// Do the same for the operand of Op0 (if Op0 is a cast instruction)
+			const CastInst *castinst = NULL;
+			if ((castinst = dyn_cast<CastInst>(Op0))) {
+				const Value *Op0_0 = castinst->getOperand(0);
+				
+				ValueBranchMap VBM(Op0_0, TBlock, FBlock, BT, BF);
+				valuesBranchMap->insert(std::make_pair(Op0_0, VBM));
+			}
 		} else {
 			// Create the interval using the intersection in the branch.
 			CmpInst::Predicate pred = ici->getPredicate();
@@ -1499,14 +1528,39 @@ void ConstraintGraph::buildValueBranchMap(const Function& F) {
 			const Value* Op0 = ici->getOperand(0);
 			SymbInterval* STOp0 = new SymbInterval(CR, Op1, pred);
 			SymbInterval* SFOp0 = new SymbInterval(CR, Op1, invPred);
+			
 			ValueBranchMap VBMOp0(Op0, TBlock, FBlock, STOp0, SFOp0);
-			valuesBranchMap->insert(std::make_pair(ici->getOperand(0), VBMOp0));
+			valuesBranchMap->insert(std::make_pair(Op0, VBMOp0));
+			
+			// Symbolic intervals for operand of op0 (if op0 is a cast instruction)
+			const CastInst *castinst = NULL;
+			if ((castinst = dyn_cast<CastInst>(Op0))) {
+				const Value* Op0_0 = castinst->getOperand(0);
+				
+				SymbInterval* STOp1_1 = new SymbInterval(CR, Op1, pred);
+				SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
+			
+				ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
+				valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
+			}
 
 			// Symbolic intervals for op1
 			SymbInterval* STOp1 = new SymbInterval(CR, Op0, invPred);
 			SymbInterval* SFOp1 = new SymbInterval(CR, Op0, pred);
 			ValueBranchMap VBMOp1(Op1, TBlock, FBlock, STOp1, SFOp1);
-			valuesBranchMap->insert(std::make_pair(ici->getOperand(1), VBMOp1));
+			valuesBranchMap->insert(std::make_pair(Op1, VBMOp1));
+			
+			// Symbolic intervals for operand of op1 (if op1 is a cast instruction)
+			castinst = NULL;
+			if ((castinst = dyn_cast<CastInst>(Op1))) {
+				const Value* Op0_0 = castinst->getOperand(0);
+				
+				SymbInterval* STOp1_1 = new SymbInterval(CR, Op1, pred);
+				SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
+			
+				ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
+				valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
+			}
 		}
 	}
 }
@@ -2179,9 +2233,10 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 				continue;
 			}
 			
-			BasicOp *cdedge = new ControlDep(source, (*opit)->getSink());
+			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
 			
-			(*useMap)[(*opit)->getSink()->getValue()].insert(cdedge);
+			//(*useMap)[(*opit)->getSink()->getValue()].insert(cdedge);
+			(*useMap)[source->getValue()].insert(cdedge);
 		}
 	}
 }
