@@ -1404,7 +1404,7 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 	BasicInterval* BItv = NULL;
 	SigmaOp* sigmaOp = NULL;
 
-	// Create the sources.
+	// Create the sources (FIXME: sigma has only 1 source. This for may not be needed)
 	for (User::const_op_iterator it = Sigma->op_begin(), e = Sigma->op_end(); it != e; ++it) {
 		Value *operand = *it;
 		VarNode* source = addVarNode(operand);
@@ -1938,7 +1938,7 @@ void ConstraintGraph::findIntervals() {
 		// TODO: PROPAGAR PARA O PROXIMO SCC
 		propagateToNextSCC(component);
 		
-		printResultIntervals();
+//		printResultIntervals();
 	}
 	
 	computeStats();
@@ -2224,10 +2224,15 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 	for (SymbMap::iterator sit = symbMap->begin(), send = symbMap->end(); sit != send; ++sit) {
 		for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend = sit->second.end(); opit != opend; ++opit) {
 			// Pega o intervalo
-			SymbInterval* interval = cast<SymbInterval>((*opit)->getIntersect());
+//			SymbInterval* interval = cast<SymbInterval>((*opit)->getIntersect());
 			
 			// Cria uma operação pseudo-aresta
-			VarNode* source = vars->find(interval->getBound())->second;
+			VarNodes::iterator source_value = vars->find(sit->first);
+			VarNode* source = NULL;
+			
+			if (source_value != vars->end()) {
+				source = vars->find(sit->first)->second;
+			}
 			
 			if (source == NULL) {
 				continue;
@@ -2236,7 +2241,7 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
 			
 			//(*useMap)[(*opit)->getSink()->getValue()].insert(cdedge);
-			(*useMap)[source->getValue()].insert(cdedge);
+			(*useMap)[sit->first].insert(cdedge);
 		}
 	}
 }

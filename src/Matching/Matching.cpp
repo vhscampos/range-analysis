@@ -81,17 +81,17 @@ namespace {
 
 		// TODO: Fazer o código para imprimir o CG
 		
-		Function &F = *(M.begin());
+//		Function &F = *(M.begin());
 
-		std::string errors;
-		std::string filename = M.getModuleIdentifier();
-		filename += ".dot";
+//		std::string errors;
+//		std::string filename = M.getModuleIdentifier();
+//		filename += ".dot";
 
-		raw_fd_ostream output(filename.c_str(), errors);
+//		raw_fd_ostream output(filename.c_str(), errors);
 
-		G->print(F, output);
+//		G->print(F, output);
 
-		output.close();
+//		output.close();
 		
 
 
