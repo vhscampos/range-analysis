@@ -61,10 +61,6 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 
 /// Selects the instructions that we are going to evaluate.
 static bool isValidInstruction(const Instruction* I) {
-	// FIXME: How can I reference a Phi function by its opcode?
-//	if (dyn_cast<PHINode>(I)) {
-//		return true;
-//	}
 
 	switch (I->getOpcode()) {
 	case Instruction::PHI:
@@ -867,7 +863,7 @@ void VarNode::storeAbstractState(){
 		else
 			this->abstractState = '-';
 	else 
-		if (this->interval.getLower().eq(Max))
+		if (this->interval.getUpper().eq(Max))
 			this->abstractState = '+';
 		else
 			this->abstractState = '0';
@@ -1633,32 +1629,23 @@ bool Meet::widen(BasicOp* op) {
 }
 
 bool Meet::growth(BasicOp* op){
-	//old_int = op.sink.interval
 	Range oldInterval = op->getSink()->getRange();
-	//  new_int = op.eval()
 	Range newInterval = op->eval();
-//	if isinstance(old_int, BottomInterval):
+
 	if (oldInterval.isEmptySet())
-//		op.sink.interval = new_int
 		op->getSink()->setRange(newInterval);
 	else{
 		APInt oldLower = oldInterval.getLower();
 		APInt oldUpper = oldInterval.getUpper();
 		APInt newLower = newInterval.getLower();
 		APInt newUpper = newInterval.getUpper();
-//		elif lt(new_int.l, old_int.l) and gt(new_int.u, old_int.u):
 		if(newLower.slt(oldLower))
 			if(newUpper.sgt(oldUpper))
-//				op.sink.interval = Interval()
 				op->getSink()->setRange(Range());
-//			elif lt(new_int.l, old_int.l):
 			else
-//				op.sink.interval = Interval('-', old_int.u)
 				op->getSink()->setRange(Range(Min, oldUpper));
 		else 
-//			elif gt(new_int.u, old_int.u):
 			if(newUpper.sgt(oldUpper))
-//				op.sink.interval = Interval(old_int.l, '+')
 				op->getSink()->setRange(Range(oldLower,Max));
 	}
 	Range sinkInterval = op->getSink()->getRange();
@@ -1709,6 +1696,7 @@ bool Meet::crop(BasicOp* op){
 	
 	bool hasChanged = false;
 	char abstractState = op->getSink()->getAbstractState();
+	
 	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
 		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper(), false));
 		hasChanged = true;
