@@ -1,0 +1,29 @@
+##=== TEST.libcalls.report - Report desc for libcalls tests ----*- perl -*-===##
+#
+# This file defines a report to be generated for the libcalls test.
+#
+##===----------------------------------------------------------------------===##
+
+# Sort by name
+$SortCol = 1;
+$TrimRepeatedPrefix = 1;
+
+# These are the columns for the report.  The first entry is the header for the
+# column, the second is the regex to use to match the value.  Empty list create
+# seperators, and closures may be put in for custom processing.
+(
+# Name
+ ["Name" , '\'([^\']+)\' Program'],
+ [],
+ ["Oprs", '([0-9]+).*Number of operations'],
+ ["Vars", '([0-9]+).*Number of variables'],
+ [],
+ ["Init", '([0-9]+).*Initial number of bits'],
+ ["Needed", '([0-9]+).*Needed bits'],
+ ["Pct", '([0-9]+).*Percentage of reduction of the number of bits'],
+ [],
+ ["SCCs", '([0-9]+).*Number of strongly connected components'],
+ ["SCCs 1", '([0-9]+).*Number of SCCs containing only one node'],
+ []
+ );
+
