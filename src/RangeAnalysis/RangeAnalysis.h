@@ -484,6 +484,40 @@ public:
 	void clear();
 };
 
+class ValueSwitchMap {
+private:
+	const Value* V;
+	SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4 > BBsuccs;
+
+public:
+	ValueSwitchMap(const Value* V,
+		SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4 > &BBsuccs);
+		
+	~ValueSwitchMap();
+	/// Get the "false side" of the branch
+	inline const BasicBlock *getBB(unsigned idx) const {
+		return BBsuccs[idx].second;
+	}
+	/// Get the interval associated to the true side of the branch
+	inline BasicInterval *getItv(unsigned idx) const {
+		return BBsuccs[idx].first;
+	}
+	// Get how many cases this switch has
+	inline unsigned getNumOfCases() const {
+		return BBsuccs.size();
+	}
+	/// Get the value associated to the branch.
+	inline const Value *getV() const {
+		return V;
+	}
+	/// Change the interval associated to the true side of the branch
+	inline void setItv(unsigned idx, BasicInterval *Itv) {
+		this->BBsuccs[idx].first = Itv;
+	}
+	/// Clear memory allocated
+	void clear();
+};
+
 // The VarNodes type.
 typedef DenseMap<const Value*, VarNode*> VarNodes;
 
@@ -501,6 +535,8 @@ typedef DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > SymbMap;
 typedef DenseMap<VarNode*, BasicOp*> DefMap;
 
 typedef DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
+
+typedef DenseMap<const Value*, ValueSwitchMap> ValuesSwitchMap;
 
 /// This class represents our constraint graph. This graph is used to
 /// perform all computations in our analysis.
@@ -520,6 +556,7 @@ private:
 	// This data structure is used to store intervals, basic blocks and intervals
 	// obtained in the branches.
 	ValuesBranchMap* valuesBranchMap;
+	ValuesSwitchMap* valuesSwitchMap;
 	/// Adds a BinaryOp in the graph.
 	void addBinaryOp(const Instruction* I);
 	/// Adds a PhiOp in the graph.
@@ -528,7 +565,9 @@ private:
 	void addSigmaOp(const PHINode* Sigma);
 	/// Takes an intruction and creates an operation.
 	void buildOperations(const Instruction* I);
-	void buildValueBranchMap(const Function& F);
+	void buildValueBranchMap(const BranchInst *br);
+	void buildValueSwitchMap(const SwitchInst *sw);
+	void buildValueMaps(const Function& F);
 	// Perform the widening and narrowing operations
 	
 protected:
@@ -547,7 +586,7 @@ public:
 	/// inter-procedural pass. So, I have to receive these data structures as
 	// parameters.
 	ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
-		ValuesBranchMap *valuesBranchMap);
+		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap);
 	~ConstraintGraph();
 	/// Adds a VarNode in the graph.
 	VarNode* addVarNode(const Value* V);
@@ -588,8 +627,8 @@ private:
 
 public:
 	Cousot(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
-		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 
-		usemap, valuesBranchMap) {}
+		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap): ConstraintGraph(varNodes, genOprs, 
+		usemap, valuesBranchMap, valuesSwitchMap) {}
 };
 
 class CropDFS: public ConstraintGraph{
@@ -603,8 +642,8 @@ private:
 
 public:
 	CropDFS(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
-		ValuesBranchMap *valuesBranchMap): ConstraintGraph(varNodes, genOprs, 
-		usemap, valuesBranchMap) {}
+		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap): ConstraintGraph(varNodes, genOprs, 
+		usemap, valuesBranchMap, valuesSwitchMap) {}
 };
 
 class Nuutila {

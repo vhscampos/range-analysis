@@ -38,12 +38,11 @@ namespace {
 		DenseMap<const Value*, VarNode*> VarNodes;
 		SmallPtrSet<BasicOp*, 64> GenOprs;
 		DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UseMap;
-		//DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > SymbMap;
 		DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
+		DenseMap<const Value*, ValueSwitchMap> ValuesSwitchMap;
 		
 		// Constraint Graph
-		//ConstraintGraph G(&VarNodes, &GenOprs, &UseMap, &SymbMap, &ValuesBranchMap);
-		ConstraintGraph *G = new Cousot(&VarNodes, &GenOprs, &UseMap, &ValuesBranchMap);
+		ConstraintGraph *G = new Cousot(&VarNodes, &GenOprs, &UseMap, &ValuesBranchMap, &ValuesSwitchMap);
 
 		// Search through the functions for the max int bitwidth
 		for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
@@ -60,7 +59,7 @@ namespace {
 		Min = APInt::getSignedMinValue(MAX_BIT_INT);
 		Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 		
-		errs() << MAX_BIT_INT << "\n";
+//		errs() << MAX_BIT_INT << "\n";
 
 
 		// Build the Constraint Graph by running on each function
@@ -144,7 +143,7 @@ namespace {
 		// Data structure which contains the matches between formal and real parameters
 		// First: formal parameter
 		// Second: real parameter
-		SmallVector<std::pair<Value*, Value*>, 8> Parameters(F.arg_size());
+		SmallVector<std::pair<Value*, Value*>, 4> Parameters(F.arg_size());
 	
 		// Fetch the function arguments (formal parameters) into the data structure
 		Function::arg_iterator argptr;
@@ -158,7 +157,7 @@ namespace {
 		bool noReturn = F.getReturnType()->isVoidTy();
 
 		// Creates the data structure which receives the return values of the function, if there is any
-		SmallPtrSet<Value*, 32> ReturnValues;
+		SmallPtrSet<Value*, 8> ReturnValues;
 
 		if (!noReturn) {
 			// Iterate over the basic blocks to fetch all possible return values

@@ -19,9 +19,9 @@ using namespace llvm;
 // These macros are used to get stats regarging the precision of our analysis.
 STATISTIC(usedBits, "Initial number of bits.");
 STATISTIC(needBits, "Needed bits.");
-STATISTIC(totalInstructions, "Number of instructions of the function.");
-STATISTIC(evaluatedInstructions, "Number of evaluated instructions.");
 STATISTIC(percentReduction, "Percentage of reduction of the number of bits.");
+STATISTIC(numSCCs, "Number of strongly connected components.");
+STATISTIC(numAloneSCCs, "Number of SCCs containing only one node.");
 
 // The number of bits needed to store the largest variable of the function (APInt).
 unsigned MAX_BIT_INT = 1;
@@ -136,7 +136,8 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	SmallPtrSet<BasicOp*, 64> GOprs;
 	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
 	DenseMap<const Value*, ValueBranchMap> VBMap;
-	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &UMap, &VBMap);
+	DenseMap<const Value*, ValueSwitchMap> VSMap;
+	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &UMap, &VBMap, &VSMap);
 
 	// Build the graph and find the intervals of the variables.
 	CG->buildGraph(F);
@@ -1252,16 +1253,35 @@ ValueBranchMap::ValueBranchMap(const Value* V,
 ValueBranchMap::~ValueBranchMap() {}
 
 void ValueBranchMap::clear() {
-/*	if (ItvT) {
-		delete ItvT;
-		ItvT = NULL;
-	}
-	
-	if (ItvF) {
-		delete ItvF;
-		ItvF = NULL;
-	}
-*/
+//	if (ItvT) {
+//		delete ItvT;
+//		ItvT = NULL;
+//	}
+//	
+//	if (ItvF) {
+//		delete ItvF;
+//		ItvF = NULL;
+//	}
+}
+
+// ========================================================================== //
+// ValueSwitchMap
+// ========================================================================== //
+
+
+ValueSwitchMap::ValueSwitchMap(const Value* V,
+              							   SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4 > &BBsuccs) :
+              							   V(V), BBsuccs(BBsuccs) {}
+
+ValueSwitchMap::~ValueSwitchMap() {}
+
+void ValueSwitchMap::clear() {
+//	for (unsigned i = 0, e = BBsuccs.size(); i < e; ++i) {
+//		if (BBsuccs[i].first) {
+//			delete BBsuccs[i].first;
+//			BBsuccs[i].first = NULL;
+//		}
+//	}
 }
 
 
@@ -1272,11 +1292,13 @@ void ValueBranchMap::clear() {
 ConstraintGraph::ConstraintGraph(VarNodes *varNodes, 
                                 GenOprs *genOprs, 
                                 UseMap *usemap,
-                       					ValuesBranchMap *valuesbranchmap) {
+                       			ValuesBranchMap *valuesbranchmap,
+                       			ValuesSwitchMap *valuesswitchMap) {
 	this->vars = varNodes;
 	this->oprs = genOprs;
 	this->useMap = usemap;
 	this->valuesBranchMap = valuesbranchmap;
+	this->valuesSwitchMap = valuesswitchMap;
 }
 
 /// The dtor.
@@ -1289,6 +1311,14 @@ ConstraintGraph::~ConstraintGraph() {
 	
 	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend; ++oit) {
 		delete *oit;
+	}
+	
+	for (ValuesBranchMap::iterator vit = valuesBranchMap->begin(), vend = valuesBranchMap->end(); vit != vend; ++vit) {
+		vit->second.clear();
+	}
+	
+	for (ValuesSwitchMap::iterator vit = valuesSwitchMap->begin(), vend = valuesSwitchMap->end(); vit != vend; ++vit) {
+		vit->second.clear();
 	}
 }
 
@@ -1399,19 +1429,45 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 	VarNode* sink = addVarNode(Sigma);
 	BasicInterval* BItv = NULL;
 	SigmaOp* sigmaOp = NULL;
+	
+	const BasicBlock *thisbb = Sigma->getParent();
 
-	// Create the sources (FIXME: sigma has only 1 source. This for may not be needed)
+	// Create the sources (FIXME: sigma has only 1 source. This 'for' may not be needed)
 	for (User::const_op_iterator it = Sigma->op_begin(), e = Sigma->op_end(); it != e; ++it) {
 		Value *operand = *it;
 		VarNode* source = addVarNode(operand);
-		// Create the operation.
-		if (this->valuesBranchMap->count(operand)) {
-			ValueBranchMap VBM = this->valuesBranchMap->find(operand)->second;
-			if (Sigma->getParent() == VBM.getBBTrue()) {
+		
+		// Create the operation (two cases from: branch or switch)
+		ValuesBranchMap::iterator vbmit = this->valuesBranchMap->find(operand);
+		
+		// Branch case
+		if (vbmit != this->valuesBranchMap->end()) {
+			const ValueBranchMap &VBM = vbmit->second;
+			if (thisbb == VBM.getBBTrue()) {
 				BItv = VBM.getItvT();
 			} else {
-				if (Sigma->getParent() == VBM.getBBFalse()) {
+				if (thisbb == VBM.getBBFalse()) {
 					BItv = VBM.getItvF();
+				}
+			}
+		}
+		else {
+			// Switch case
+			ValuesSwitchMap::iterator vsmit = this->valuesSwitchMap->find(operand);
+			
+			if (vsmit == this->valuesSwitchMap->end()) {
+				continue;
+			}
+			
+			const ValueSwitchMap &VSM = vsmit->second;
+			
+			// Find out which case are we dealing with
+			for (unsigned idx = 0, e = VSM.getNumOfCases(); idx < e; ++idx) {
+				const BasicBlock *bb = VSM.getBB(idx);
+				
+				if (bb == thisbb) {
+					BItv = VSM.getItv(idx);
+					break;
 				}
 			}
 		}
@@ -1449,121 +1505,225 @@ void ConstraintGraph::buildOperations(const Instruction* I) {
 	}
 }
 
-void ConstraintGraph::buildValueBranchMap(const Function& F) {
-	// Fix the intersects using the ranges obtained in the branches.
-	for (Function::const_iterator iBB = F.begin(), eBB = F.end(); iBB != eBB; ++iBB){
-		const TerminatorInst* ti = iBB->getTerminator();
-		if(!isa<BranchInst>(ti))	continue;
-		const BranchInst * br = cast<BranchInst>(ti);
-		if(!br->isConditional())	continue;
-		ICmpInst *ici = dyn_cast<ICmpInst> (br->getCondition());
-		if(!ici) continue;
+void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
+{
+	const Value *condition = sw->getCondition();
+	
+	// Verify conditions
+	const Type* opType = sw->getCondition()->getType();
+	if (!opType->isIntegerTy()) {
+		return;
+	}
+	
+	// Create VarNode for switch condition explicitly (need to do this when inlining is used!)
+	addVarNode(condition);
+	
+	
+	SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4 > BBsuccs;
 
-		//FIXME: handle switch case later
-		const Type* op0Type = ici->getOperand(0)->getType();
-		const Type* op1Type = ici->getOperand(1)->getType();
-		if (!op0Type->isIntegerTy() || !op1Type->isIntegerTy()) {
-			continue;
+	
+	// Treat when condition of switch is a cast of the real condition (same thing as in buildValueBranchMap)
+	const CastInst *castinst = NULL;
+	const Value *Op0_0 = NULL;
+	if ((castinst = dyn_cast<CastInst>(condition))) {
+		Op0_0 = castinst->getOperand(0);
+	}
+	
+	
+	// Handle 'default', if there is any
+	BasicBlock *succ = sw->getSuccessor(0);
+	const ConstantInt *constant = sw->getCaseValue(0);
+	
+	if (constant) {
+		APInt sigMin = Min;
+		APInt sigMax = Max;
+
+		Range Values = Range(sigMin, sigMax, false);
+
+		// Create the interval using the intersection in the branch.
+		BasicInterval* BI = new BasicInterval(Values);
+
+		BBsuccs.push_back(std::make_pair(BI, succ));
+	}
+	
+	// Handle the rest of cases
+	for (unsigned i = 1, e = sw->getNumCases(); i < e; ++i) {
+		BasicBlock *succ = sw->getSuccessor(i);
+		const ConstantInt *constant = sw->getCaseValue(i);
+		
+		APInt sigMin = constant->getValue();
+		APInt sigMax = sigMin;
+
+//		if (sigMax.slt(sigMin)) {
+//			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+//		}
+	
+		Range Values = Range(sigMin, sigMax, false);
+
+		// Create the interval using the intersection in the branch.
+		BasicInterval* BI = new BasicInterval(Values);
+	
+		BBsuccs.push_back(std::make_pair(BI, succ));
+	}
+	
+	ValueSwitchMap VSM(condition, BBsuccs);
+	valuesSwitchMap->insert(std::make_pair(condition, VSM));
+	
+	if (Op0_0) {
+		ValueSwitchMap VSM_0(Op0_0, BBsuccs);
+		valuesSwitchMap->insert(std::make_pair(Op0_0, VSM_0));
+	}
+}
+
+void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
+{
+//	if ((br->getParent()->getParent()->getName() == "uncompressStream") && (br->getParent()->getName() == "bb1")) {
+//		errs () << "Aqui\n";
+//	}
+	
+	// Verify conditions
+	if (!br->isConditional())	return;
+		
+	ICmpInst *ici = dyn_cast<ICmpInst>(br->getCondition());
+	if (!ici) return;
+	
+	const Type* op0Type = ici->getOperand(0)->getType();
+	const Type* op1Type = ici->getOperand(1)->getType();
+	if (!op0Type->isIntegerTy() || !op1Type->isIntegerTy()) {
+		return;
+	}
+	
+	// Create VarNodes for comparison operands explicitly (need to do this when inlining is used!)
+	addVarNode(ici->getOperand(0));
+	addVarNode(ici->getOperand(1));
+	
+	// Gets the successors of the current basic block.
+	const BasicBlock *TBlock = br->getSuccessor(0);
+	const BasicBlock *FBlock = br->getSuccessor(1);
+
+	// We have a Variable-Constant comparison.
+	if (ConstantInt *CI = dyn_cast<ConstantInt>(ici->getOperand(1))) {
+		// Calculate the range of values that would satisfy the comparison.
+		ConstantRange CR(CI->getValue(), CI->getValue() + 1);
+		unsigned int pred = ici->getPredicate();
+	
+		ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
+		APInt sigMin = tmpT.getSignedMin();
+		APInt sigMax = tmpT.getSignedMax();
+
+		if (sigMax.slt(sigMin)) {
+			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
 		}
+	
+		Range TValues = Range(sigMin, sigMax, false);
 
-		// Gets the successors of the current basic block.
-		const BasicBlock *TBlock = br->getSuccessor(0);
-		const BasicBlock *FBlock = br->getSuccessor(1);
+		// If we're interested in the false dest, invert the condition.
+		ConstantRange tmpF = tmpT.inverse();
+		sigMin = tmpF.getSignedMin();
+		sigMax = tmpF.getSignedMax();
+	
+		if (sigMax.slt(sigMin)) {
+			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+		}
+	
+		Range FValues = Range(sigMin, sigMax, false);
 
-		// We have a Variable-Constant comparison.
-		if (ConstantInt *CI = dyn_cast<ConstantInt>(ici->getOperand(1))) {
-			// Calculate the range of values that would satisfy the comparison.
-			ConstantRange CR(CI->getValue(), CI->getValue() + 1);
-			unsigned int pred = ici->getPredicate();
+		// Create the interval using the intersection in the branch.
+		BasicInterval* BT = new BasicInterval(TValues);
+		BasicInterval* BF = new BasicInterval(FValues);
+	
+		const Value *Op0 = ici->getOperand(0);
+		ValueBranchMap VBM(Op0, TBlock, FBlock, BT, BF);
+		valuesBranchMap->insert(std::make_pair(Op0, VBM));
+	
+		// Do the same for the operand of Op0 (if Op0 is a cast instruction)
+		const CastInst *castinst = NULL;
+		if ((castinst = dyn_cast<CastInst>(Op0))) {
+			const Value *Op0_0 = castinst->getOperand(0);
 			
-			ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
-			APInt sigMin = tmpT.getSignedMin();
-			APInt sigMax = tmpT.getSignedMax();
-
-			if (sigMax.slt(sigMin)) {
-				sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
-			}
-			
-			Range TValues = Range(sigMin, sigMax, false);
-
-			// If we're interested in the false dest, invert the condition.
-			ConstantRange tmpF = tmpT.inverse();
-			sigMin = tmpF.getSignedMin();
-			sigMax = tmpF.getSignedMax();
-			
-			if (sigMax.slt(sigMin)) {
-				sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
-			}
-			
-			Range FValues = Range(sigMin, sigMax, false);
-
-			// Create the interval using the intersection in the branch.
 			BasicInterval* BT = new BasicInterval(TValues);
 			BasicInterval* BF = new BasicInterval(FValues);
-			
-			const Value *Op0 = ici->getOperand(0);
-			ValueBranchMap VBM(Op0, TBlock, FBlock, BT, BF);
-			valuesBranchMap->insert(std::make_pair(Op0, VBM));
-			
-			// Do the same for the operand of Op0 (if Op0 is a cast instruction)
-			const CastInst *castinst = NULL;
-			if ((castinst = dyn_cast<CastInst>(Op0))) {
-				const Value *Op0_0 = castinst->getOperand(0);
-				
-				ValueBranchMap VBM(Op0_0, TBlock, FBlock, BT, BF);
-				valuesBranchMap->insert(std::make_pair(Op0_0, VBM));
-			}
-		} else {
-			// Create the interval using the intersection in the branch.
-			CmpInst::Predicate pred = ici->getPredicate();
-			CmpInst::Predicate invPred = ici->getInversePredicate();
-			Range CR(Min, Max, false);
-			const Value* Op1 = ici->getOperand(1);
+		
+			ValueBranchMap VBM(Op0_0, TBlock, FBlock, BT, BF);
+			valuesBranchMap->insert(std::make_pair(Op0_0, VBM));
+		}
+	} else {
+		// Create the interval using the intersection in the branch.
+		CmpInst::Predicate pred = ici->getPredicate();
+		CmpInst::Predicate invPred = ici->getInversePredicate();
+		Range CR(Min, Max, false);
+		const Value* Op1 = ici->getOperand(1);
 
-			// Symbolic intervals for op0
-			const Value* Op0 = ici->getOperand(0);
-			SymbInterval* STOp0 = new SymbInterval(CR, Op1, pred);
-			SymbInterval* SFOp0 = new SymbInterval(CR, Op1, invPred);
-			
-			ValueBranchMap VBMOp0(Op0, TBlock, FBlock, STOp0, SFOp0);
-			valuesBranchMap->insert(std::make_pair(Op0, VBMOp0));
-			
-			// Symbolic intervals for operand of op0 (if op0 is a cast instruction)
-			const CastInst *castinst = NULL;
-			if ((castinst = dyn_cast<CastInst>(Op0))) {
-				const Value* Op0_0 = castinst->getOperand(0);
-				
-				SymbInterval* STOp1_1 = new SymbInterval(CR, Op1, pred);
-				SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
-			
-				ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
-				valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
-			}
+		// Symbolic intervals for op0
+		const Value* Op0 = ici->getOperand(0);
+		SymbInterval* STOp0 = new SymbInterval(CR, Op1, pred);
+		SymbInterval* SFOp0 = new SymbInterval(CR, Op1, invPred);
+	
+		ValueBranchMap VBMOp0(Op0, TBlock, FBlock, STOp0, SFOp0);
+		valuesBranchMap->insert(std::make_pair(Op0, VBMOp0));
+	
+		// Symbolic intervals for operand of op0 (if op0 is a cast instruction)
+		const CastInst *castinst = NULL;
+		if ((castinst = dyn_cast<CastInst>(Op0))) {
+			const Value* Op0_0 = castinst->getOperand(0);
+		
+			SymbInterval* STOp1_1 = new SymbInterval(CR, Op1, pred);
+			SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
+	
+			ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
+			valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
+		}
 
-			// Symbolic intervals for op1
-			SymbInterval* STOp1 = new SymbInterval(CR, Op0, invPred);
-			SymbInterval* SFOp1 = new SymbInterval(CR, Op0, pred);
-			ValueBranchMap VBMOp1(Op1, TBlock, FBlock, STOp1, SFOp1);
-			valuesBranchMap->insert(std::make_pair(Op1, VBMOp1));
-			
-			// Symbolic intervals for operand of op1 (if op1 is a cast instruction)
-			castinst = NULL;
-			if ((castinst = dyn_cast<CastInst>(Op1))) {
-				const Value* Op0_0 = castinst->getOperand(0);
-				
-				SymbInterval* STOp1_1 = new SymbInterval(CR, Op1, pred);
-				SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
-			
-				ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
-				valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
-			}
+		// Symbolic intervals for op1
+		SymbInterval* STOp1 = new SymbInterval(CR, Op0, invPred);
+		SymbInterval* SFOp1 = new SymbInterval(CR, Op0, pred);
+		ValueBranchMap VBMOp1(Op1, TBlock, FBlock, STOp1, SFOp1);
+		valuesBranchMap->insert(std::make_pair(Op1, VBMOp1));
+	
+		// Symbolic intervals for operand of op1 (if op1 is a cast instruction)
+		castinst = NULL;
+		if ((castinst = dyn_cast<CastInst>(Op1))) {
+			const Value* Op0_0 = castinst->getOperand(0);
+		
+			SymbInterval* STOp1_1 = new SymbInterval(CR, Op1, pred);
+			SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
+	
+			ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
+			valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
+		}
+	}
+}
+
+void ConstraintGraph::buildValueMaps(const Function& F) {
+	for (Function::const_iterator iBB = F.begin(), eBB = F.end(); iBB != eBB; ++iBB){
+		const TerminatorInst* ti = iBB->getTerminator();
+		const BranchInst* br = dyn_cast<BranchInst>(ti);
+		const SwitchInst* sw = dyn_cast<SwitchInst>(ti);
+		
+		if (br) {
+			buildValueBranchMap(br);
+		}
+		else if (sw) {
+			buildValueSwitchMap(sw);
 		}
 	}
 }
 
 /// Iterates through all instructions in the function and builds the graph.
 void ConstraintGraph::buildGraph(const Function& F) {
-	buildValueBranchMap(F);
+	buildValueMaps(F);
+	
+//	for (Function::const_arg_iterator ait = F.arg_begin(), aend = F.arg_end(); ait != aend; ++ait) {
+//		const Value *argument = &*ait;
+//		const Type* ty = argument->getType();
+//		
+//		if (!ty->isIntegerTy()) {
+//			continue;
+//		}
+//		
+//		addVarNode(argument);
+//	}
+	
 	for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
 		const Type* ty = (&*I)->getType();
 		if (!(ty->isIntegerTy() || ty->isPointerTy() || ty->isVoidTy())) {
@@ -1696,7 +1856,7 @@ bool Meet::crop(BasicOp* op){
 	
 	bool hasChanged = false;
 	char abstractState = op->getSink()->getAbstractState();
-	
+
 	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
 		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper(), false));
 		hasChanged = true;
@@ -1835,80 +1995,29 @@ void ConstraintGraph::findIntervals() {
 	// List of SCCs
 	Nuutila sccList(vars, useMap, symbMap);
 	
-	errs() << "Number of strongly connected components: " << sccList.worklist.size() << "\n";
+	// STATS
+	numSCCs = sccList.worklist.size();
 	
 	// For each SCC in graph, do the following
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end(); nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
 		
-		errs() << component.size() << "\n";
-
-		// DEBUG
-		/*
-		if (component.size() == 16) {
-			std::string errors;
-			std::string filename = "16";
-			filename += ".dot";
-
-			raw_fd_ostream output(filename.c_str(), errors);
-			
-			const char* quot = "\"";
-			// Print the header of the .dot file.
-			output << "digraph dotgraph {\n";
-			output << "label=\"Constraint Graph for \"\n";
-			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
-
-			// Print the body of the .dot file.
-			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
-					output << " " << C->getValue();
-				} else {
-					output << quot;
-					printVarName((*bgn)->getValue(), output);
-					output << quot;
-				}
-
-				output << " [label=\"";
-				(*bgn)->print(output);
-				output << " \"]\n";
-			}
-			
-			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-				VarNode *var = *bgn;
-				
-				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
-				
-				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
-					if (component.count((*useit)->getSink())) {
-						(*useit)->print(output);
-						output << "\n";
-					}
-				}
-			}			
-			
-			//output << pseudoEdgesString.str();
-
-			// Print the footer of the .dot file.
-			output << "}\n";
-
-			output.close();
-			
+		// STATS
+		if (component.size() == 1) {
+			++numAloneSCCs;
 		}
-		*/
 		
 		
-		
-		
-		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
-			const ConstantInt *CI = NULL;
-			
-			if ((CI = dyn_cast<ConstantInt>((*p)->getValue()))) {
-				errs() << CI->getValue() << "\n";
-			}
-			else {
-				errs() << (*p)->getValue()->getName() << "\n";
-			}
-		}
+//		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
+//			const ConstantInt *CI = NULL;
+//			
+//			if ((CI = dyn_cast<ConstantInt>((*p)->getValue()))) {
+//				errs() << CI->getValue() << "\n";
+//			}
+//			else {
+//				errs() << (*p)->getValue()->getName() << "\n";
+//			}
+//		}
 		
 		UseMap compUseMap = buildUseMap(component);
 		
@@ -2211,20 +2320,17 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 {
 	for (SymbMap::iterator sit = symbMap->begin(), send = symbMap->end(); sit != send; ++sit) {
 		for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend = sit->second.end(); opit != opend; ++opit) {
-			// Pega o intervalo
-//			SymbInterval* interval = cast<SymbInterval>((*opit)->getIntersect());
-			
 			// Cria uma operação pseudo-aresta
 			VarNodes::iterator source_value = vars->find(sit->first);
-			VarNode* source = NULL;
+			VarNode* source = source_value->second;
 			
-			if (source_value != vars->end()) {
-				source = vars->find(sit->first)->second;
-			}
+//			if (source_value != vars->end()) {
+//				source = vars->find(sit->first)->second;
+//			}
 			
-			if (source == NULL) {
-				continue;
-			}
+//			if (source == NULL) {
+//				continue;
+//			}
 			
 			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
 			

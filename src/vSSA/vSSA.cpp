@@ -53,7 +53,7 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 	
 	// CASE 1: Branch Instruction
 	BranchInst *bi = NULL;
-	//SwitchInst *si = NULL;
+	SwitchInst *si = NULL;
 	if ((bi = dyn_cast<BranchInst>(ti))) {
 		if (bi->isConditional()) {
 			Value *condition = bi->getCondition();
@@ -80,7 +80,7 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 		}
 	}
 	// CASE 2: Switch Instruction
-	/*
+	
 	else if ((si = dyn_cast<SwitchInst>(ti))) {
 		Value *condition = si->getCondition();
 		
@@ -88,7 +88,7 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 			insertSigmas(ti, condition);
 		}
 	}
-	*/
+	
 }
 
 /*
