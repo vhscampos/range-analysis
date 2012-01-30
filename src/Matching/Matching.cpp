@@ -37,12 +37,13 @@ namespace {
 	
 		DenseMap<const Value*, VarNode*> VarNodes;
 		SmallPtrSet<BasicOp*, 64> GenOprs;
+		DenseMap<const Value*, BasicOp*> DefMap;
 		DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UseMap;
 		DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
 		DenseMap<const Value*, ValueSwitchMap> ValuesSwitchMap;
 		
 		// Constraint Graph
-		ConstraintGraph *G = new Cousot(&VarNodes, &GenOprs, &UseMap, &ValuesBranchMap, &ValuesSwitchMap);
+		ConstraintGraph *G = new Cousot(&VarNodes, &GenOprs, &DefMap, &UseMap, &ValuesBranchMap, &ValuesSwitchMap);
 
 		// Search through the functions for the max int bitwidth
 		for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
@@ -79,6 +80,7 @@ namespace {
 
 
 		// TODO: Fazer o código para imprimir o CG
+		G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
 		
 //		Function &F = *(M.begin());
 

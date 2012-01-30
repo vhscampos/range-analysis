@@ -134,10 +134,11 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	// The data structures
 	DenseMap<const Value*, VarNode*> VNodes;
 	SmallPtrSet<BasicOp*, 64> GOprs;
+	DenseMap<const Value*, BasicOp*> DMap;
 	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
 	DenseMap<const Value*, ValueBranchMap> VBMap;
 	DenseMap<const Value*, ValueSwitchMap> VSMap;
-	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &UMap, &VBMap, &VSMap);
+	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &DMap, &UMap, &VBMap, &VSMap);
 
 	// Build the graph and find the intervals of the variables.
 	CG->buildGraph(F);
@@ -833,15 +834,21 @@ VarNode::~VarNode() {}
 
 
 /// Initializes the value of the node.
-void VarNode::init() {
+void VarNode::init(bool outside) {
 	const Value* V = this->getValue();
 	if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
 		APInt tmp = CI->getValue();
 		APInt value = tmp.sextOrTrunc(MAX_BIT_INT);
 		this->setRange(Range(value, value, false));
-	} else {
-		// Initialize with a basic, empty, interval.
-		this->setRange(Range(Min, Max, /*isEmpty=*/true));
+	}
+	else {
+		if (!outside) {
+			// Initialize with a basic, empty, interval.
+			this->setRange(Range(Min, Max, /*isEmpty=*/true));
+		}
+		else {
+			this->setRange(Range(Min, Max, false));
+		}
 	}
 }
 
@@ -940,6 +947,10 @@ UnaryOp::~UnaryOp() {}
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
 Range UnaryOp::eval() const {
+//	if (source->getRange().isEmptySet()) {
+//		errs() << "Checagem de empty-set falhou\n";
+//	}
+	
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
 	Range result(Min, Max, false);
 	switch (this->getOpcode()) {
@@ -953,7 +964,7 @@ Range UnaryOp::eval() const {
 		result = source->getRange().sextOrTrunc(bw);
 		break;
 	default:
-		// Phi functions, Loads and Stores are handled here.
+		// Loads and Stores are handled here.
 		result = source->getRange();
 		break;
 	}
@@ -1028,11 +1039,15 @@ SigmaOp::~SigmaOp() {}
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
 Range SigmaOp::eval() const {
+//	if (getSource()->getRange().isEmptySet()) {
+//		errs() << "Checagem de empty-set falhou\n";
+//	}
+	
 	Range result = this->getSource()->getRange();
 
-	if (!getIntersect()->getRange().isMaxRange()) {
+	//if (!getIntersect()->getRange().isMaxRange()) {
 		result = result.intersectWith(getIntersect()->getRange());
-	}
+	//}
 
 	return result;
 }
@@ -1085,6 +1100,10 @@ BinaryOp::~BinaryOp() {}
 /// Basically, this function performs the operation indicated in its opcode
 /// taking as its operands the source1 and the source2.
 Range BinaryOp::eval() const {
+//	if (source1->getRange().isEmptySet() || source2->getRange().isEmptySet()) {
+//		errs() << "Checagem de empty-set falhou\n";
+//	}
+	
 	Range op1 = this->getSource1()->getRange();
 	Range op2 = this->getSource2()->getRange();
 	Range result(Min, Max, /*is empty=*/true);
@@ -1290,12 +1309,14 @@ void ValueSwitchMap::clear() {
 // ========================================================================== //
 
 ConstraintGraph::ConstraintGraph(VarNodes *varNodes, 
-                                GenOprs *genOprs, 
+                                GenOprs *genOprs,
+                                DefMap *defmap,
                                 UseMap *usemap,
                        			ValuesBranchMap *valuesbranchmap,
                        			ValuesSwitchMap *valuesswitchMap) {
 	this->vars = varNodes;
 	this->oprs = genOprs;
+	this->defMap = defmap;
 	this->useMap = usemap;
 	this->valuesBranchMap = valuesbranchmap;
 	this->valuesSwitchMap = valuesswitchMap;
@@ -1361,17 +1382,23 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	// Create the operation using the intersect to constrain sink's interval.
 	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, I, source, I->getOpcode());
 	this->oprs->insert(UOp);
+	
+	// Insert this definition in defmap
+	(*this->defMap)[sink->getValue()] = UOp;
 
 	// Inserts the sources of the operation in the use map list.
 	this->useMap->find(source->getValue())->second.insert(UOp);
 }
 
-/// Adds an UnaryOp in the graph.
+/// Adds an UnaryOp in the graph. Used by inter-procedural graph building
 void ConstraintGraph::addUnaryOp(VarNode* sink, VarNode* source) {
 	// Create the operation using the intersect to constrain sink's interval.
   // I'm using zero as the opcode because it doesn't matter here.
 	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, NULL, source, 0); 
 	this->oprs->insert(UOp);
+	
+	// Insert this definition in defmap
+	(*this->defMap)[sink->getValue()] = UOp;
 
 	// Inserts the sources of the operation in the use map list.
 	this->useMap->find(source->getValue())->second.insert(UOp);
@@ -1396,6 +1423,9 @@ void ConstraintGraph::addBinaryOp(const Instruction* I) {
 
 	// Insert the operation in the graph.
 	this->oprs->insert(BOp);
+	
+	// Insert this definition in defmap
+	(*this->defMap)[sink->getValue()] = BOp;
 
 	// Inserts the sources of the operation in the use map list.
 	this->useMap->find(source1->getValue())->second.insert(BOp);
@@ -1412,6 +1442,9 @@ void ConstraintGraph::addPhiOp(const PHINode* Phi)
 	
 	// Insert the operation in the graph.
 	this->oprs->insert(phiOp);
+	
+	// Insert this definition in defmap
+	(*this->defMap)[sink->getValue()] = phiOp;
 
 	// Create the sources.
 	for (User::const_op_iterator it = Phi->op_begin(), e = Phi->op_end(); it != e; ++it) {
@@ -1480,6 +1513,9 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 
 		// Insert the operation in the graph.
 		this->oprs->insert(sigmaOp);
+		
+		// Insert this definition in defmap
+		(*this->defMap)[sink->getValue()] = sigmaOp;
 
 		// Inserts the sources of the operation in the use map list.
 		this->useMap->find(source->getValue())->second.insert(sigmaOp);
@@ -1487,6 +1523,7 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 }
 
 void ConstraintGraph::buildOperations(const Instruction* I) {
+	
 	// Handle binary instructions.
 	if (I->isBinaryOp()) {
 		addBinaryOp(I);
@@ -1740,7 +1777,8 @@ void ConstraintGraph::buildGraph(const Function& F) {
 	// Initializes the nodes and the use map structure.
 	VarNodes::iterator bgn = this->vars->begin(), end = this->vars->end();
 	for (; bgn != end; ++bgn) {
-		bgn->second->init();
+		bgn->second->init(!this->defMap->count(bgn->first));
+//		bgn->second->init(false);
 	}
 }
 
@@ -1989,6 +2027,21 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
 
+//	errs() << "Lista:\n";
+//	for (VarNodes::const_iterator vit = vars->begin(), vend = vars->end(); vit != vend; ++vit) {
+//		const Value *temp = vit->first;
+//		assert(temp == vit->second->getValue() && "Deu pau aqui.");
+//		
+//		const ConstantInt *ci = NULL;
+//		if ((ci = dyn_cast<ConstantInt>(temp))) {
+//			errs() << ci->getValue() << "\n";
+//		}
+//		else {
+//			errs() << temp->getName() << "\n";
+//		}
+//	}
+//	errs() << "\n";
+	
 	// Builds symbMap
 	buildSymbolicIntersectMap();
 	
@@ -2018,6 +2071,8 @@ void ConstraintGraph::findIntervals() {
 //				errs() << (*p)->getValue()->getName() << "\n";
 //			}
 //		}
+//		
+//		errs() << "\n";
 		
 		UseMap compUseMap = buildUseMap(component);
 		
@@ -2161,9 +2216,14 @@ void ConstraintGraph::printResultIntervals(){
 }
 
 void ConstraintGraph::computeStats(){
-	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+	for (VarNodes::const_iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
 		// We only count the instructions that have uses.
 		if (vbgn->first->getNumUses() == 0) {
+			continue;
+		}
+		
+		// ConstantInts must NOT be counted!!
+		if (isa<ConstantInt>(vbgn->first)) {
 			continue;
 		}
 

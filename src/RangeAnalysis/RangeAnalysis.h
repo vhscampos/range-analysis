@@ -144,7 +144,7 @@ public:
 	VarNode(const Value* V);
 	~VarNode();
 	/// Initializes the value of the node.
-	void init();
+	void init(bool outside);
 	/// Returns the range of the variable represented by this node.
 	inline Range getRange() const {return interval;}
 	/// Returns the variable represented by this node.
@@ -532,7 +532,7 @@ typedef DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UseMap;
 typedef DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > SymbMap;
 
 // A map from varnodes to the operation in which this variable is defined
-typedef DenseMap<VarNode*, BasicOp*> DefMap;
+typedef DenseMap<const Value*, BasicOp*> DefMap;
 
 typedef DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
 
@@ -548,6 +548,8 @@ protected:
 	GenOprs* oprs;
 
 private:
+	// A map from variables to the operations that define them
+	DefMap* defMap;
 	// A map from variables to the operations where these variables are used.
 	UseMap* useMap;
 	// A map from variables to the operations where these 
@@ -585,7 +587,7 @@ public:
 	/// I'm doing this because I want to use this analysis in an
 	/// inter-procedural pass. So, I have to receive these data structures as
 	// parameters.
-	ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
+	ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap);
 	~ConstraintGraph();
 	/// Adds a VarNode in the graph.
@@ -626,9 +628,9 @@ private:
 		const SmallPtrSet<VarNode*, 32> *component);
 
 public:
-	Cousot(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
+	Cousot(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap): ConstraintGraph(varNodes, genOprs, 
-		usemap, valuesBranchMap, valuesSwitchMap) {}
+		defmap, usemap, valuesBranchMap, valuesSwitchMap) {}
 };
 
 class CropDFS: public ConstraintGraph{
@@ -641,9 +643,9 @@ private:
 	void crop(const UseMap &compUseMap, BasicOp *op);
 
 public:
-	CropDFS(VarNodes *varNodes, GenOprs *genOprs, UseMap *usemap,
+	CropDFS(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap): ConstraintGraph(varNodes, genOprs, 
-		usemap, valuesBranchMap, valuesSwitchMap) {}
+		defmap, usemap, valuesBranchMap, valuesSwitchMap) {}
 };
 
 class Nuutila {
