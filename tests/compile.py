@@ -3,10 +3,9 @@
 import sys
 import os
 
-passPath = "/home/igor/workspace/llvm-3.0/Debug/lib/"
+passPath = "/home/igor/workspace/ra/llvm-3.0/Debug/lib/"
 
 def checkArgs(args):
-    print ("Lenght=",len(args))
     if len(args) != 3:
         return False
     if args[1] in ["-ra-inter-crop","-ra-inter-cousot","-ra-intra-crop","-ra-intra-cousot"]:

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2011.10.14)  16 DEC 2011 14:47
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2011.10.14)  11 JAN 2012 14:43
 entering extended mode
  %&-line parsing enabled.
 **doc.tex
@@ -392,60 +392,18 @@ File: images/ex1.pdf Graphic file (type pdf)
 <images/algorithm.pdf, id=2, 422.57672pt x 222.83049pt>
 File: images/algorithm.pdf Graphic file (type pdf)
 
-<use images/algorithm.pdf>
-
-Package natbib Warning: Citation `Bodik00' on page 1 undefined on input line 23
-4.
-
-[1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}
+<use images/algorithm.pdf> [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map
+}
 
 
-]
-<images/ex_standard_eSSA.pdf, id=22, 212.79198pt x 228.98047pt>
+] <images/ex_standard_eSSA.pdf, id=22, 212.79198pt x 228.98047pt>
 File: images/ex_standard_eSSA.pdf Graphic file (type pdf)
 
 <use images/ex_standard_eSSA.pdf>
-
-Package natbib Warning: Citation `Barik06' on page 2 undefined on input line 28
-1.
-
-
-Package natbib Warning: Citation `Tallam03' on page 2 undefined on input line 2
-81.
-
-
-Package natbib Warning: Citation `Pereira08' on page 2 undefined on input line 
-281.
-
-
-Package natbib Warning: Citation `Cong05' on page 2 undefined on input line 282
-.
-
-
-Package natbib Warning: Citation `Mahlke01' on page 2 undefined on input line 2
-82.
-
-
-Package natbib Warning: Citation `Stephenson00' on page 2 undefined on input li
-ne 282.
-
 <images/ex_non_pruned.pdf, id=23, 343.2825pt x 160.59799pt>
 File: images/ex_non_pruned.pdf Graphic file (type pdf)
 
 <use images/ex_non_pruned.pdf>
-
-Package natbib Warning: Citation `Ferrante87' on page 2 undefined on input line
- 344.
-
-
-Package natbib Warning: Citation `Ferrante87' on page 2 undefined on input line
- 354.
-
-
-Package natbib Warning: Citation `Ferrante87' on page 2 undefined on input line
- 355.
-
-
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [2 <./images/ex1.pdf> <./images/algorithm.pdf> <./images/ex_standard_eSSA.pdf>
@@ -454,10 +412,6 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 File: images/ex_graph.pdf Graphic file (type pdf)
 
 <use images/ex_graph.pdf>
-
-Package natbib Warning: Citation `Cousot77' on page 3 undefined on input line 4
-10.
-
 <images/growth_lattice.pdf, id=113, 81.30376pt x 131.48824pt>
 File: images/growth_lattice.pdf Graphic file (type pdf)
 
@@ -477,32 +431,23 @@ Overfull \hbox (27.59679pt too wide) in alignment at lines 474--483
  [][][] []
  []
 
-
-Package natbib Warning: Citation `Cousot77' on page 4 undefined on input line 5
-08.
-
 <images/ex_partition_grow_crop.pdf, id=220, 276.02824pt x 420.56825pt>
 File: images/ex_partition_grow_crop.pdf Graphic file (type pdf)
 
-<use images/ex_partition_grow_crop.pdf> (./doc.bbl
+<use images/ex_partition_grow_crop.pdf> (./doc.bbl [4 <./images/ex_partition_gr
+ow_crop.pdf>]) [5
 
-Package natbib Warning: Empty `thebibliography' environment on input line 3.
-
-)
-
-Package natbib Warning: There were undefined citations.
-
-[4 <./images/ex_partition_grow_crop.pdf>] (./doc.aux)
+] (./doc.aux)
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 5306 strings out of 495041
- 66483 string characters out of 1181896
- 126602 words of memory out of 3000000
- 8397 multiletter control sequences out of 15000+50000
- 30094 words of font info for 67 fonts, out of 3000000 for 9000
+ 5326 strings out of 495041
+ 66852 string characters out of 1181896
+ 126737 words of memory out of 3000000
+ 8416 multiletter control sequences out of 15000+50000
+ 31778 words of font info for 69 fonts, out of 3000000 for 9000
  30 hyphenation exceptions out of 8191
  34i,27n,32p,401b,433s stack positions out of 5000i,500n,10000p,200000b,50000s
 {/usr/share/texmf-texlive/fonts/enc/dvips/base/8r.enc}</usr/share/texmf-texli
@@ -520,9 +465,9 @@ y8.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr
 /texmf-texlive/fonts/type1/urw/times/utmb8a.pfb></usr/share/texmf-texlive/fonts
 /type1/urw/times/utmbi8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/times/ut
 mr8a.pfb></usr/share/texmf-texlive/fonts/type1/urw/times/utmri8a.pfb>
-Output written on doc.pdf (4 pages, 466446 bytes).
+Output written on doc.pdf (5 pages, 469345 bytes).
 PDF statistics:
- 318 PDF objects out of 1000 (max. 8388607)
+ 321 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  36 words of extra memory for PDF output out of 10000 (max. 10000000)
 

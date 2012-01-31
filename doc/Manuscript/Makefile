@@ -1,7 +1,7 @@
 all:
 	pdflatex doc.tex
+	bibtex doc
 	pdflatex doc.tex
-#	bibtex doc
 	pdflatex doc.tex
 
 clean:

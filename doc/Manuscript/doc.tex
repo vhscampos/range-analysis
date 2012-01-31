@@ -240,7 +240,7 @@ We will show first how we convert a program into standard e-SSA form.
 Let $(v < c)?$ be a conditional test, and let $l_t$ and $l_f$ be labels in
 the program, such that $l_t$ is the target of the test if the condition is true,
 and let $l_f$ is the target when the condition is false.
-If $l_t$ dominates any use of $v$, then we insert at $l_f$ a copy
+If $l_f$ dominates any use of $v$, then we insert at $l_f$ a copy
 $v_f = v \sqcap [-\infty, c-1]$, where $v_f$ is a fresh name.
 We then rename every use of $v$ that is dominated by $l_f$ to $v_f$.
 Dually, if $l_t$ dominates any use of $v$, then we insert at $l_t$ a copy
@@ -593,6 +593,6 @@ approach is guaranteed to find the least fixpoint.
 The same is true if we have a SCC with only {\em descending constraints}.
 
 \bibliographystyle{plain}
-\bibliography{../../../bibtex/references}
+\bibliography{references}
 
 \end{document}

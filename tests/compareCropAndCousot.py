@@ -16,7 +16,6 @@ def readIntervals(fileName):
 			m = re.search('(?<=label=\")\[.*\](?=\"])', line)
 			if m != None:
 				intersections.append(m.group(0))
-	
 	return {'vars': intervals, 'intersections': set(intersections)}
 
 def checkVariables(cropIntervals, cousotIntervals):

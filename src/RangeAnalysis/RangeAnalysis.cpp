@@ -49,13 +49,14 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 	const Instruction *I = NULL;
 	
 	if ((A = dyn_cast<Argument>(V))) {
-		OS << A->getParent()->getName() << "." << A->getName() << " ";
+		OS << A->getParent()->getName() << "." << A->getName();
 	}
 	else if ((I = dyn_cast<Instruction>(V))) {
-		OS << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName() << " ";
+		OS << I->getParent()->getParent()->getName() << "."
+			<< I->getParent()->getName() << "." << I->getName();
 	}
 	else {
-		OS << V->getName() << " ";
+		OS << V->getName();
 	}
 }
 
@@ -706,7 +707,7 @@ void Range::print(raw_ostream& OS) const {
 	}
 
 	if (getUpper().eq(Max)) {
-		OS << "+inf] ";
+		OS << "+inf]";
 	} else {
 		OS << getUpper() << "]";
 	}
@@ -856,11 +857,11 @@ void VarNode::init(bool outside) {
 /// Pretty print.
 void VarNode::print(raw_ostream& OS) const {
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(this->getValue())) {
-		OS << C->getValue() << " ";
+		OS << C->getValue();
 	} else {
 		printVarName(this->getValue(), OS);
 	}
-
+	OS << " ";
 	this->getRange().print(OS);
 }
 
@@ -982,7 +983,7 @@ Range UnaryOp::eval() const {
 /// because I had problems to access the members of the class outside it.
 void UnaryOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
-	OS << " " << quot << this << quot << " [label =\"";
+	OS << " " << quot << this << quot << " [label=\"";
 	
 	// Instruction bitwidth
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
@@ -1057,7 +1058,7 @@ Range SigmaOp::eval() const {
 /// because I had problems to access the members of the class outside it.
 void SigmaOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
-	OS << " " << quot << this << quot << " [label =\"";
+	OS << " " << quot << this << quot << " [label=\"";
 	this->getIntersect()->print(OS);
 	OS << "\"]\n";
 	const Value* V = this->getSource()->getValue();
@@ -1166,7 +1167,7 @@ Range BinaryOp::eval() const {
 void BinaryOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
 	const char* opcodeName = Instruction::getOpcodeName(this->getOpcode());
-	OS << " " << quot << this << quot << " [label =\"" << opcodeName << "\"]\n";
+	OS << " " << quot << this << quot << " [label=\"" << opcodeName << "\"]\n";
 
 	const Value* V1 = this->getSource1()->getValue();
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(V1)) {
@@ -1234,7 +1235,7 @@ Range PhiOp::eval() const {
 /// because I had problems to access the members of the class outside it.
 void PhiOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
-	OS << " " << quot << this << quot << " [label =\"";
+	OS << " " << quot << this << quot << " [label=\"";
 	OS << "phi";
 	OS << "\"]\n";
 	
@@ -2178,7 +2179,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 
 		OS << " [label=\"";
 		bgn->second->print(OS);
-		OS << " \"]\n";
+		OS << "\"]\n";
 	}
 
 	GenOprs::const_iterator B = oprs->begin(), E = oprs->end();
