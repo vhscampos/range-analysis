@@ -606,21 +606,9 @@ Range Range::truncate(unsigned bitwidht) const {
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
 	
-	// If it is a truncation to the same bitwidth (MAX_BIT_INT), return itself
-	if (bitwidht == MAX_BIT_INT) {
-		return *this;
-	}
+	Range result(APInt::getSignedMinValue(bitwidht), APInt::getSignedMaxValue(bitwidht), false);
 	
-	Range result(getLower().trunc(bitwidht), getUpper().trunc(bitwidht), isEmptySet());
-	
-	// If upper bound is less than lower bound, truncation is not valid, so return max range
-	if (result.getUpper().slt(result.getLower())) {
-		return Range(APInt::getSignedMinValue(bitwidht),
-				     APInt::getSignedMaxValue(bitwidht), false);;
-	}
-	else {
-		return result;
-	}
+	return result.intersectWith(*this);
 }
 
 //Range Range::signExtend(unsigned bitwidht) const {
@@ -648,17 +636,7 @@ Range Range::sextOrTrunc(unsigned bitwidht) const {
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
 	
-	// Check if source bitwidth is greater or less than destination bitwidth
-	unsigned srcbw = getLower().getActiveBits() > getUpper().getActiveBits() ? getLower().getActiveBits() : getUpper().getActiveBits();
-	
-	// Source bw <= Dest bw --> sext (since we use integers of max bit for all variables, sext does not make sense)
-	if (srcbw <= bitwidht) {
-		return *this;
-	}
-	// else --> trunc
-	else {
-		return truncate(bitwidht);
-	}
+	return Range(APInt::getSignedMinValue(bitwidht), APInt::getSignedMaxValue(bitwidht), false);
 }
 
 
@@ -668,17 +646,7 @@ Range Range::zextOrTrunc(unsigned bitwidht) const {
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
 
-	// Check if source bitwidth is greater or less than destination bitwidth
-	unsigned srcbw = getLower().getActiveBits() > getUpper().getActiveBits() ? getLower().getActiveBits() : getUpper().getActiveBits();
-	
-	// Source bw <= Dest bw --> zext (since we use integers of max bit for all variables, zext does not make sense)
-	if (srcbw <= bitwidht) {
-		return *this;
-	}
-	// else --> trunc
-	else {
-		return truncate(bitwidht);
-	}
+	return Range(APInt::getSignedMinValue(bitwidht), APInt::getSignedMaxValue(bitwidht), false);
 }
 
 
