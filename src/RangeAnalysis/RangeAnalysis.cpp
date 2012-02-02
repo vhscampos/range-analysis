@@ -49,14 +49,13 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 	const Instruction *I = NULL;
 	
 	if ((A = dyn_cast<Argument>(V))) {
-		OS << A->getParent()->getName() << "." << A->getName();
+		OS << A->getParent()->getName() << "." << A->getName() << " ";
 	}
 	else if ((I = dyn_cast<Instruction>(V))) {
-		OS << I->getParent()->getParent()->getName() << "."
-			<< I->getParent()->getName() << "." << I->getName();
+		OS << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName() << " ";
 	}
 	else {
-		OS << V->getName();
+		OS << V->getName() << " ";
 	}
 }
 
@@ -607,29 +606,40 @@ Range Range::truncate(unsigned bitwidht) const {
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
 	
-	Range result(APInt::getSignedMinValue(bitwidht),
-				     APInt::getSignedMaxValue(bitwidht), false);
-	
-	return result.intersectWith(*this);
-}
-
-Range Range::signExtend(unsigned bitwidht) const {
-	if (isEmptySet()) {
-		return Range(APInt::getSignedMinValue(bitwidht),
-				     APInt::getSignedMaxValue(bitwidht), true);
+	// If it is a truncation to the same bitwidth (MAX_BIT_INT), return itself
+	if (bitwidht == MAX_BIT_INT) {
+		return *this;
 	}
 	
-	return Range(getLower().sext(bitwidht), getUpper().sext(bitwidht), isEmptySet());
+	Range result(getLower().trunc(bitwidht), getUpper().trunc(bitwidht), isEmptySet());
+	
+	// If upper bound is less than lower bound, truncation is not valid, so return max range
+	if (result.getUpper().slt(result.getLower())) {
+		return Range(APInt::getSignedMinValue(bitwidht),
+				     APInt::getSignedMaxValue(bitwidht), false);;
+	}
+	else {
+		return result;
+	}
 }
 
-Range Range::zeroExtend(unsigned bitwidht) const {
-	if (isEmptySet()) {
-		return Range(APInt::getSignedMinValue(bitwidht),
-				     APInt::getSignedMaxValue(bitwidht), true);
-	}
-	
-	return Range(getLower().zext(bitwidht), getUpper().zext(bitwidht), isEmptySet());
-}
+//Range Range::signExtend(unsigned bitwidht) const {
+//	if (isEmptySet()) {
+//		return Range(APInt::getSignedMinValue(bitwidht),
+//				     APInt::getSignedMaxValue(bitwidht), true);
+//	}
+//	
+//	return Range(getLower().sext(bitwidht), getUpper().sext(bitwidht), isEmptySet());
+//}
+
+//Range Range::zeroExtend(unsigned bitwidht) const {
+//	if (isEmptySet()) {
+//		return Range(APInt::getSignedMinValue(bitwidht),
+//				     APInt::getSignedMaxValue(bitwidht), true);
+//	}
+//	
+//	return Range(getLower().zext(bitwidht), getUpper().zext(bitwidht), isEmptySet());
+//}
 
 
 Range Range::sextOrTrunc(unsigned bitwidht) const {
@@ -637,9 +647,18 @@ Range Range::sextOrTrunc(unsigned bitwidht) const {
 		return Range(APInt::getSignedMinValue(bitwidht),
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
-
-	// FIXME (maybe fixed)
-	return signExtend(bitwidht);
+	
+	// Check if source bitwidth is greater or less than destination bitwidth
+	unsigned srcbw = getLower().getActiveBits() > getUpper().getActiveBits() ? getLower().getActiveBits() : getUpper().getActiveBits();
+	
+	// Source bw <= Dest bw --> sext (since we use integers of max bit for all variables, sext does not make sense)
+	if (srcbw <= bitwidht) {
+		return *this;
+	}
+	// else --> trunc
+	else {
+		return truncate(bitwidht);
+	}
 }
 
 
@@ -649,8 +668,17 @@ Range Range::zextOrTrunc(unsigned bitwidht) const {
 				     APInt::getSignedMaxValue(bitwidht), true);
 	}
 
-	// FIXME
-	return Range(Min, Max, false);
+	// Check if source bitwidth is greater or less than destination bitwidth
+	unsigned srcbw = getLower().getActiveBits() > getUpper().getActiveBits() ? getLower().getActiveBits() : getUpper().getActiveBits();
+	
+	// Source bw <= Dest bw --> zext (since we use integers of max bit for all variables, zext does not make sense)
+	if (srcbw <= bitwidht) {
+		return *this;
+	}
+	// else --> trunc
+	else {
+		return truncate(bitwidht);
+	}
 }
 
 
@@ -707,7 +735,7 @@ void Range::print(raw_ostream& OS) const {
 	}
 
 	if (getUpper().eq(Max)) {
-		OS << "+inf]";
+		OS << "+inf] ";
 	} else {
 		OS << getUpper() << "]";
 	}
@@ -857,11 +885,11 @@ void VarNode::init(bool outside) {
 /// Pretty print.
 void VarNode::print(raw_ostream& OS) const {
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(this->getValue())) {
-		OS << C->getValue();
+		OS << C->getValue() << " ";
 	} else {
 		printVarName(this->getValue(), OS);
 	}
-	OS << " ";
+
 	this->getRange().print(OS);
 }
 
@@ -948,8 +976,9 @@ UnaryOp::~UnaryOp() {}
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
 Range UnaryOp::eval() const {
-//	if (source->getRange().isEmptySet()) {
-//		errs() << "Checagem de empty-set falhou\n";
+//	const Instruction *itmp = NULL;
+//	if ((itmp = dyn_cast<Instruction>(this->getSink()->getValue())) && (itmp->getParent()->getParent()->getName() == "BZ2_blockSort") && (this->getSink()->getValue()->getName() == "tmp142.i")) {
+//		errs() << "Aqui\n";
 //	}
 	
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
@@ -983,7 +1012,7 @@ Range UnaryOp::eval() const {
 /// because I had problems to access the members of the class outside it.
 void UnaryOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
-	OS << " " << quot << this << quot << " [label=\"";
+	OS << " " << quot << this << quot << " [label =\"";
 	
 	// Instruction bitwidth
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
@@ -1058,7 +1087,7 @@ Range SigmaOp::eval() const {
 /// because I had problems to access the members of the class outside it.
 void SigmaOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
-	OS << " " << quot << this << quot << " [label=\"";
+	OS << " " << quot << this << quot << " [label =\"";
 	this->getIntersect()->print(OS);
 	OS << "\"]\n";
 	const Value* V = this->getSource()->getValue();
@@ -1101,8 +1130,9 @@ BinaryOp::~BinaryOp() {}
 /// Basically, this function performs the operation indicated in its opcode
 /// taking as its operands the source1 and the source2.
 Range BinaryOp::eval() const {
-//	if (source1->getRange().isEmptySet() || source2->getRange().isEmptySet()) {
-//		errs() << "Checagem de empty-set falhou\n";
+//	const Instruction *itmp = NULL;
+//	if ((itmp = dyn_cast<Instruction>(this->getSink()->getValue())) && (itmp->getParent()->getParent()->getName() == "BZ2_blockSort") && (this->getSink()->getValue()->getName() == "tmp142.i")) {
+//		errs() << "Aqui\n";
 //	}
 	
 	Range op1 = this->getSource1()->getRange();
@@ -1167,7 +1197,7 @@ Range BinaryOp::eval() const {
 void BinaryOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
 	const char* opcodeName = Instruction::getOpcodeName(this->getOpcode());
-	OS << " " << quot << this << quot << " [label=\"" << opcodeName << "\"]\n";
+	OS << " " << quot << this << quot << " [label =\"" << opcodeName << "\"]\n";
 
 	const Value* V1 = this->getSource1()->getValue();
 	if (const ConstantInt* C = dyn_cast<ConstantInt>(V1)) {
@@ -1220,6 +1250,11 @@ void PhiOp::addSource(const VarNode* newsrc)
 /// The result of evaluating a phi-function is the union of the ranges of
 /// every variable used in the phi.
 Range PhiOp::eval() const {
+//	const Instruction *itmp = NULL;
+//	if ((itmp = dyn_cast<Instruction>(this->getSink()->getValue())) && (itmp->getParent()->getParent()->getName() == "BZ2_blockSort") && (this->getSink()->getValue()->getName() == "s.0.i")) {
+//		errs() << "Aqui\n";
+//	}
+		
 	Range result = this->getSource(0)->getRange();
 
 	// Iterate over the sources of the phiop
@@ -1235,7 +1270,7 @@ Range PhiOp::eval() const {
 /// because I had problems to access the members of the class outside it.
 void PhiOp::print(raw_ostream& OS) const {
 	const char* quot = "\"";
-	OS << " " << quot << this << quot << " [label=\"";
+	OS << " " << quot << this << quot << " [label =\"";
 	OS << "phi";
 	OS << "\"]\n";
 	
@@ -1569,10 +1604,9 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 	
 	
 	// Handle 'default', if there is any
-	BasicBlock *succ = sw->getSuccessor(0);
-	const ConstantInt *constant = sw->getCaseValue(0);
+	BasicBlock *succ = sw->getDefaultDest();
 	
-	if (constant) {
+	if (succ) {
 		APInt sigMin = Min;
 		APInt sigMax = Max;
 
@@ -2005,6 +2039,7 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 	*/
 	
 //	int i = 20;
+
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
@@ -2061,6 +2096,57 @@ void ConstraintGraph::findIntervals() {
 			++numAloneSCCs;
 		}
 		
+		// DEBUG
+//		if (component.size() == 17) {
+//			std::string errors;
+//			std::string filename = "17.before";
+//			filename += ".dot";
+
+//			raw_fd_ostream output(filename.c_str(), errors);
+//			
+//			const char* quot = "\"";
+//			// Print the header of the .dot file.
+//			output << "digraph dotgraph {\n";
+//			output << "label=\"Constraint Graph for \"\n";
+//			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
+
+//			// Print the body of the .dot file.
+//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+//				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
+//					output << " " << C->getValue();
+//				} else {
+//					output << quot;
+//					printVarName((*bgn)->getValue(), output);
+//					output << quot;
+//				}
+
+//				output << " [label=\"";
+//				(*bgn)->print(output);
+//				output << " \"]\n";
+//			}
+//			
+//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+//				VarNode *var = *bgn;
+//				
+//				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
+//				
+//				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
+//					if (component.count((*useit)->getSink())) {
+//						(*useit)->print(output);
+//						output << "\n";
+//					}
+//				}
+//			}			
+//			
+//			//output << pseudoEdgesString.str();
+
+//			// Print the footer of the .dot file.
+//			output << "}\n";
+
+//			output.close();
+//			
+//		}
+		
 		
 //		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
 //			const ConstantInt *CI = NULL;
@@ -2083,6 +2169,57 @@ void ConstraintGraph::findIntervals() {
 		// Primeiro iterate till fix point
 		preUpdate(compUseMap, entryPoints);
 		fixIntersects(component);
+		
+//		if (component.size() == 17) {
+//			std::string errors;
+//			std::string filename = "17.widen";
+//			filename += ".dot";
+
+//			raw_fd_ostream output(filename.c_str(), errors);
+//			
+//			const char* quot = "\"";
+//			// Print the header of the .dot file.
+//			output << "digraph dotgraph {\n";
+//			output << "label=\"Constraint Graph for \"\n";
+//			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
+
+//			// Print the body of the .dot file.
+//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+//				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
+//					output << " " << C->getValue();
+//				} else {
+//					output << quot;
+//					printVarName((*bgn)->getValue(), output);
+//					output << quot;
+//				}
+
+//				output << " [label=\"";
+//				(*bgn)->print(output);
+//				output << " \"]\n";
+//			}
+//			
+//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+//				VarNode *var = *bgn;
+//				
+//				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
+//				
+//				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
+//					if (component.count((*useit)->getSink())) {
+//						(*useit)->print(output);
+//						output << "\n";
+//					}
+//				}
+//			}			
+//			
+//			//output << pseudoEdgesString.str();
+
+//			// Print the footer of the .dot file.
+//			output << "}\n";
+
+//			output.close();
+//			
+//		}
+		
 		// Segundo iterate till fix point
 		SmallPtrSet<const Value*, 6> activeVars;
 		generateActivesVars(component, activeVars);
@@ -2090,6 +2227,56 @@ void ConstraintGraph::findIntervals() {
 		
 		// TODO: PROPAGAR PARA O PROXIMO SCC
 		propagateToNextSCC(component);
+		
+//		if (component.size() == 17) {
+//			std::string errors;
+//			std::string filename = "17.narrow";
+//			filename += ".dot";
+
+//			raw_fd_ostream output(filename.c_str(), errors);
+//			
+//			const char* quot = "\"";
+//			// Print the header of the .dot file.
+//			output << "digraph dotgraph {\n";
+//			output << "label=\"Constraint Graph for \"\n";
+//			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
+
+//			// Print the body of the .dot file.
+//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+//				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
+//					output << " " << C->getValue();
+//				} else {
+//					output << quot;
+//					printVarName((*bgn)->getValue(), output);
+//					output << quot;
+//				}
+
+//				output << " [label=\"";
+//				(*bgn)->print(output);
+//				output << " \"]\n";
+//			}
+//			
+//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
+//				VarNode *var = *bgn;
+//				
+//				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
+//				
+//				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
+//					if (component.count((*useit)->getSink())) {
+//						(*useit)->print(output);
+//						output << "\n";
+//					}
+//				}
+//			}			
+//			
+//			//output << pseudoEdgesString.str();
+
+//			// Print the footer of the .dot file.
+//			output << "}\n";
+
+//			output.close();
+//			
+//		}
 		
 //		printResultIntervals();
 	}
@@ -2179,7 +2366,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 
 		OS << " [label=\"";
 		bgn->second->print(OS);
-		OS << "\"]\n";
+		OS << " \"]\n";
 	}
 
 	GenOprs::const_iterator B = oprs->begin(), E = oprs->end();

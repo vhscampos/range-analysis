@@ -118,8 +118,8 @@ public:
 	Range Or(const Range& other);
 	Range Xor(const Range& other);
 	Range truncate(unsigned bitwidht) const;
-	Range signExtend(unsigned bitwidht) const;
-	Range zeroExtend(unsigned bitwidht) const;
+//	Range signExtend(unsigned bitwidht) const;
+//	Range zeroExtend(unsigned bitwidht) const;
 	Range sextOrTrunc(unsigned bitwidht) const;
 	Range zextOrTrunc(unsigned bitwidht) const;
 	Range intersectWith(const Range& other) const;
