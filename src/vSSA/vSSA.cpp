@@ -188,6 +188,10 @@ void vSSA::renameUsesToSigma(Value *V, PHINode *sigma)
 		usepointers[i] = dyn_cast<Instruction>(*uit);
 	
 	for (i = 0; i < n; ++i) {
+		if (usepointers[i] ==  NULL) {
+			continue;
+		}
+		
 		BasicBlock *BB_user = usepointers[i]->getParent();
 		
 		if (usepointers[i] == sigma)
@@ -235,16 +239,13 @@ SmallVector<PHINode*, 25> vSSA::insertPhisForSigma(Value *V, PHINode *sigma)
 	
 		// Check if the Value sigmed dominates this basicblock
 		// We need to differentiate Instruction and Argument
-		bool condition;
+		bool condition = false;
 	
 		if (Instruction *I = dyn_cast<Instruction>(V)) {
 			condition = DT_->dominates(I->getParent(), BB_infrontier) && dominateAny(BB_infrontier, V);
 		}
 		else if (isa<Argument>(V)) {
 			condition = dominateAny(BB_infrontier, V);
-		}
-		else {
-			errs() << "ERRO\n";
 		}
 	
 		// If the original Value, for which the sigma was created, dominates the basicblock in the frontier, and this BB dominates any use of the Value, a vSSA_PHI is needed
@@ -293,16 +294,13 @@ void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 	
 		// Check if the Value phied dominates this basicblock
 		// We need to differentiate Instruction and Argument
-		bool condition;
+		bool condition = false;
 	
 		if (Instruction *I = dyn_cast<Instruction>(V)) {
 			condition = DT_->dominates(I->getParent(), BB_infrontier) && dominateAny(BB_infrontier, V);
 		}
 		else if (isa<Argument>(V)) {
 			condition = dominateAny(BB_infrontier, V);
-		}
-		else {
-			errs() << "ERRO\n";
 		}
 	
 		// If the original Value, for which the phi was created, dominates the basicblock in the frontier, and this BB dominates any use of the Value, a vSSA_PHI is needed
@@ -582,6 +580,11 @@ bool vSSA::dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *v
 
 	for (Value::use_iterator begin = value->use_begin(), end = value->use_end(); begin != end; ++begin) {
 		Instruction *I = dyn_cast<Instruction>(*begin);
+		
+		if (I == NULL) {
+			continue;
+		}
+		
 		BasicBlock *BB_father = I->getParent();
 		if (BB_next == BB_father && isa<PHINode>(I))
 			continue;
