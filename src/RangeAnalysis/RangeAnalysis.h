@@ -37,41 +37,25 @@
 #include "llvm/Pass.h"
 #include "llvm/Constants.h"
 #include "llvm/Instructions.h"
+#include "llvm/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ConstantRange.h"
+#include "llvm/Support/CallSite.h"
 #include <deque>
 #include <stack>
 #include <set>
 
+//TODO: coment the line below to disable the debug of SCCs and optimize the code
+// generated.
+#define SCC_DEBUG
 
-namespace llvm {
+using namespace llvm;
 
-template <class CGT>
-class RangeAnalysis: public FunctionPass {
-
-public:
-	static char ID; // Pass identification, replacement for typeid
-	RangeAnalysis() : FunctionPass(ID) {}
-	void getAnalysisUsage(AnalysisUsage &AU) const;
-	bool runOnFunction(Function &F);
-
-private:
-	/// Gets the maximum bit width of the operands in
-	/// the instructions of the function.
-	/// This function is necessary because the class APInt only supports
-	/// binary operations on operands that have the same number of bits; thus,
-	/// all the APInts that we allocate to process the function will have the
-	/// maximum bit size.
-	/// The complexity of this function is linear on the number of operands
-	/// used in the function.
-	void getMaxBitWidth(const Function& F);
-
-}; // end of class RangeAnalysis
-
+namespace {
 
 /// In our range analysis pass we have to perform operations on ranges all the
 /// time. LLVM has a class to perform operations on ranges: the class
@@ -657,7 +641,9 @@ public:
 	SmallPtrSet<Value*, 32> inComponent;
 	DenseMap<Value*, SmallPtrSet<VarNode*, 32> > components;
 	std::deque<Value*> worklist;
-	
+#ifdef SCC_DEBUG
+	bool checkWorklist();
+#endif
 public:
 	Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single = false);
 	void addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNodes* vars);
@@ -675,6 +661,40 @@ public:
 	static bool crop(BasicOp* op);
 	static bool growth(BasicOp* op);
 };
+
+class RangeAnalysis{
+protected:
+	/** Gets the maximum bit width of the operands in the instructions of the
+	 * function. This function is necessary because the class APInt only
+	 * supports binary operations on operands that have the same number of
+	 * bits; thus, all the APInts that we allocate to process the function will
+	 * have the maximum bit size. The complexity of this function is linear on
+	 * the number of operands used in the function.
+	 */
+	unsigned getMaxBitWidth(const Function& F);
+	void updateMinMax(unsigned maxBitWidth);
+};
+
+template <class CGT>
+class InterProceduralRA: public ModulePass, RangeAnalysis{
+public:
+	static char ID; // Pass identification, replacement for typeid
+	InterProceduralRA() : ModulePass(ID) { }
+	bool runOnModule(Module &M);
+private:
+	void MatchParametersAndReturnValues(Function &F, ConstraintGraph &G);
+	unsigned getMaxBitWidth(Module &M);
+};
+
+template <class CGT>
+class IntraProceduralRA: public FunctionPass, RangeAnalysis{
+public:
+	static char ID; // Pass identification, replacement for typeid
+	IntraProceduralRA() : FunctionPass(ID) {}
+	void getAnalysisUsage(AnalysisUsage &AU) const;
+	bool runOnFunction(Function &F);
+}; // end of class RangeAnalysis
+
 
 } // end namespace
 

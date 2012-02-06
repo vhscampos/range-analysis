@@ -22,6 +22,8 @@ STATISTIC(needBits, "Needed bits.");
 STATISTIC(percentReduction, "Percentage of reduction of the number of bits.");
 STATISTIC(numSCCs, "Number of strongly connected components.");
 STATISTIC(numAloneSCCs, "Number of SCCs containing only one node.");
+STATISTIC(numVars, "Number of variables");
+STATISTIC(numOps, "Number of operations");
 
 // The number of bits needed to store the largest variable of the function (APInt).
 unsigned MAX_BIT_INT = 1;
@@ -91,46 +93,44 @@ static bool isValidInstruction(const Instruction* I) {
 	return false;
 }
 
-
 // ========================================================================== //
-// Range Analysis
+// RangeAnalysis
 // ========================================================================== //
-
-template <class CGT>
-void RangeAnalysis<CGT>::getMaxBitWidth(const Function& F) {
-	unsigned int InstBitSize = 0, opBitSize = 0;
-	MAX_BIT_INT = 1;
+unsigned RangeAnalysis::getMaxBitWidth(const Function& F) {
+	unsigned int InstBitSize = 0, opBitSize = 0, max = 0;
 
 	// Obtains the maximum bit width of the instructions of the function.
 	for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-		if (!isValidInstruction(&*I)) {
-			continue;
-		}
-
 		InstBitSize = I->getType()->getPrimitiveSizeInBits();
-		if (I->getType()->isIntegerTy() && InstBitSize > MAX_BIT_INT) {
-			MAX_BIT_INT = InstBitSize;
+		if (I->getType()->isIntegerTy() && InstBitSize > max) {
+			max = InstBitSize;
 		}
 
-		// Obtains the maximum bit width of the operands od the instruction.
+		// Obtains the maximum bit width of the operands of the instruction.
 		User::const_op_iterator bgn = I->op_begin(), end = I->op_end();
 		for (; bgn != end; ++bgn) {
 			opBitSize = (*bgn)->getType()->getPrimitiveSizeInBits();
-			if ((*bgn)->getType()->isIntegerTy() && opBitSize > MAX_BIT_INT) {
-				MAX_BIT_INT = opBitSize;
+			if ((*bgn)->getType()->isIntegerTy() && opBitSize > max) {
+				max = opBitSize;
 			}
 		}
 	}
 
-	// Updates the Min and Max values.
-	Min = APInt::getSignedMinValue(MAX_BIT_INT);
-	Max = APInt::getSignedMaxValue(MAX_BIT_INT);
+	return max;
 }
 
-template <class CGT>
-bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
-	getMaxBitWidth(F);
+void RangeAnalysis::updateMinMax(unsigned maxBitWidth){
+	// Updates the Min and Max values.
+	Min = APInt::getSignedMinValue(maxBitWidth);
+	Max = APInt::getSignedMaxValue(maxBitWidth);
+}
 
+// ========================================================================== //
+// IntraProceduralRangeAnalysis
+// ========================================================================== //
+
+template <class CGT>
+bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	// The data structures
 	DenseMap<const Value*, VarNode*> VNodes;
 	SmallPtrSet<BasicOp*, 64> GOprs;
@@ -139,6 +139,9 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 	DenseMap<const Value*, ValueBranchMap> VBMap;
 	DenseMap<const Value*, ValueSwitchMap> VSMap;
 	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &DMap, &UMap, &VBMap, &VSMap);
+
+	MAX_BIT_INT = getMaxBitWidth(F);
+	updateMinMax(MAX_BIT_INT);
 
 	// Build the graph and find the intervals of the variables.
 	CG->buildGraph(F);
@@ -151,15 +154,182 @@ bool RangeAnalysis<CGT>::runOnFunction(Function &F) {
 }
 
 template <class CGT>
-void RangeAnalysis<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
+void IntraProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.setPreservesAll();
 }
 
-template <class CGT>
-char RangeAnalysis<CGT>::ID = 0;
+// ========================================================================== //
+// InterProceduralRangeAnalysis
+// ========================================================================== //
 
-static RegisterPass<RangeAnalysis<Cousot> > Y("ra-intra-cousot", "Range Analysis with Cousot");
-static RegisterPass<RangeAnalysis<CropDFS> > Z("ra-intra-crop", "Range Analysis with CropDFS");
+template <class CGT>
+unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M){
+	unsigned max = 0;
+	// Search through the functions for the max int bitwidth
+	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+		if (!I->isDeclaration()) {
+			unsigned bitwidth = RangeAnalysis::getMaxBitWidth(*I);
+
+			if (bitwidth > max)
+				max = bitwidth;
+		}
+	}
+	return max;
+}
+
+template <class CGT>
+bool InterProceduralRA<CGT>::runOnModule(Module &M) {
+	DenseMap<const Value*, VarNode*> VarNodes;
+	SmallPtrSet<BasicOp*, 64> GenOprs;
+	DenseMap<const Value*, BasicOp*> DefMap;
+	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UseMap;
+	DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
+	DenseMap<const Value*, ValueSwitchMap> ValuesSwitchMap;
+
+	// Constraint Graph
+	ConstraintGraph *G = new CGT(&VarNodes, &GenOprs, &DefMap, &UseMap,
+		&ValuesBranchMap, &ValuesSwitchMap);
+
+	MAX_BIT_INT = getMaxBitWidth(M);
+	updateMinMax(MAX_BIT_INT);
+
+	// Build the Constraint Graph by running on each function
+	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+		// If the function is only a declaration, or if it has variable number of arguments, do not match
+		if (I->isDeclaration() || I->isVarArg())
+			continue;
+
+		G->buildGraph(*I);
+
+		MatchParametersAndReturnValues(*I, *G);
+	}
+
+	G->findIntervals();
+	G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
+
+	// Collect statistics
+	numVars = VarNodes.size();
+	numOps = GenOprs.size();
+
+	delete G;
+
+	// FIXME: Não sei se tem que retornar true ou false
+	return true;
+}
+
+template <class CGT>
+void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, ConstraintGraph &G) {
+	// Data structure which contains the matches between formal and real parameters
+	// First: formal parameter
+	// Second: real parameter
+	SmallVector<std::pair<Value*, Value*>, 4> Parameters(F.arg_size());
+
+	// Fetch the function arguments (formal parameters) into the data structure
+	Function::arg_iterator argptr;
+	Function::arg_iterator e;
+	unsigned i;
+
+	for (i = 0, argptr = F.arg_begin(), e = F.arg_end(); argptr != e; ++i, ++argptr)
+		Parameters[i].first = argptr;
+
+	// Check if the function returns a supported value type. If not, no return value matching is done
+	bool noReturn = F.getReturnType()->isVoidTy();
+
+	// Creates the data structure which receives the return values of the function, if there is any
+	SmallPtrSet<Value*, 8> ReturnValues;
+
+	if (!noReturn) {
+		// Iterate over the basic blocks to fetch all possible return values
+		for (Function::iterator bb = F.begin(), bbend = F.end(); bb != bbend; ++bb) {
+			// Get the terminator instruction of the basic block and check if it's
+			// a return instruction: if it's not, continue to next basic block
+			Instruction *terminator = bb->getTerminator();
+
+			ReturnInst *RI = dyn_cast<ReturnInst>(terminator);
+
+			if (!RI)
+				continue;
+
+			// Get the return value and insert in the data structure
+			ReturnValues.insert(RI->getReturnValue());
+		}
+	}
+
+	// For each use of F, get the real parameters and the caller instruction to do the matching
+	for (Value::use_iterator UI = F.use_begin(), E = F.use_end(); UI != E; ++UI) {
+		User *U = *UI;
+
+		// Ignore blockaddress uses
+		if (isa<BlockAddress>(U))
+			continue;
+
+		// Used by a non-instruction, or not the callee of a function, do not
+		// match.
+		if (!isa<CallInst>(U) && !isa<InvokeInst> (U))
+			continue;
+
+		Instruction *caller = cast<Instruction>(U);
+
+		CallSite CS(caller);
+		if (!CS.isCallee(UI))
+			continue;
+
+		// Iterate over the real parameters and put them in the data structure
+		CallSite::arg_iterator AI;
+		CallSite::arg_iterator EI;
+
+		for (i = 0, AI = CS.arg_begin(), EI = CS.arg_end(); AI != EI; ++i, ++AI)
+			Parameters[i].second = *AI;
+
+
+		// // Do the interprocedural construction of CG
+		VarNode* to;
+		VarNode* from;
+
+		// Match formal and real parameters
+		for (i = 0; i < Parameters.size(); ++i) {
+			// Add formal parameter to the CG
+			to = G.addVarNode(Parameters[i].first);
+
+			// Add real parameter to the CG
+			from = G.addVarNode(Parameters[i].second);
+
+			// Connect nodes
+			G.addUnaryOp(to, from);
+		}
+
+		// Match return values
+		if (!noReturn) {
+			// Add caller instruction to the CG (it receives the return value)
+			to = G.addVarNode(caller);
+
+			// For each return value, create a node and connect with an edge
+			for (SmallPtrSetIterator<Value*> ri = ReturnValues.begin(), re = ReturnValues.end(); ri != re; ++ri) {
+
+
+				// Add VarNode to the CG
+				from = G.addVarNode(*ri);
+
+				/// Connect nodes
+				G.addUnaryOp(to, from);
+
+			}
+		}
+
+		// Real parameters are cleaned before moving to the next use (for safety's sake)
+		for (i = 0; i < Parameters.size(); ++i)
+			Parameters[i].second = NULL;
+	}
+}
+
+template<class CGT>
+char IntraProceduralRA<CGT>::ID = 0;
+static RegisterPass<IntraProceduralRA<Cousot> > Y("ra-intra-cousot", "Range Analysis with Cousot");
+static RegisterPass<IntraProceduralRA<CropDFS> > Z("ra-intra-crop", "Range Analysis with CropDFS");
+template<class CGT>
+char InterProceduralRA<CGT>::ID = 2;
+static RegisterPass<InterProceduralRA<Cousot> > W("ra-inter-cousot", "Matching Pass with Cousot");
+static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop", "Matching Pass with CropDFS");
 
 // ========================================================================== //
 // Range
@@ -2520,54 +2690,60 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap)
  */
 Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single)
 {
-
-if (single) {
-	/* FERNANDO */
-	SmallPtrSet<VarNode*, 32> SCC;
-	for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
-			SCC.insert(vit->second);
-	}
-
-	for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
-			Value *V = const_cast<Value*>(vit->first);
-			components[V] = SCC;
-	}
-
-	this->worklist.push_back(const_cast<Value*>(varNodes->begin()->first));
-}
-else {
-	
-
-	// Copy structures
-	this->variables = varNodes;
-	this->index = 0;
-	
-	// Iterate over all varnodes of the constraint graph
-	for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
-		// Initialize DFS control variable for each Value in the graph
-		Value *V = const_cast<Value*>(vit->first);
-		dfs[V] = -1;
-	}
-	
-	// Self-explanatory
-	addControlDependenceEdges(symbMap, useMap, varNodes);
-	
-	// Iterate again over all varnodes of the constraint graph
-	for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
-		Value *V = const_cast<Value*>(vit->first);
-		
-		// If the Value has not been visited yet, call visit for him
-		if (dfs[V] < 0) {
-			std::stack<Value*> pilha;
-			if (!pilha.empty()) {
-				errs() << "Erro na pilha\n";
-			}
-			
-			visit(V, pilha, useMap);
+	if (single) {
+		/* FERNANDO */
+		SmallPtrSet<VarNode*, 32> SCC;
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+				SCC.insert(vit->second);
 		}
-	}
 	
-	// Self-explanatory
-	delControlDependenceEdges(useMap);
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+				Value *V = const_cast<Value*>(vit->first);
+				components[V] = SCC;
+		}
+	
+		this->worklist.push_back(const_cast<Value*>(varNodes->begin()->first));
+	}
+	else {
+		// Copy structures
+		this->variables = varNodes;
+		this->index = 0;
+
+		// Iterate over all varnodes of the constraint graph
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+			// Initialize DFS control variable for each Value in the graph
+			Value *V = const_cast<Value*>(vit->first);
+			dfs[V] = -1;
+		}
+
+		addControlDependenceEdges(symbMap, useMap, varNodes);
+		
+		// Iterate again over all varnodes of the constraint graph
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+			Value *V = const_cast<Value*>(vit->first);
+
+			// If the Value has not been visited yet, call visit for him
+			if (dfs[V] < 0) {
+				std::stack<Value*> pilha;
+				if (!pilha.empty()) {
+					errs() << "Erro na pilha\n";
+				}
+
+				visit(V, pilha, useMap);
+			}
+		}
+
+		delControlDependenceEdges(useMap);
+	}
+
+#ifdef SCC_DEBUG
+	assert(checkWorklist() && "ERROR: an inconsistency in SCC worklist have been found");
+#endif
 }
+
+#ifdef SCC_DEBUG
+bool Nuutila::checkWorklist(){
+	errs() << "[Nuutila::checkWorklist] OK!\n";
+	return true;
 }
+#endif
