@@ -681,12 +681,12 @@ Range Range::unionWith(const Range& other) const {
 
 
 bool Range::operator==(const Range& other) const {
-	return getLower().eq(other.getLower()) && getUpper().eq(other.getUpper());
+	return (isEmptySet() == other.isEmptySet()) && getLower().eq(other.getLower()) && getUpper().eq(other.getUpper());
 }
 
 
 bool Range::operator!=(const Range& other) const {
-	return !(getLower().eq(other.getLower()) && getUpper().eq(other.getUpper()));
+	return !(*this == other);
 }
 
 
@@ -2030,22 +2030,6 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
-
-//	errs() << "Lista:\n";
-//	for (VarNodes::const_iterator vit = vars->begin(), vend = vars->end(); vit != vend; ++vit) {
-//		const Value *temp = vit->first;
-//		assert(temp == vit->second->getValue() && "Deu pau aqui.");
-//		
-//		const ConstantInt *ci = NULL;
-//		if ((ci = dyn_cast<ConstantInt>(temp))) {
-//			errs() << ci->getValue() << "\n";
-//		}
-//		else {
-//			errs() << temp->getName() << "\n";
-//		}
-//	}
-//	errs() << "\n";
-	
 	// Builds symbMap
 	buildSymbolicIntersectMap();
 	
@@ -2064,71 +2048,6 @@ void ConstraintGraph::findIntervals() {
 			++numAloneSCCs;
 		}
 		
-		// DEBUG
-//		if (component.size() == 17) {
-//			std::string errors;
-//			std::string filename = "17.before";
-//			filename += ".dot";
-
-//			raw_fd_ostream output(filename.c_str(), errors);
-//			
-//			const char* quot = "\"";
-//			// Print the header of the .dot file.
-//			output << "digraph dotgraph {\n";
-//			output << "label=\"Constraint Graph for \"\n";
-//			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
-
-//			// Print the body of the .dot file.
-//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-//				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
-//					output << " " << C->getValue();
-//				} else {
-//					output << quot;
-//					printVarName((*bgn)->getValue(), output);
-//					output << quot;
-//				}
-
-//				output << " [label=\"";
-//				(*bgn)->print(output);
-//				output << " \"]\n";
-//			}
-//			
-//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-//				VarNode *var = *bgn;
-//				
-//				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
-//				
-//				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
-//					if (component.count((*useit)->getSink())) {
-//						(*useit)->print(output);
-//						output << "\n";
-//					}
-//				}
-//			}			
-//			
-//			//output << pseudoEdgesString.str();
-
-//			// Print the footer of the .dot file.
-//			output << "}\n";
-
-//			output.close();
-//			
-//		}
-		
-		
-//		for (SmallPtrSetIterator<VarNode*> p = component.begin(), pend = component.end(); p != pend; ++p) {
-//			const ConstantInt *CI = NULL;
-//			
-//			if ((CI = dyn_cast<ConstantInt>((*p)->getValue()))) {
-//				errs() << CI->getValue() << "\n";
-//			}
-//			else {
-//				errs() << (*p)->getValue()->getName() << "\n";
-//			}
-//		}
-//		
-//		errs() << "\n";
-		
 		UseMap compUseMap = buildUseMap(component);
 		
 		// Get the entry points of the SCC
@@ -2138,113 +2057,13 @@ void ConstraintGraph::findIntervals() {
 		preUpdate(compUseMap, entryPoints);
 		fixIntersects(component);
 		
-//		if (component.size() == 17) {
-//			std::string errors;
-//			std::string filename = "17.widen";
-//			filename += ".dot";
-
-//			raw_fd_ostream output(filename.c_str(), errors);
-//			
-//			const char* quot = "\"";
-//			// Print the header of the .dot file.
-//			output << "digraph dotgraph {\n";
-//			output << "label=\"Constraint Graph for \"\n";
-//			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
-
-//			// Print the body of the .dot file.
-//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-//				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
-//					output << " " << C->getValue();
-//				} else {
-//					output << quot;
-//					printVarName((*bgn)->getValue(), output);
-//					output << quot;
-//				}
-
-//				output << " [label=\"";
-//				(*bgn)->print(output);
-//				output << " \"]\n";
-//			}
-//			
-//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-//				VarNode *var = *bgn;
-//				
-//				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
-//				
-//				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
-//					if (component.count((*useit)->getSink())) {
-//						(*useit)->print(output);
-//						output << "\n";
-//					}
-//				}
-//			}			
-//			
-//			//output << pseudoEdgesString.str();
-
-//			// Print the footer of the .dot file.
-//			output << "}\n";
-
-//			output.close();
-//			
-//		}
-		
 		// Segundo iterate till fix point
 		SmallPtrSet<const Value*, 6> activeVars;
 		generateActivesVars(component, activeVars);
 		posUpdate(compUseMap, activeVars, &component);
 		
-		// TODO: PROPAGAR PARA O PROXIMO SCC
+
 		propagateToNextSCC(component);
-		
-//		if (component.size() == 17) {
-//			std::string errors;
-//			std::string filename = "17.narrow";
-//			filename += ".dot";
-
-//			raw_fd_ostream output(filename.c_str(), errors);
-//			
-//			const char* quot = "\"";
-//			// Print the header of the .dot file.
-//			output << "digraph dotgraph {\n";
-//			output << "label=\"Constraint Graph for \"\n";
-//			output << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
-
-//			// Print the body of the .dot file.
-//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-//				if (const ConstantInt* C = dyn_cast<ConstantInt>((*bgn)->getValue())) {
-//					output << " " << C->getValue();
-//				} else {
-//					output << quot;
-//					printVarName((*bgn)->getValue(), output);
-//					output << quot;
-//				}
-
-//				output << " [label=\"";
-//				(*bgn)->print(output);
-//				output << " \"]\n";
-//			}
-//			
-//			for (SmallPtrSetIterator<VarNode*> bgn = component.begin(), end = component.end(); bgn != end; ++bgn) {
-//				VarNode *var = *bgn;
-//				
-//				SmallPtrSet<BasicOp*, 8> &uselist = (*this->useMap)[var->getValue()];
-//				
-//				for (SmallPtrSetIterator<BasicOp*> useit = uselist.begin(), usend = uselist.end(); useit != usend; ++useit) {
-//					if (component.count((*useit)->getSink())) {
-//						(*useit)->print(output);
-//						output << "\n";
-//					}
-//				}
-//			}			
-//			
-//			//output << pseudoEdgesString.str();
-
-//			// Print the footer of the .dot file.
-//			output << "}\n";
-
-//			output.close();
-//			
-//		}
 		
 //		printResultIntervals();
 	}
@@ -2386,8 +2205,36 @@ void ConstraintGraph::computeStats(){
 		unsigned total = vbgn->first->getType()->getPrimitiveSizeInBits();
 		usedBits += total;
 		Range CR = vbgn->second->getRange();
-		unsigned lb = CR.getLower().getActiveBits();
-		unsigned ub = CR.getUpper().getActiveBits();
+		
+		unsigned ub, lb;
+		
+		if (CR.getLower().isNegative()) {
+			APInt abs = CR.getLower().abs();
+			
+			unsigned log = abs.ceilLogBase2();
+			
+			lb = (log > 1) ? log : log+1;
+		}
+		else {
+			lb = CR.getLower().getActiveBits();
+		}
+		
+		if (CR.getUpper().isNegative()) {
+			APInt abs = CR.getUpper().abs();
+			
+			unsigned log = abs.ceilLogBase2();
+			
+			ub = (log > 1) ? log : log+1;
+		}
+		else {
+			ub = CR.getUpper().getActiveBits();
+		}
+
+//		lb = CR.getLower().getActiveBits();
+//		ub = CR.getUpper().getActiveBits();
+		
+			
+
 		unsigned nBits = lb > ub ? lb : ub;
 
 		if ((lb != 0 || ub != 0) && nBits < total) {
