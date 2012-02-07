@@ -647,6 +647,7 @@ public:
     std::deque<Value*> worklist;
 #ifdef SCC_DEBUG
     bool checkWorklist();
+    bool checkComponents();
 #endif
 public:
     Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single = false);

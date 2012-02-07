@@ -2197,7 +2197,6 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
     }
 }
 
-
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
     // Builds symbMap
@@ -2208,11 +2207,16 @@ void ConstraintGraph::findIntervals() {
 
     // STATS
     numSCCs = sccList.worklist.size();
+#ifdef SCC_DEBUG
+    unsigned numberOfSCCs = numSCCs;
+#endif
 
     // For each SCC in graph, do the following
     for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end(); nit != nend; ++nit) {
         SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
-
+#ifdef SCC_DEBUG
+        --numberOfSCCs;
+#endif
         // STATS
         if (component.size() == 1) {
             ++numAloneSCCs;
@@ -2232,12 +2236,13 @@ void ConstraintGraph::findIntervals() {
         generateActivesVars(component, activeVars);
         posUpdate(compUseMap, activeVars, &component);
 
-
         propagateToNextSCC(component);
 
 //        printResultIntervals();
     }
-
+#ifdef SCC_DEBUG
+    ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
+#endif
     computeStats();
 }
 
@@ -2737,7 +2742,8 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool sing
     }
 
 #ifdef SCC_DEBUG
-    ASSERT(checkWorklist(),"ERROR: an inconsistency in SCC worklist have been found")
+    ASSERT(checkWorklist(),"an inconsistency in SCC worklist have been found")
+    ASSERT(checkComponents(),"a component has been used more than once")
 #endif
 }
 
@@ -2758,5 +2764,23 @@ bool Nuutila::checkWorklist(){
         }
     }
     return consistent;
+}
+
+bool Nuutila::checkComponents(){
+    bool isConsistent = true;
+    for (Nuutila::iterator nit = this->begin(), nend = this->end();
+        nit != nend; ++nit) {
+        SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+        for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
+            nit2 != nend2; ++nit2) {
+            SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
+            if (component == component2 && nit != nit2){
+                errs() << "[Nuutila::checkComponent] Component ["<< component
+                    << ", " << component->size() << "]\n";
+                isConsistent = false;
+            }
+        }
+    }
+    return isConsistent;
 }
 #endif
