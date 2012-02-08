@@ -648,6 +648,8 @@ public:
 #ifdef SCC_DEBUG
     bool checkWorklist();
     bool checkComponents();
+    bool checkTopologicalSort(UseMap *useMap);
+    bool hasEdge(SmallPtrSet<VarNode*, 32> *componentFrom, SmallPtrSet<VarNode*, 32> *componentTo, UseMap *useMap);
 #endif
 public:
     Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single = false);

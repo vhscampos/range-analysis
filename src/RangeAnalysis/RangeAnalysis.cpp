@@ -1032,6 +1032,7 @@ void VarNode::print(raw_ostream& OS) const {
 }
 
 void VarNode::storeAbstractState(){
+    ASSERT(!this->interval.isEmptySet(), "storeAbstractState doesn't handle empty set")
     if(this->interval.getLower().eq(Min))
         if(this->interval.getUpper().eq(Max))
             this->abstractState = '?';
@@ -2743,7 +2744,8 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool sing
 
 #ifdef SCC_DEBUG
     ASSERT(checkWorklist(),"an inconsistency in SCC worklist have been found")
-    ASSERT(checkComponents(),"a component has been used more than once")
+    ASSERT(checkComponents(), "a component has been used more than once")
+    ASSERT(checkTopologicalSort(useMap), "topological sort is incorrect")
 #endif
 }
 
@@ -2781,6 +2783,61 @@ bool Nuutila::checkComponents(){
             }
         }
     }
+    return isConsistent;
+}
+
+/**
+ * Check if a component has an edge to another component
+ */
+bool Nuutila::hasEdge(SmallPtrSet<VarNode*, 32> *componentFrom,
+    SmallPtrSet<VarNode*, 32> *componentTo, UseMap *useMap)
+{
+    for (SmallPtrSetIterator<VarNode*> vit = componentFrom->begin(),
+        vend = componentFrom->end(); vit != vend; ++vit)
+    {
+        const Value *source = (*vit)->getValue();
+        for (SmallPtrSetIterator<BasicOp*> sit = (*useMap)[source].begin(),
+            send = (*useMap)[source].end(); sit != send; ++sit)
+        {
+            BasicOp *op = *sit;
+            if(componentTo->count(op->getSink())){
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Nuutila::checkTopologicalSort(UseMap *useMap){
+    bool isConsistent = true;
+    DenseMap<SmallPtrSet<VarNode*, 32>*,bool> visited;
+    for (Nuutila::iterator nit = this->begin(), nend = this->end();
+        nit != nend; ++nit) {
+        SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+        visited[component] = false;
+    }
+
+    for (Nuutila::iterator nit = this->begin(), nend = this->end();
+            nit != nend; ++nit) {
+        SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+
+        if(!visited[component]){
+            visited[component] = true;
+            //check if this component points to another component that has already been visited
+            for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
+                nit2 != nend2; ++nit2) {
+                SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
+                if(nit != nit2 && visited[component2] &&
+                    hasEdge(component, component2, useMap)){
+                    isConsistent = false;
+                }
+            }
+        }else{
+            errs() << "[Nuutila::checkTopologicalSort] Component visited more than once time\n";
+        }
+
+    }
+
     return isConsistent;
 }
 #endif
