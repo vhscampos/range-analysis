@@ -51,10 +51,12 @@
 
 //TODO: coment the line below to disable the debug of SCCs and optimize the code
 // generated.
-//#define SCC_DEBUG
+#define SCC_DEBUG
 
 #ifdef SCC_DEBUG
 #define ASSERT(cond,msg) if(!cond){ errs() << "ERROR: " << msg << "\n"; }
+#else
+#define ASSERT(cond,msg)
 #endif
 
 using namespace llvm;
@@ -536,6 +538,8 @@ protected:
 	GenOprs* oprs;
 
 private:
+    // Save the last Function analyzed
+    const Function *func;
 	// A map from variables to the operations that define them
 	DefMap* defMap;
 	// A map from variables to the operations where these variables are used.
@@ -553,7 +557,7 @@ private:
 	void addPhiOp(const PHINode* Phi);
 	// Adds a SigmaOp to the graph.
 	void addSigmaOp(const PHINode* Sigma);
-	/// Takes an intruction and creates an operation.
+	/// Takes an instruction and creates an operation.
 	void buildOperations(const Instruction* I);
 	void buildValueBranchMap(const BranchInst *br);
 	void buildValueSwitchMap(const SwitchInst *sw);

@@ -1097,16 +1097,19 @@ void VarNode::print(raw_ostream& OS) const {
 }
 
 void VarNode::storeAbstractState(){
-	if(this->interval.getLower().eq(Min))
-		if(this->interval.getUpper().eq(Max))
-			this->abstractState = '?';
-		else
-			this->abstractState = '-';
-	else
-		if (this->interval.getUpper().eq(Max))
-			this->abstractState = '+';
-		else
-			this->abstractState = '0';
+    ASSERT(!this->interval.isEmptySet(), "storeAbstractState doesn't handle empty set")
+    errs() << "\n\t[VarNode] ";
+    this->getValue()->dump();
+    if(this->interval.getLower().eq(Min))
+        if(this->interval.getUpper().eq(Max))
+            this->abstractState = '?';
+        else
+            this->abstractState = '-';
+    else
+        if (this->interval.getUpper().eq(Max))
+            this->abstractState = '+';
+        else
+            this->abstractState = '0';
 }
 
 
@@ -1546,6 +1549,7 @@ ConstraintGraph::ConstraintGraph(VarNodes *varNodes,
 	this->useMap = usemap;
 	this->valuesBranchMap = valuesbranchmap;
 	this->valuesSwitchMap = valuesswitchMap;
+    this->func = NULL;
 }
 
 /// The dtor.
@@ -1959,7 +1963,8 @@ void ConstraintGraph::buildValueMaps(const Function& F) {
 
 /// Iterates through all instructions in the function and builds the graph.
 void ConstraintGraph::buildGraph(const Function& F) {
-	buildValueMaps(F);
+    this->func = &F;
+    buildValueMaps(F);
 
 //	for (Function::const_arg_iterator ait = F.arg_begin(), aend = F.arg_end(); ait != aend; ++ait) {
 //		const Value *argument = &*ait;
@@ -1993,10 +1998,10 @@ void ConstraintGraph::buildGraph(const Function& F) {
 	}
 }
 
+//FIXME: do it just for component
 void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component){
-	VarNodes::iterator vbgn = this->vars->begin(), vend = this->vars->end();
-	for (; vbgn != vend; ++vbgn) {
-		vbgn->second->storeAbstractState();
+	for (SmallPtrSetIterator<VarNode*> cit = component->begin(), cend = component->end(); cit != cend; ++cit) {
+		(*cit)->storeAbstractState();
 	}
 }
 
@@ -2282,7 +2287,8 @@ void ConstraintGraph::findIntervals() {
 		errs() << "\n----------\n";
 
 		UseMap compUseMap = buildUseMap(component);
-
+        if(func)
+            printToFile(*func,"/tmp/"+func->getName()+"cgint.dot");
 		// Get the entry points of the SCC
 		SmallPtrSet<const Value*, 6> entryPoints;
 		generateEntryPoints(component, entryPoints);
