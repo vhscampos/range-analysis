@@ -51,7 +51,27 @@
 
 //TODO: coment the line below to disable the debug of SCCs and optimize the code
 // generated.
-#define SCC_DEBUG
+//#define SCC_DEBUG
+
+#define PRINTCOMPONENT(component) errs() << "\n--------------\n"; \
+		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) { \
+			const VarNode *var = *cit; \
+			const Value *V = var->getValue(); \
+			const Argument *A = NULL; \
+			const Instruction *I = NULL; \
+			const ConstantInt *CI = NULL; \
+			if ((A = dyn_cast<Argument>(V))) { \
+				errs() << A->getParent()->getName() << "." << A->getName(); \
+			} \
+			else if ((I = dyn_cast<Instruction>(V))) { \
+				errs() << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName(); \
+			} \
+			else if ((CI = dyn_cast<ConstantInt>(V))) { \
+				errs() << CI->getValue(); \
+			} \
+			errs() << "\n"; \
+		} \
+		errs() << "\n----------\n";
 
 #ifdef SCC_DEBUG
 #define ASSERT(cond,msg) if(!cond){ errs() << "ERROR: " << msg << "\n"; }
@@ -307,7 +327,9 @@ private:
 	/// Computes the interval of the sink based on the interval of the sources,
 	/// the operation and the interval associated to the operation.
 	Range eval() const;
-
+	
+	bool unresolved;
+	
 public:
 	SigmaOp(BasicInterval* intersect,
 		VarNode* sink,
@@ -324,6 +346,11 @@ public:
 	static inline bool classof(BasicOp const *BO) {
 		return BO->getValueId() == SigmaOpId;
 	}
+	
+	bool isUnresolved() const {return unresolved;}
+	void markResolved() {unresolved = false;}
+	void markUnresolved() {unresolved = true;}
+	
 	/// Prints the content of the operation. I didn't it an operator overload
 	/// because I had problems to access the members of the class outside it.
 	void print(raw_ostream& OS) const;

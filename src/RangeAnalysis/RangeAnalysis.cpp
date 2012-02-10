@@ -454,17 +454,55 @@ Range Range::mul(const Range& other) {
 	if (this->isEmptySet() || other.isEmptySet()) {
 		return Range(Min, Max, true);
 	}
+	
+	if (this->isMaxRange() || other.isMaxRange()) {
+		return Range(Min, Max, false);
+	}
 
 	APInt l = Min, u = Max;
-
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
+	
+	// Lower bound
+	if ((getLower().eq(Min) && other.getLower().slt(0)) || (other.getLower().eq(Min) && getLower().slt(0))) {
+		l = Max;
+	}
+	else if ((getLower().eq(Max) && other.getLower().sgt(0)) || (other.getLower().eq(Max) && getLower().sgt(0))) {
+		l = Max;
+	}
+	else if ((getLower().eq(Min) && other.getLower().sgt(0)) || (other.getLower().eq(Min) && getLower().sgt(0))) {
+		l = Min;
+	}
+	else if ((getLower().eq(Max) && other.getLower().slt(0)) || (other.getLower().eq(Max) && getLower().slt(0))) {
+		l = Min;
+	}
+	else {
 		l = getLower() * other.getLower();
 	}
-
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
+	
+	
+	// Upper bound
+	if ((getUpper().eq(Min) && other.getUpper().slt(0)) || (other.getUpper().eq(Min) && getUpper().slt(0))) {
+		u = Max;
+	}
+	else if ((getUpper().eq(Max) && other.getUpper().sgt(0)) || (other.getUpper().eq(Max) && getUpper().sgt(0))) {
+		u = Max;
+	}
+	else if ((getUpper().eq(Min) && other.getUpper().sgt(0)) || (other.getUpper().eq(Min) && getUpper().sgt(0))) {
+		u = Min;
+	}
+	else if ((getUpper().eq(Max) && other.getUpper().slt(0)) || (other.getUpper().eq(Max) && getUpper().slt(0))) {
+		u = Min;
+	}
+	else {
 		u = getUpper() * other.getUpper();
 	}
-
+	
+	// If lower bound has become greater than upper bound, invert the ranges
+	if (l.sgt(u)) {
+		APInt tmp = l;
+		l = u;
+		u = tmp;
+	}
+	
 	return Range(l, u, false);
 }
 
@@ -853,35 +891,63 @@ Range Range::Xor(const Range& other) {
 }
 
 
+// Truncate
+//		- if the source range is entirely inside max bit range, he is the result
+//      - else, the result is the max bit range
 Range Range::truncate(unsigned bitwidht) const {
-	if (this->isEmptySet()) {
-		return Range(APInt::getSignedMinValue(bitwidht),
-					 APInt::getSignedMaxValue(bitwidht), true);
+	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
+	APInt maxlower = APInt::getSignedMinValue(bitwidht);
+	
+	if (bitwidht < MAX_BIT_INT) {
+		maxupper = maxupper.sext(MAX_BIT_INT);
+		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
-
-	Range result(APInt::getSignedMinValue(bitwidht), APInt::getSignedMaxValue(bitwidht), false);
-
-	return result.intersectWith(*this);
+	
+	if (this->isEmptySet()) {
+		return Range(maxlower, maxupper, true);
+	}
+	
+	// Check if source range is contained by max bit range
+	if (this->getLower().sge(maxlower) && this->getUpper().sle(maxupper)) {
+		return *this;
+	}
+	else {
+		return Range(maxlower, maxupper, false);
+	}
 }
 
 
 Range Range::sextOrTrunc(unsigned bitwidht) const {
+	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
+	APInt maxlower = APInt::getSignedMinValue(bitwidht);
+	
+	if (bitwidht < MAX_BIT_INT) {
+		maxupper = maxupper.sext(MAX_BIT_INT);
+		maxlower = maxlower.sext(MAX_BIT_INT);
+	}
+	
 	if (this->isEmptySet()) {
-		return Range(APInt::getSignedMinValue(bitwidht),
-					 APInt::getSignedMaxValue(bitwidht), true);
+		return Range(maxlower, maxupper, true);
 	}
 
-	return Range(APInt::getSignedMinValue(bitwidht), APInt::getSignedMaxValue(bitwidht), false);
+	return Range(maxlower, maxupper, false);
 }
 
 
 Range Range::zextOrTrunc(unsigned bitwidht) const {
+	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
+	APInt maxlower = APInt::getSignedMinValue(bitwidht);
+	
+	if (bitwidht < MAX_BIT_INT) {
+		maxupper = maxupper.sext(MAX_BIT_INT);
+		maxlower = maxlower.sext(MAX_BIT_INT);
+	}
+	
 	if (this->isEmptySet()) {
-		return Range(APInt::getSignedMinValue(bitwidht),
-					 APInt::getSignedMaxValue(bitwidht), true);
+		return Range(maxlower, maxupper, true);
 	}
 
-	return Range(APInt::getSignedMinValue(bitwidht), APInt::getSignedMaxValue(bitwidht), false);
+	return Range(maxlower, maxupper, false);
 }
 
 
@@ -1262,7 +1328,7 @@ SigmaOp::SigmaOp(BasicInterval* intersect,
 						 const Instruction *inst,
 						 VarNode* source,
 						 unsigned int opcode) :
-						 UnaryOp(intersect, sink, inst, source, opcode) {}
+						 UnaryOp(intersect, sink, inst, source, opcode), unresolved(false) {}
 
 
 // The dtor.
@@ -1864,7 +1930,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		APInt sigMax = tmpT.getSignedMax();
 
 		if (sigMax.slt(sigMin)) {
-			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+			sigMax = Max;
 		}
 
 		Range TValues = Range(sigMin, sigMax, false);
@@ -1875,7 +1941,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		sigMax = tmpF.getSignedMax();
 
 		if (sigMax.slt(sigMin)) {
-			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+			sigMax = Max;
 		}
 
 		Range FValues = Range(sigMin, sigMax, false);
@@ -1903,7 +1969,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		// Create the interval using the intersection in the branch.
 		CmpInst::Predicate pred = ici->getPredicate();
 		CmpInst::Predicate invPred = ici->getInversePredicate();
-		Range CR(Min, Max, false);
+		Range CR(Min, Max, true);
 		const Value* Op1 = ici->getOperand(1);
 
 		// Symbolic intervals for op0
@@ -2265,26 +2331,18 @@ void ConstraintGraph::findIntervals() {
 			++numAloneSCCs;
 		}
 		
-		errs() << "\n--------------\n";
-		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
-			const VarNode *var = *cit;
-			const Value *V = var->getValue();
-			
-			const Argument *A = NULL;
-			const Instruction *I = NULL;
-			const ConstantInt *CI = NULL;
-
-			if ((A = dyn_cast<Argument>(V))) {
-				errs() << A->getParent()->getName() << "." << A->getName();
-			}
-			else if ((I = dyn_cast<Instruction>(V))) {
-				errs() << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName();
-			}
-			else if ((CI = dyn_cast<ConstantInt>(V))) {
-				errs() << CI->getValue();
-			}
-		}
-		errs() << "\n----------\n";
+//		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+//			VarNode *var = *cit;
+//			const Value *V = var->getValue();
+//			const Instruction *inst = dyn_cast<Instruction>(V);
+//			
+//			if (inst && inst->getParent()->getName() == "for.body8" && inst->getName() == "vSSA_sigma") {
+//				errs () << "";
+//				break;
+//			}
+//		}
+		
+		PRINTCOMPONENT(component)
 
 		UseMap compUseMap = buildUseMap(component);
         if(func)
@@ -2303,7 +2361,7 @@ void ConstraintGraph::findIntervals() {
 
 		propagateToNextSCC(component);
 
-		//printResultIntervals();
+		printResultIntervals();
 	}
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
@@ -2320,6 +2378,25 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, 
 	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
+		
+		// FIXME: trocar strcmp por enumeraçao de varnodes
+		if (V->getName().startswith(sigmaString)) {
+			DefMap::iterator dit = this->defMap->find(V);
+			
+			if (dit != this->defMap->end()) {
+				BasicOp *bop = dit->second;
+				SigmaOp *defop = dyn_cast<SigmaOp>(bop);
+		
+				if (defop && defop->isUnresolved()) {
+					//printVarName(defop->getSink()->getValue(), errs());
+				
+					//errs() << defop->getSink()->getRange();
+					defop->getSink()->setRange(bop->eval());
+					//errs() << defop->getSink()->getRange();
+					defop->markResolved();
+				}
+			}
+		}
 
 		// TODO: Verificar a condição para ser um entry point
 		if (!var->getRange().isEmptySet()) {
@@ -2606,8 +2683,13 @@ void ConstraintGraph::propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &compon
 
 		for (SmallPtrSetIterator<BasicOp*> sit = p->second.begin(), send = p->second.end(); sit != send; ++sit) {
 			BasicOp *op = *sit;
-
+			SigmaOp *sigmaop = dyn_cast<SigmaOp>(op);
+			
 			op->getSink()->setRange(op->eval());
+			
+			if (sigmaop && sigmaop->getIntersect()->getRange().isEmptySet()) {
+				sigmaop->markUnresolved();
+			}
 		}
 	}
 }
@@ -2637,8 +2719,8 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 
 		
 
-//			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
-			BasicOp *cdedge = new ControlDep((cast<UnaryOp>(*opit))->getSource(), source);
+			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
+//			BasicOp *cdedge = new ControlDep((cast<UnaryOp>(*opit))->getSource(), source);
 
 			//(*useMap)[(*opit)->getSink()->getValue()].insert(cdedge);
 			(*useMap)[sit->first].insert(cdedge);
