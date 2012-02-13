@@ -2568,7 +2568,7 @@ void ConstraintGraph::propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &compon
 			
 			op->getSink()->setRange(op->eval());
 			
-			if (sigmaop && sigmaop->getIntersect()->getRange().isEmptySet()) {
+			if (sigmaop && sigmaop->getIntersect()->getRange().isEmpty()) {
 				sigmaop->markUnresolved();
 			}
 		}
