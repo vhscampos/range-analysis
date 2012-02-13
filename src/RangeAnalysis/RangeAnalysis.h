@@ -49,7 +49,7 @@
 #include <stack>
 #include <set>
 
-//TODO: coment the line below to disable the debug of SCCs and optimize the code
+//TODO: comment the line below to disable the debug of SCCs and optimize the code
 // generated.
 //#define SCC_DEBUG
 
@@ -96,22 +96,26 @@ namespace {
 /// considering the ranges symbolically, letting them wrap around, 
 /// as ConstantRange considers, but it would require big changes 
 /// in our algorithm.
+
+enum RangeType {Unknown, Regular, Empty};
+
 class Range {
 private:
 	APInt l;	// The lower bound of the range.
 	APInt u;	// The upper bound of the range.
-	bool isEmpty;
+	RangeType type;
 
 public:
 	Range();
-	Range(APInt lb, APInt ub, bool isEmpty);
+	Range(APInt lb, APInt ub, RangeType type);
 	~Range();
 	inline APInt getLower() const {return l;}
 	inline APInt getUpper() const {return u;}
 	inline void setLower(const APInt& newl) {this->l = newl;}
 	inline void setUpper(const APInt& newu) {this->u = newu;}
-	inline void setEmptySet(bool isEmptySet) {this->isEmpty = isEmptySet;}
-	inline bool isEmptySet() const {return isEmpty;}
+	inline bool isUnknown() const {return type == Unknown;}
+	inline bool isRegular() const {return type == Regular;}
+	inline bool isEmpty() const {return type == Empty;}
 	bool isMaxRange() const;
 	void print(raw_ostream& OS) const;
 	Range add(const Range& other);

@@ -373,13 +373,12 @@ static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop", "Matching Pa
 // ========================================================================== //
 // Range
 // ========================================================================== //
+Range::Range() : l(Min), u(Max), type(Regular) {}
 
-Range::Range() : l(Min), u(Max), isEmpty(false) {}
-
-Range::Range(APInt lb, APInt ub, bool isEmpty = false) :
+Range::Range(APInt lb, APInt ub, RangeType rType = Regular) :
 	l(lb.sextOrTrunc(MAX_BIT_INT)),
 	u(ub.sextOrTrunc(MAX_BIT_INT)),
-	isEmpty(isEmpty) {}
+	type(rType) {}
 
 Range::~Range() {}
 
@@ -390,10 +389,6 @@ bool Range::isMaxRange() const {
 /// Add and Mul are commutatives. So, they are a little different 
 /// of the other operations.
 Range Range::add(const Range& other) {
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt l = Min, u = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		l = getLower() + other.getLower();
@@ -411,19 +406,6 @@ Range Range::add(const Range& other) {
 /// max (a − c, a − d, b − c, b − d)] = [a − d, b − c]
 /// The other operations are just like this operation.
 Range Range::sub(const Range& other) {
-
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), true);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower() - other.getLower(); // lower lower
@@ -444,19 +426,14 @@ Range Range::sub(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 /// Add and Mul are commutatives. So, they are a little different 
 /// of the other operations.
 Range Range::mul(const Range& other) {
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-	
 	if (this->isMaxRange() || other.isMaxRange()) {
-		return Range(Min, Max, false);
+		return Range(Min, Max);
 	}
 
 	APInt l = Min, u = Max;
@@ -503,22 +480,10 @@ Range Range::mul(const Range& other) {
 		u = tmp;
 	}
 	
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 Range Range::udiv(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		if (other.getLower().ne(APInt::getNullValue(MAX_BIT_INT))) {
@@ -547,22 +512,10 @@ Range Range::udiv(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 Range Range::sdiv(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		if (other.getLower().ne(APInt::getNullValue(MAX_BIT_INT))) {
@@ -591,23 +544,11 @@ Range Range::sdiv(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::urem(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-	
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().urem(other.getLower()); // lower lower
@@ -628,23 +569,11 @@ Range Range::urem(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::srem(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().srem(other.getLower()); // lower lower
@@ -665,23 +594,11 @@ Range Range::srem(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::shl(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().shl(other.getLower()); // lower lower
@@ -702,23 +619,11 @@ Range Range::shl(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::lshr(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().lshr(other.getLower()); // lower lower
@@ -739,23 +644,11 @@ Range Range::lshr(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::ashr(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().ashr(other.getLower()); // lower lower
@@ -776,23 +669,11 @@ Range Range::ashr(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::And(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().And(other.getLower()); // lower lower
@@ -813,21 +694,13 @@ Range Range::And(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::Or(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
 	}
 
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
@@ -850,23 +723,11 @@ Range Range::Or(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::Xor(const Range& other) {
-//	if (this->isEmptySet()) {
-//		return Range(Min, Max, true);
-//	}
-
-//	if (other.isEmptySet()) {
-//		return Range(this->getLower(), this->getUpper(), false);
-//	}
-
-	if (this->isEmptySet() || other.isEmptySet()) {
-		return Range(Min, Max, true);
-	}
-
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().Xor(other.getLower()); // lower lower
@@ -887,7 +748,7 @@ Range Range::Xor(const Range& other) {
 	APInt l = ll.slt(lu) ? ll : lu;
 	APInt u = uu.sgt(ul) ? uu : ul;
 
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
@@ -903,16 +764,12 @@ Range Range::truncate(unsigned bitwidht) const {
 		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
 	
-	if (this->isEmptySet()) {
-		return Range(maxlower, maxupper, true);
-	}
-	
 	// Check if source range is contained by max bit range
 	if (this->getLower().sge(maxlower) && this->getUpper().sle(maxupper)) {
 		return *this;
 	}
 	else {
-		return Range(maxlower, maxupper, false);
+		return Range(maxlower, maxupper);
 	}
 }
 
@@ -925,12 +782,8 @@ Range Range::sextOrTrunc(unsigned bitwidht) const {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
-	
-	if (this->isEmptySet()) {
-		return Range(maxlower, maxupper, true);
-	}
 
-	return Range(maxlower, maxupper, false);
+	return Range(maxlower, maxupper);
 }
 
 
@@ -942,47 +795,54 @@ Range Range::zextOrTrunc(unsigned bitwidht) const {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
-	
-	if (this->isEmptySet()) {
-		return Range(maxlower, maxupper, true);
-	}
 
-	return Range(maxlower, maxupper, false);
+	return Range(maxlower, maxupper);
 }
 
 
 Range Range::intersectWith(const Range& other) const {
-	if (this->isEmptySet()) {
+	if (this->isEmpty() || other.isEmpty())
+		return Range(Min,Max, Empty);
+
+	if (this->isUnknown()) {
 		return other;
 	}
 
-	if (other.isEmptySet()) {
+	if (other.isUnknown()) {
 		return *this;
 	}
 
 	APInt l = getLower().sgt(other.getLower()) ? getLower() : other.getLower();
 	APInt u = getUpper().slt(other.getUpper()) ? getUpper() : other.getUpper();
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 Range Range::unionWith(const Range& other) const {
-	if (this->isEmptySet()) {
+	if (this->isEmpty()) {
 		return other;
 	}
 
-	if (other.isEmptySet()) {
+	if (other.isEmpty()) {
+		return *this;
+	}
+
+	if (this->isUnknown()) {
+		return other;
+	}
+
+	if (other.isUnknown()) {
 		return *this;
 	}
 
 	APInt l = getLower().slt(other.getLower()) ? getLower() : other.getLower();
 	APInt u = getUpper().sgt(other.getUpper()) ? getUpper() : other.getUpper();
-	return Range(l, u, false);
+	return Range(l, u);
 }
 
 
 bool Range::operator==(const Range& other) const {
-	return (isEmptySet() == other.isEmptySet()) && getLower().eq(other.getLower()) && getUpper().eq(other.getUpper());
+	return (isUnknown() == other.isUnknown()) && getLower().eq(other.getLower()) && getUpper().eq(other.getUpper());
 }
 
 
@@ -992,8 +852,13 @@ bool Range::operator!=(const Range& other) const {
 
 
 void Range::print(raw_ostream& OS) const {
-	if (this->isEmptySet()) {
-		OS << "empty-set";
+	if (this->isUnknown()) {
+		OS << "Unknown";
+		return;
+	}
+
+	if (this->isEmpty()) {
+		OS << "Empty";
 		return;
 	}
 
@@ -1022,7 +887,7 @@ raw_ostream& operator<<(raw_ostream& OS, const Range& R) {
 
 BasicInterval::BasicInterval(const Range& range) : range(range) {}
 
-BasicInterval::BasicInterval() : range(Range(Min, Max, false)) {}
+BasicInterval::BasicInterval() : range(Range(Min, Max)) {}
 
 BasicInterval::BasicInterval(const APInt& l, const APInt& u) : 
 							 range(Range(l, u)) {}
@@ -1062,25 +927,25 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 
 	switch (this->getOperation()) {
 	case ICmpInst::ICMP_EQ: // equal
-		return Range(l, u, false);
+		return Range(l, u);
 		break;
 	case ICmpInst::ICMP_SLE: // signed less or equal
-		return Range(lower, u, false);
+		return Range(lower, u);
 		break;
 	case ICmpInst::ICMP_SLT: // signed less than
-		return Range(lower, u-1, false);
+		return Range(lower, u-1);
 		break;
 	case ICmpInst::ICMP_SGE: // signed greater or equal
-		return Range(l, upper, false);
+		return Range(l, upper);
 		break;
 	case ICmpInst::ICMP_SGT: // signed greater than
-		return Range(l+1, upper, false);
+		return Range(l+1, upper);
 		break;
 	default:
-		return Range(Min, Max, false);
+		return Range(Min, Max);
 	}
 
-	return Range(Min, Max, false);
+	return Range(Min, Max);
 }
 
 
@@ -1125,7 +990,7 @@ void SymbInterval::print(raw_ostream& OS) const {
 // ========================================================================== //
 
 /// The ctor.
-VarNode::VarNode(const Value* V) : V(V), interval(Range(Min, Max, true)) {}
+VarNode::VarNode(const Value* V) : V(V), interval(Range(Min, Max, Unknown)) {}
 
 /// The dtor.
 VarNode::~VarNode() {}
@@ -1137,15 +1002,15 @@ void VarNode::init(bool outside) {
 	if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
 		APInt tmp = CI->getValue();
 		APInt value = tmp.sextOrTrunc(MAX_BIT_INT);
-		this->setRange(Range(value, value, false));
+		this->setRange(Range(value, value));
 	}
 	else {
 		if (!outside) {
 			// Initialize with a basic, empty, interval.
-			this->setRange(Range(Min, Max, /*isEmpty=*/true));
+			this->setRange(Range(Min, Max, Unknown));
 		}
 		else {
-			this->setRange(Range(Min, Max, false));
+			this->setRange(Range(Min, Max));
 		}
 	}
 }
@@ -1163,7 +1028,7 @@ void VarNode::print(raw_ostream& OS) const {
 }
 
 void VarNode::storeAbstractState(){
-    ASSERT(!this->interval.isEmptySet(), "storeAbstractState doesn't handle empty set")
+    ASSERT(!this->interval.isUnknown(), "storeAbstractState doesn't handle empty set")
     errs() << "\n\t[VarNode] ";
     this->getValue()->dump();
     if(this->interval.getLower().eq(Min))
@@ -1250,27 +1115,34 @@ UnaryOp::~UnaryOp() {}
 Range UnaryOp::eval() const {
 
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
-	Range result(Min, Max, false);
-	switch (this->getOpcode()) {
-	case Instruction::Trunc:
-		result = source->getRange().truncate(bw);
-		break;
-	case Instruction::ZExt:
-		result = source->getRange().zextOrTrunc(bw);
-		break;
-	case Instruction::SExt:
-		result = source->getRange().sextOrTrunc(bw);
-		break;
-	default:
-		// Loads and Stores are handled here.
-		result = source->getRange();
-		break;
-	}
+	Range oprnd = source->getRange();
+	Range result(Min, Max, Unknown);
+
+	if (oprnd.isRegular()){
+		switch (this->getOpcode()) {
+		case Instruction::Trunc:
+			result = oprnd.truncate(bw);
+			break;
+		case Instruction::ZExt:
+			result = oprnd.zextOrTrunc(bw);
+			break;
+		case Instruction::SExt:
+			result = oprnd.sextOrTrunc(bw);
+			break;
+		default:
+			// Loads and Stores are handled here.
+			result = oprnd;
+			break;
+		}
+	}else
+		if(oprnd.isEmpty())
+			result = Range(Min, Max, Empty);
 
 	if (!getIntersect()->getRange().isMaxRange()) {
 		Range aux(getIntersect()->getRange());
 		result = result.intersectWith(aux);
 	}
+
 	// To ensure that we always are dealing with the correct bit width.
 	return result;
 }
@@ -1400,55 +1272,62 @@ Range BinaryOp::eval() const {
 
 	Range op1 = this->getSource1()->getRange();
 	Range op2 = this->getSource2()->getRange();
-	Range result(Min, Max, /*is empty=*/true);
+	Range result(Min, Max, Unknown);
 
-	switch (this->getOpcode()) {
-	case Instruction::Add:
-		result = op1.add(op2);
-		break;
-	case Instruction::Sub:
-		result = op1.sub(op2);
-		break;
-	case Instruction::Mul:
-		result = op1.mul(op2);
-		break;
-	case Instruction::UDiv:
-		result = op1.udiv(op2);
-		break;
-	case Instruction::SDiv:
-		result = op1.sdiv(op2);
-		break;
-	case Instruction::URem:
-		result = op1.urem(op2);
-		break;
-	case Instruction::SRem:
-		result = op1.srem(op2);
-		break;
-	case Instruction::Shl:
-		result = op1.shl(op2);
-		break;
-	case Instruction::LShr:
-		result = op1.lshr(op2);
-		break;
-	case Instruction::AShr:
-		result = op1.ashr(op2);
-		break;
-	case Instruction::And:
-		result = op1.And(op2);
-		break;
-	case Instruction::Or:
-		result = op1.Or(op2);
-		break;
-	case Instruction::Xor:
-		result = op1.Xor(op2);
-		break;
-	default:
-		break;
-	}
+	//only evaluate if all operands are Regular
+	if(op1.isRegular() && op2.isRegular()){
+		switch (this->getOpcode()) {
+		case Instruction::Add:
+			result = op1.add(op2);
+			break;
+		case Instruction::Sub:
+			result = op1.sub(op2);
+			break;
+		case Instruction::Mul:
+			result = op1.mul(op2);
+			break;
+		case Instruction::UDiv:
+			result = op1.udiv(op2);
+			break;
+		case Instruction::SDiv:
+			result = op1.sdiv(op2);
+			break;
+		case Instruction::URem:
+			result = op1.urem(op2);
+			break;
+		case Instruction::SRem:
+			result = op1.srem(op2);
+			break;
+		case Instruction::Shl:
+			result = op1.shl(op2);
+			break;
+		case Instruction::LShr:
+			result = op1.lshr(op2);
+			break;
+		case Instruction::AShr:
+			result = op1.ashr(op2);
+			break;
+		case Instruction::And:
+			result = op1.And(op2);
+			break;
+		case Instruction::Or:
+			result = op1.Or(op2);
+			break;
+		case Instruction::Xor:
+			result = op1.Xor(op2);
+			break;
+		default:
+			break;
+		}
 
-	if (!this->getIntersect()->getRange().isMaxRange()) {
-		Range aux = this->getIntersect()->getRange();
-		result = result.intersectWith(aux);
+		//FIXME: check if this intersection happens
+		if (!this->getIntersect()->getRange().isMaxRange()) {
+			Range aux = this->getIntersect()->getRange();
+			result = result.intersectWith(aux);
+		}
+	}else{
+		if (op1.isEmpty() || op2.isEmpty())
+			result = Range(Min,Max,Empty);
 	}
 
 	return result;
@@ -1856,7 +1735,7 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 		APInt sigMin = Min;
 		APInt sigMax = Max;
 
-		Range Values = Range(sigMin, sigMax, false);
+		Range Values = Range(sigMin, sigMax);
 
 		// Create the interval using the intersection in the branch.
 		BasicInterval* BI = new BasicInterval(Values);
@@ -1876,7 +1755,7 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 //			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
 //		}
 
-		Range Values = Range(sigMin, sigMax, false);
+		Range Values = Range(sigMin, sigMax);
 
 		// Create the interval using the intersection in the branch.
 		BasicInterval* BI = new BasicInterval(Values);
@@ -1933,7 +1812,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 			sigMax = Max;
 		}
 
-		Range TValues = Range(sigMin, sigMax, false);
+		Range TValues = Range(sigMin, sigMax);
 
 		// If we're interested in the false dest, invert the condition.
 		ConstantRange tmpF = tmpT.inverse();
@@ -1944,7 +1823,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 			sigMax = Max;
 		}
 
-		Range FValues = Range(sigMin, sigMax, false);
+		Range FValues = Range(sigMin, sigMax);
 
 		// Create the interval using the intersection in the branch.
 		BasicInterval* BT = new BasicInterval(TValues);
@@ -1969,7 +1848,9 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		// Create the interval using the intersection in the branch.
 		CmpInst::Predicate pred = ici->getPredicate();
 		CmpInst::Predicate invPred = ici->getInversePredicate();
-		Range CR(Min, Max, true);
+
+		Range CR(Min, Max, Unknown);
+
 		const Value* Op1 = ici->getOperand(1);
 
 		// Symbolic intervals for op0
@@ -2088,17 +1969,17 @@ bool Meet::widen(BasicOp* op) {
 	APInt newLower = newInterval.getLower();
 	APInt newUpper = newInterval.getUpper();
 
-	if (oldInterval.isEmptySet()) {
+	if (oldInterval.isUnknown()) {
 		op->getSink()->setRange(newInterval);
 	} else {
 		if (newLower.slt(oldLower) && newUpper.sgt(oldUpper)) {
-			op->getSink()->setRange(Range(Min, Max, false));
+			op->getSink()->setRange(Range(Min, Max));
 		} else {
 			if (newLower.slt(oldLower)) {
-				op->getSink()->setRange(Range(Min, oldUpper, false));
+				op->getSink()->setRange(Range(Min, oldUpper));
 			} else {
 				if (newUpper.sgt(oldUpper)) {
-					op->getSink()->setRange(Range(oldLower, Max, false));
+					op->getSink()->setRange(Range(oldLower, Max));
 				}
 			}
 		}
@@ -2112,7 +1993,7 @@ bool Meet::growth(BasicOp* op){
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
-	if (oldInterval.isEmptySet())
+	if (oldInterval.isUnknown())
 		op->getSink()->setRange(newInterval);
 	else{
 		APInt oldLower = oldInterval.getLower();
@@ -2146,23 +2027,23 @@ bool Meet::narrow(BasicOp* op) {
 	bool hasChanged = false;
 
 	if (oLower.eq(Min) && nLower.ne(Min)) {
-		op->getSink()->setRange(Range(nLower, oUpper, false));
+		op->getSink()->setRange(Range(nLower, oUpper));
 		hasChanged = true;
 	} else {
 		APInt smin = APIntOps::smin(oLower, nLower);
 		if (oLower.ne(smin)) {
-			op->getSink()->setRange(Range(smin, oUpper, false));
+			op->getSink()->setRange(Range(smin, oUpper));
 			hasChanged = true;
 		}
 	}
 
 	if (oUpper.eq(Max) && nUpper.ne(Max)) {
-		op->getSink()->setRange(Range(oLower, nUpper, false));
+		op->getSink()->setRange(Range(oLower, nUpper));
 		hasChanged = true;
 	} else {
 		APInt smax = APIntOps::smax(oUpper, nUpper);
 		if (oUpper.ne(smax)) {
-			op->getSink()->setRange(Range(oLower, smax, false));
+			op->getSink()->setRange(Range(oLower, smax));
 			hasChanged = true;
 		}
 	}
@@ -2178,12 +2059,12 @@ bool Meet::crop(BasicOp* op){
 	char abstractState = op->getSink()->getAbstractState();
 
 	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
-		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper(), false));
+		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper()));
 		hasChanged = true;
 	}
 
 	if((abstractState == '+' || abstractState == '?') && newInterval.getUpper().slt(oldInterval.getUpper())){
-		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), newInterval.getUpper(), false));
+		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), newInterval.getUpper()));
 		hasChanged = true;
 	}
 
@@ -2399,7 +2280,7 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, 
 		}
 
 		// TODO: Verificar a condição para ser um entry point
-		if (!var->getRange().isEmptySet()) {
+		if (!var->getRange().isUnknown()) {
 			entryPoints.insert(V);
 		}
 	}
