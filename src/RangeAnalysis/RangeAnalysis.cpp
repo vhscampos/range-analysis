@@ -22,7 +22,10 @@ STATISTIC(needBits, "Needed bits.");
 STATISTIC(percentReduction, "Percentage of reduction of the number of bits.");
 STATISTIC(numSCCs, "Number of strongly connected components.");
 STATISTIC(numAloneSCCs, "Number of SCCs containing only one node.");
+STATISTIC(sizeMaxSCC, "Size of largest SCC.");
 STATISTIC(numVars, "Number of variables");
+STATISTIC(numUnknown, "Number of unknown variables");
+STATISTIC(numEmpty, "Number of empty-set variables");
 STATISTIC(numOps, "Number of operations");
 
 // The number of bits needed to store the largest variable of the function (APInt).
@@ -145,10 +148,14 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 
 	// Build the graph and find the intervals of the variables.
 	CG->buildGraph(F);
+	#ifdef PRINT_DEBUG
 	CG->printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
 	errs() << "Analysing function " << F.getName() << ":\n";
+	#endif
 	CG->findIntervals();
+	#ifdef PRINT_DEBUG
 	CG->printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
+	#endif
 	delete CG;
 	return false;
 }
@@ -207,7 +214,7 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	}
 
 	G->findIntervals();
-	G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
+	//G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
 
 	// Collect statistics
 	numVars = VarNodes.size();
@@ -224,10 +231,6 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 	// Only do the matching if F has any use
 	if (!F.hasNUsesOrMore(1)) {
 		return;
-	}
-	
-	if (F.getName() == "uDivTest4") {
-		errs() << "";
 	}
 
 	// Data structure which contains the matches between formal and real parameters
@@ -431,54 +434,58 @@ Range Range::sub(const Range& other) {
 /// of the other operations.
 Range Range::mul(const Range& other) {
 	if (this->isMaxRange() || other.isMaxRange()) {
-		return Range(Min, Max);
-	}
-
-	APInt l = Min, u = Max;
-	
-	// Lower bound
-	if ((getLower().eq(Min) && other.getLower().slt(0)) || (other.getLower().eq(Min) && getLower().slt(0))) {
-		l = Max;
-	}
-	else if ((getLower().eq(Max) && other.getLower().sgt(0)) || (other.getLower().eq(Max) && getLower().sgt(0))) {
-		l = Max;
-	}
-	else if ((getLower().eq(Min) && other.getLower().sgt(0)) || (other.getLower().eq(Min) && getLower().sgt(0))) {
-		l = Min;
-	}
-	else if ((getLower().eq(Max) && other.getLower().slt(0)) || (other.getLower().eq(Max) && getLower().slt(0))) {
-		l = Min;
-	}
-	else {
-		l = getLower() * other.getLower();
+		return Range(Min, Max, Regular);
 	}
 	
+	SmallVector<APInt, 2> range1;
+	range1.push_back(this->getLower());
+	range1.push_back(this->getUpper());
 	
-	// Upper bound
-	if ((getUpper().eq(Min) && other.getUpper().slt(0)) || (other.getUpper().eq(Min) && getUpper().slt(0))) {
-		u = Max;
-	}
-	else if ((getUpper().eq(Max) && other.getUpper().sgt(0)) || (other.getUpper().eq(Max) && getUpper().sgt(0))) {
-		u = Max;
-	}
-	else if ((getUpper().eq(Min) && other.getUpper().sgt(0)) || (other.getUpper().eq(Min) && getUpper().sgt(0))) {
-		u = Min;
-	}
-	else if ((getUpper().eq(Max) && other.getUpper().slt(0)) || (other.getUpper().eq(Max) && getUpper().slt(0))) {
-		u = Min;
-	}
-	else {
-		u = getUpper() * other.getUpper();
+	SmallVector<APInt, 2> range2;
+	range2.push_back(other.getLower());
+	range2.push_back(other.getUpper());
+	
+	SmallVector<APInt, 4> candidates;
+	
+	// Calculate lower candidates
+	for (unsigned i = 0; i < 2; ++i) {
+		for (unsigned j = 0; j < 2; ++j) {
+			APInt value = Min;
+			
+			if ((range1[i].eq(Min) && range2[j].slt(0)) || (range2[j].eq(Min) && range1[i].slt(0))) {
+				value = Max;
+			}
+			else if ((range1[i].eq(Max) && range2[j].sgt(0)) || (range2[j].eq(Max) && range1[i].sgt(0))) {
+				value = Max;
+			}
+			else if ((range1[i].eq(Min) && range2[j].sgt(0)) || (range2[j].eq(Min) && range1[i].sgt(0))) {
+				value = Min;
+			}
+			else if ((range1[i].eq(Max) && range2[j].slt(0)) || (range2[j].eq(Max) && range1[i].slt(0))) {
+				value = Min;
+			}
+			else {
+				value = range1[i] * range2[j];
+			}
+			
+			candidates.push_back(value);
+		}
 	}
 	
-	// If lower bound has become greater than upper bound, invert the ranges
-	if (l.sgt(u)) {
-		APInt tmp = l;
-		l = u;
-		u = tmp;
+	// Lower bound is the min value from the vector, while upper bound is the max value
+	const APInt *min = &candidates[0];
+	const APInt *max = &candidates[0];
+	
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max)) {
+			max = &candidates[i];
+		}
+		if (candidates[i].slt(*min)) {
+			min = &candidates[i];
+		}
 	}
 	
-	return Range(l, u);
+	return Range(*min, *max, Regular);
 }
 
 Range Range::udiv(const Range& other) {
@@ -935,13 +942,23 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 		return Range(lower, u);
 		break;
 	case ICmpInst::ICMP_SLT: // signed less than
-		return Range(lower, u-1);
+		if (u != Max) {
+			return Range(lower, u-1);
+		}
+		else {
+			return Range(lower, u);
+		}
 		break;
 	case ICmpInst::ICMP_SGE: // signed greater or equal
 		return Range(l, upper);
 		break;
 	case ICmpInst::ICMP_SGT: // signed greater than
-		return Range(l+1, upper);
+		if (l != Min) {
+			return Range(l+1, upper);
+		}
+		else {
+			return Range(l, upper);
+		}
 		break;
 	default:
 		return Range(Min, Max);
@@ -1008,7 +1025,7 @@ void VarNode::init(bool outside) {
 	}
 	else {
 		if (!outside) {
-			// Initialize with a basic, empty, interval.
+			// Initialize with a basic, unknown, interval.
 			this->setRange(Range(Min, Max, Unknown));
 		}
 		else {
@@ -1211,11 +1228,6 @@ SigmaOp::~SigmaOp() {}
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
 Range SigmaOp::eval() const {
-	const Instruction *inst = dyn_cast<Instruction>(getSink()->getValue());
-	if (inst && inst->getParent()->getParent()->getName() == "uDivTest4" && inst->getName() == "vSSA_sigma1") {
-		errs() << "";
-	}
-
 	Range result = this->getSource()->getRange();
 
 	result = result.intersectWith(getIntersect()->getRange());
@@ -1323,7 +1335,9 @@ Range BinaryOp::eval() const {
 		}
 
 		//FIXME: check if this intersection happens
-		if (!this->getIntersect()->getRange().isMaxRange()) {
+		bool test = this->getIntersect()->getRange().isMaxRange();
+		
+		if (!test) {
 			Range aux = this->getIntersect()->getRange();
 			result = result.intersectWith(aux);
 		}
@@ -2213,29 +2227,26 @@ void ConstraintGraph::findIntervals() {
 		if (component.size() == 1) {
 			++numAloneSCCs;
 		}
+		if (component.size() > sizeMaxSCC) {
+			sizeMaxSCC = component.size();
+		}
 		
-//		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
-//			VarNode *var = *cit;
-//			const Value *V = var->getValue();
-//			const Instruction *inst = dyn_cast<Instruction>(V);
-//			
-//			if (inst && inst->getParent()->getName() == "for.body8" && inst->getName() == "vSSA_sigma") {
-//				errs () << "";
-//				break;
-//			}
-//		}
-		
-		PRINTCOMPONENT(component)
+		//PRINTCOMPONENT(component)
 
 		UseMap compUseMap = buildUseMap(component);
+		#ifdef PRINT_DEBUG
         if(func)
             printToFile(*func,"/tmp/"+func->getName()+"cgint.dot");
+       #endif
 		// Get the entry points of the SCC
 		SmallPtrSet<const Value*, 6> entryPoints;
 		generateEntryPoints(component, entryPoints);
 		// Primeiro iterate till fix point
 		preUpdate(compUseMap, entryPoints);
 		fixIntersects(component);
+		
+		//printResultIntervals();
+		
 
 		// Segundo iterate till fix point
 		SmallPtrSet<const Value*, 6> activeVars;
@@ -2244,7 +2255,7 @@ void ConstraintGraph::findIntervals() {
 
 		propagateToNextSCC(component);
 
-		printResultIntervals();
+		//printResultIntervals();
 	}
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
@@ -2402,9 +2413,23 @@ void ConstraintGraph::computeStats(){
 			continue;
 		}
 
+		// Count original (used) bits
 		unsigned total = vbgn->first->getType()->getPrimitiveSizeInBits();
 		usedBits += total;
 		Range CR = vbgn->second->getRange();
+		
+		// If range is unknown, we have total needed bits
+		if (CR.isUnknown()) {
+			++numUnknown;
+			needBits += total;
+			continue;
+		}
+		
+		// If range is empty, we have 0 needed bits
+		if (CR.isEmpty()) {
+			++numEmpty;
+			continue;
+		}
 
 		unsigned ub, lb;
 
@@ -2416,7 +2441,7 @@ void ConstraintGraph::computeStats(){
 			lb = (log > 1) ? log : log+1;
 		}
 		else {
-			lb = CR.getLower().getActiveBits();
+			lb = CR.getLower().getActiveBits() + 1;
 		}
 
 		if (CR.getUpper().isNegative()) {
@@ -2427,17 +2452,13 @@ void ConstraintGraph::computeStats(){
 			ub = (log > 1) ? log : log+1;
 		}
 		else {
-			ub = CR.getUpper().getActiveBits();
+			ub = CR.getUpper().getActiveBits() + 1;
 		}
-
-//		lb = CR.getLower().getActiveBits();
-//		ub = CR.getUpper().getActiveBits();
-
 
 
 		unsigned nBits = lb > ub ? lb : ub;
 
-		if ((lb != 0 || ub != 0) && nBits < total) {
+		if (nBits < total) {
 			needBits += nBits;
 		} else {
 			needBits += total;
@@ -2570,7 +2591,7 @@ void ConstraintGraph::propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &compon
 			
 			op->getSink()->setRange(op->eval());
 			
-			if (sigmaop && sigmaop->getIntersect()->getRange().isEmpty()) {
+			if (sigmaop && sigmaop->getIntersect()->getRange().isUnknown()) {
 				sigmaop->markUnresolved();
 			}
 		}
@@ -2872,52 +2893,4 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap){
 
     return isConsistent;
 }
-
 #endif
-
-#define ASSERT_TRUE(print_op,op,op1,op2,res) total++; if(op1.op(op2) != res){ \
-				failed++; \
-				errs() << "\t[" << total << "] " << print_op << ": "; \
-				op1.print(errs()); \
-				errs() << " "; \
-				op2.print(errs()); \
-				errs() << " RESULT: "; \
-				(op1.op(op2)).print(errs()); \
-				errs() << " EXPECTED: "; \
-				res.print(errs()); \
-				errs() << "\n";}
-
-void RangeUnitTest::printStats(){
-	errs() << "\n//********************** STATS *******************************//\n";
-	errs() << "\tFailed: " << failed << "\n";
-	errs() << "\tTotal: " << total << "\n";
-	errs() << "//************************************************************//\n";
-}
-
-bool RangeUnitTest::runOnModule(Module & M){
-	errs() << "Running unit tests for Range class!\n";
-
-	// --------------------------- Shared Objects -------------------------//
-	Range unknown(Min, Max, Unknown);
-	Range empty(Min, Max, Empty);
-	Range maxLimits(Min, Max);
-	Range zero(APInt(MAX_BIT_INT,0,true),APInt(MAX_BIT_INT,0,true));
-	Range infy(Min,Max);
-	// -------------------------------- ADD --------------------------------//
-	ASSERT_TRUE("ADD", add, infy, infy, infy);
-	ASSERT_TRUE("ADD", add, zero, infy, infy);
-	ASSERT_TRUE("ADD", add, infy, zero, infy);
-	ASSERT_TRUE("ADD", add, zero, zero, zero);
-
-	// -------------------------------- SUB --------------------------------//
-	ASSERT_TRUE("SUB", sub, infy, infy, infy);
-	ASSERT_TRUE("SUB", sub, zero, infy, infy);
-	ASSERT_TRUE("SUB", sub, infy, zero, infy);
-	ASSERT_TRUE("SUB", sub, zero, zero, zero);
-	printStats();
-	return true;
-}
-
-
-char RangeUnitTest::ID = 3;
-static RegisterPass<RangeUnitTest > T("ra-test-range", "Run unit test for class Range");

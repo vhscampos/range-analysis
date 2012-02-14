@@ -3,7 +3,7 @@
 import sys
 import os
 
-passPath = "/home/igor/workspace/ra/llvm-3.0/Debug/lib/"
+passPath = "/work/victorsc/llvm-3.0/Debug/lib/"
 
 def checkArgs(args):
     if len(args) != 3:
@@ -19,8 +19,8 @@ if checkArgs(sys.argv):
     print("clang -c -emit-llvm "+fileName+fileExtension+" -o "+fileName+".bc")
     os.system("clang -c -emit-llvm "+fileName+fileExtension+" -o "+fileName+".bc")
     print("Generating eSSA")
-    print("opt -instnamer -mem2reg "+fileName+".bc -o "+fileName+".bc")
-    os.system("opt -instnamer -mem2reg -inline -internalize "+fileName+".bc -o "+fileName+".bc")
+    print("opt -instnamer -mem2reg -break-crit-edges "+fileName+".bc -o "+fileName+".bc")
+    os.system("opt -instnamer -mem2reg -break-crit-edges -inline -internalize "+fileName+".bc -o "+fileName+".bc")
     print("opt -load "+passPath+"vSSA.so -vssa "+fileName+".bc -o "+fileName+".essa.bc")
     os.system("opt -load "+passPath+"vSSA.so -vssa "+fileName+".bc -o "+fileName+".essa.bc")
     print("Running the Range Analysis Pass")

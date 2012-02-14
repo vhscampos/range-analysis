@@ -109,13 +109,16 @@ public:
 	Range();
 	Range(APInt lb, APInt ub, RangeType type);
 	~Range();
-	inline APInt getLower() const {return l;}
-	inline APInt getUpper() const {return u;}
-	inline void setLower(const APInt& newl) {this->l = newl;}
-	inline void setUpper(const APInt& newu) {this->u = newu;}
-	inline bool isUnknown() const {return type == Unknown;}
-	inline bool isRegular() const {return type == Regular;}
-	inline bool isEmpty() const {return type == Empty;}
+	APInt getLower() const {return l;}
+	APInt getUpper() const {return u;}
+	void setLower(const APInt& newl) {this->l = newl;}
+	void setUpper(const APInt& newu) {this->u = newu;}
+	bool isUnknown() const {return type == Unknown;}
+	void setUnknown() {type = Unknown;}
+	bool isRegular() const {return type == Regular;}
+	void setRegular() {type = Regular;}
+	bool isEmpty() const {return type == Empty;}
+	void setEmpty() {type = Empty;}
 	bool isMaxRange() const;
 	void print(raw_ostream& OS) const;
 	Range add(const Range& other);
@@ -160,12 +163,18 @@ public:
 	/// Initializes the value of the node.
 	void init(bool outside);
 	/// Returns the range of the variable represented by this node.
-	inline Range getRange() const {return interval;}
+	Range getRange() const {return interval;}
 	/// Returns the variable represented by this node.
-	inline const Value *getValue() const {return V;}
+	const Value *getValue() const {return V;}
 	/// Changes the status of the variable represented by this node.
-	inline void setRange(const Range& newInterval) {
+	void setRange(const Range& newInterval) {
 		this->interval = newInterval;
+		
+		// Check if lower bound is greater than upper bound. If it is,
+		// set range to empty
+		if (this->interval.getLower().sgt(this->interval.getUpper())) {
+			this->interval.setEmpty();
+		}
 	}
 	/// Pretty print.
 	void print(raw_ostream& OS) const;
@@ -193,12 +202,18 @@ public:
 	virtual ~BasicInterval(); // This is a base class.
 	// Methods for RTTI
 	virtual IntervalId getValueId() const {return BasicIntervalId;}
-	static inline bool classof(BasicInterval const *) {return true;}
+	static bool classof(BasicInterval const *) {return true;}
 	/// Returns the range of this interval.
-	inline const Range& getRange() const {return this->range;}
+	const Range& getRange() const {return this->range;}
 	/// Sets the range of this interval to another range.
-	inline void setRange(const Range& newRange) {
+	void setRange(const Range& newRange) {
 		this->range = newRange;
+		
+		// Check if lower bound is greater than upper bound. If it is,
+		// set range to empty
+		if (this->range.getLower().sgt(this->range.getUpper())) {
+			this->range.setEmpty();
+		}
 	}
 	/// Pretty print.
 	virtual void print(raw_ostream& OS) const;
@@ -220,12 +235,12 @@ public:
 	~SymbInterval();
 	// Methods for RTTI
 	virtual IntervalId getValueId() const {return SymbIntervalId;}
-	static inline bool classof(SymbInterval const *) {return true;}
-	static inline bool classof(BasicInterval const *BI) {
+	static bool classof(SymbInterval const *) {return true;}
+	static bool classof(BasicInterval const *BI) {
 		return BI->getValueId() == SymbIntervalId;
 	}
 	/// Returns the opcode of the operation that create this interval.
-	inline CmpInst::Predicate getOperation() const {return this->pred;}
+	CmpInst::Predicate getOperation() const {return this->pred;}
 	/// Returns the node which is the bound of this interval.
 	const Value* getBound() const {return this->bound;}
 	/// Replace symbolic intervals with hard-wired constants.
@@ -268,7 +283,7 @@ public:
 	virtual ~BasicOp();
 	// Methods for RTTI
 	virtual OperationId getValueId() const = 0;
-	static inline bool classof(BasicOp const *) {return true;}
+	static bool classof(BasicOp const *) {return true;}
 	/// Given the input of the operation and the operation that will be
 	/// performed, evaluates the result of the operation.
 	virtual Range eval() const = 0;
@@ -277,17 +292,17 @@ public:
 	/// Replace symbolic intervals with hard-wired constants.
 	void fixIntersects(VarNode* V);
 	/// Returns the range of the operation.
-	inline BasicInterval* getIntersect() const {return intersect;}
+	BasicInterval* getIntersect() const {return intersect;}
 	/// Changes the interval of the operation.
-	inline void setIntersect(const Range& newIntersect) {
+	void setIntersect(const Range& newIntersect) {
 		this->intersect->setRange(newIntersect);
 	}
 	/// Returns the target of the operation, that is,
 	/// where the result will be stored.
-	inline const VarNode* getSink() const {return sink;}
+	const VarNode* getSink() const {return sink;}
 	/// Returns the target of the operation, that is,
 	/// where the result will be stored.
-	inline VarNode* getSink() {return sink;}
+	VarNode* getSink() {return sink;}
 	/// Prints the content of the operation.
 	virtual void print(raw_ostream& OS) const = 0;
 };
@@ -312,12 +327,12 @@ public:
 	~UnaryOp();
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return UnaryOpId;}
-	static inline bool classof(UnaryOp const *) {return true;}
-	static inline bool classof(BasicOp const *BO) {
+	static bool classof(UnaryOp const *) {return true;}
+	static bool classof(BasicOp const *BO) {
 		return BO->getValueId() == UnaryOpId ||  BO->getValueId() == SigmaOpId;
 	}
 	/// Return the opcode of the operation.
-	inline unsigned int getOpcode() const {return opcode;}
+	unsigned int getOpcode() const {return opcode;}
 	/// Returns the source of the operation.
 	VarNode *getSource() const {return source;}
 	/// Prints the content of the operation. I didn't it an operator overload
@@ -343,11 +358,11 @@ public:
 	~SigmaOp();
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return SigmaOpId;}
-	static inline bool classof(SigmaOp const *) {return true;}
-	static inline bool classof(UnaryOp const *UO) {
+	static bool classof(SigmaOp const *) {return true;}
+	static bool classof(UnaryOp const *UO) {
 		return UO->getValueId() == SigmaOpId;
 	}
-	static inline bool classof(BasicOp const *BO) {
+	static bool classof(BasicOp const *BO) {
 		return BO->getValueId() == SigmaOpId;
 	}
 	
@@ -372,8 +387,8 @@ public:
 	~ControlDep();
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return ControlDepId;}
-	static inline bool classof(ControlDep const *) {return true;}
-	static inline bool classof(BasicOp const *BO) {
+	static bool classof(ControlDep const *) {return true;}
+	static bool classof(BasicOp const *BO) {
 		return BO->getValueId() == ControlDepId;
 	}
 	/// Returns the source of the operation.
@@ -403,10 +418,10 @@ public:
 	const VarNode *getSource(unsigned index) const {return sources[index];}
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return PhiOpId;}
-	static inline bool classof(PhiOp const *) {
+	static bool classof(PhiOp const *) {
 		return true;
 	}
-	static inline bool classof(BasicOp const *BO) {
+	static bool classof(BasicOp const *BO) {
 		return BO->getValueId() == PhiOpId;
 	}
 	/// Prints the content of the operation. I didn't it an operator overload
@@ -437,18 +452,18 @@ public:
 	~BinaryOp();
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return BinaryOpId;}
-	static inline bool classof(BinaryOp const *) {
+	static bool classof(BinaryOp const *) {
 		return true;
 	}
-	static inline bool classof(BasicOp const *BO) {
+	static bool classof(BasicOp const *BO) {
 		return BO->getValueId() == BinaryOpId;
 	}
 	/// Return the opcode of the operation.
-	inline unsigned int getOpcode() const {return opcode;}
+	unsigned int getOpcode() const {return opcode;}
 	/// Returns the first operand of this operation.
-	inline VarNode *getSource1() const {return source1;}
+	VarNode *getSource1() const {return source1;}
 	/// Returns the second operand of this operation.
-	inline VarNode *getSource2() const {return source2;}
+	VarNode *getSource2() const {return source2;}
 	/// Prints the content of the operation. I didn't it an operator overload
 	/// because I had problems to access the members of the class outside it.
 	void print(raw_ostream& OS) const;
@@ -474,31 +489,31 @@ public:
 		BasicInterval* ItvF);
 	~ValueBranchMap();
 	/// Get the "false side" of the branch
-	inline const BasicBlock *getBBFalse() const {
+	const BasicBlock *getBBFalse() const {
 		return BBFalse;
 	}
 	/// Get the "true side" of the branch
-	inline const BasicBlock *getBBTrue() const {
+	const BasicBlock *getBBTrue() const {
 		return BBTrue;
 	}
 	/// Get the interval associated to the true side of the branch
-	inline BasicInterval *getItvT() const {
+	BasicInterval *getItvT() const {
 		return ItvT;
 	}
 	/// Get the interval associated to the false side of the branch
-	inline BasicInterval *getItvF() const {
+	BasicInterval *getItvF() const {
 		return ItvF;
 	}
 	/// Get the value associated to the branch.
-	inline const Value *getV() const {
+	const Value *getV() const {
 		return V;
 	}
 	/// Change the interval associated to the true side of the branch
-	inline void setItvT(BasicInterval *Itv) {
+	void setItvT(BasicInterval *Itv) {
 		this->ItvT = Itv;
 	}
 	/// Change the interval associated to the false side of the branch
-	inline void setItvF(BasicInterval *Itv) {
+	void setItvF(BasicInterval *Itv) {
 		this->ItvF = Itv;
 	}
 	/// Clear memory allocated
@@ -516,23 +531,23 @@ public:
 
 	~ValueSwitchMap();
 	/// Get the "false side" of the branch
-	inline const BasicBlock *getBB(unsigned idx) const {
+	const BasicBlock *getBB(unsigned idx) const {
 		return BBsuccs[idx].second;
 	}
 	/// Get the interval associated to the true side of the branch
-	inline BasicInterval *getItv(unsigned idx) const {
+	BasicInterval *getItv(unsigned idx) const {
 		return BBsuccs[idx].first;
 	}
 	// Get how many cases this switch has
-	inline unsigned getNumOfCases() const {
+	unsigned getNumOfCases() const {
 		return BBsuccs.size();
 	}
 	/// Get the value associated to the branch.
-	inline const Value *getV() const {
+	const Value *getV() const {
 		return V;
 	}
 	/// Change the interval associated to the true side of the branch
-	inline void setItv(unsigned idx, BasicInterval *Itv) {
+	void setItv(unsigned idx, BasicInterval *Itv) {
 		this->BBsuccs[idx].first = Itv;
 	}
 	/// Clear memory allocated
@@ -739,15 +754,6 @@ public:
 	bool runOnFunction(Function &F);
 }; // end of class RangeAnalysis
 
-class RangeUnitTest: public ModulePass{
-	unsigned total;
-	unsigned failed;
-	void printStats();
-public:
-	static char ID; // Pass identification, replacement for typeid
-	RangeUnitTest() : ModulePass(ID), total(0), failed(0) {}
-	bool runOnModule(Module & M);
-};
 
 } // end namespace
 
