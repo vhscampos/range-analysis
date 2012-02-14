@@ -376,9 +376,7 @@ static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop", "Matching Pa
 Range::Range() : l(Min), u(Max), type(Regular) {}
 
 Range::Range(APInt lb, APInt ub, RangeType rType = Regular) :
-	l(lb.sextOrTrunc(MAX_BIT_INT)),
-	u(ub.sextOrTrunc(MAX_BIT_INT)),
-	type(rType) {}
+	l(lb), u(ub), type(rType) {}
 
 Range::~Range() {}
 
@@ -842,12 +840,16 @@ Range Range::unionWith(const Range& other) const {
 
 
 bool Range::operator==(const Range& other) const {
-	return (isUnknown() == other.isUnknown()) && getLower().eq(other.getLower()) && getUpper().eq(other.getUpper());
+	return this->type == other.type
+			&& getLower().eq(other.getLower())
+			&& getUpper().eq(other.getUpper());
 }
 
 
 bool Range::operator!=(const Range& other) const {
-	return !(*this == other);
+	return this->type != other.type
+			|| getLower().ne(other.getLower())
+			|| getUpper().ne(other.getUpper());
 }
 
 
@@ -2870,4 +2872,52 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap){
 
     return isConsistent;
 }
+
 #endif
+
+#define ASSERT_TRUE(print_op,op,op1,op2,res) total++; if(op1.op(op2) != res){ \
+				failed++; \
+				errs() << "\t[" << total << "] " << print_op << ": "; \
+				op1.print(errs()); \
+				errs() << " "; \
+				op2.print(errs()); \
+				errs() << " RESULT: "; \
+				(op1.op(op2)).print(errs()); \
+				errs() << " EXPECTED: "; \
+				res.print(errs()); \
+				errs() << "\n";}
+
+void RangeUnitTest::printStats(){
+	errs() << "\n//********************** STATS *******************************//\n";
+	errs() << "\tFailed: " << failed << "\n";
+	errs() << "\tTotal: " << total << "\n";
+	errs() << "//************************************************************//\n";
+}
+
+bool RangeUnitTest::runOnModule(Module & M){
+	errs() << "Running unit tests for Range class!\n";
+
+	// --------------------------- Shared Objects -------------------------//
+	Range unknown(Min, Max, Unknown);
+	Range empty(Min, Max, Empty);
+	Range maxLimits(Min, Max);
+	Range zero(APInt(MAX_BIT_INT,0,true),APInt(MAX_BIT_INT,0,true));
+	Range infy(Min,Max);
+	// -------------------------------- ADD --------------------------------//
+	ASSERT_TRUE("ADD", add, infy, infy, infy);
+	ASSERT_TRUE("ADD", add, zero, infy, infy);
+	ASSERT_TRUE("ADD", add, infy, zero, infy);
+	ASSERT_TRUE("ADD", add, zero, zero, zero);
+
+	// -------------------------------- SUB --------------------------------//
+	ASSERT_TRUE("SUB", sub, infy, infy, infy);
+	ASSERT_TRUE("SUB", sub, zero, infy, infy);
+	ASSERT_TRUE("SUB", sub, infy, zero, infy);
+	ASSERT_TRUE("SUB", sub, zero, zero, zero);
+	printStats();
+	return true;
+}
+
+
+char RangeUnitTest::ID = 3;
+static RegisterPass<RangeUnitTest > T("ra-test-range", "Run unit test for class Range");

@@ -739,6 +739,15 @@ public:
 	bool runOnFunction(Function &F);
 }; // end of class RangeAnalysis
 
+class RangeUnitTest: public ModulePass{
+	unsigned total;
+	unsigned failed;
+	void printStats();
+public:
+	static char ID; // Pass identification, replacement for typeid
+	RangeUnitTest() : ModulePass(ID), total(0), failed(0) {}
+	bool runOnModule(Module & M);
+};
 
 } // end namespace
 
