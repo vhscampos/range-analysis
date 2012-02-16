@@ -44,12 +44,21 @@ APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
 APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 APInt Zero(MAX_BIT_INT, 0, true);
 
+// String used to identify sigmas
 const std::string sigmaString = "vSSA_sigma";
 
 // Used to print pseudo-edges in the Constraint Graph dot
 std::string pestring;
 raw_string_ostream pseudoEdgesString(pestring);
 
+// Used in time measure
+sys::TimeValue zerot(0, 0);
+	
+std::pair<sys::TimeValue, sys::TimeValue> clockt(zerot, zerot);
+std::pair<sys::TimeValue, sys::TimeValue> usert(zerot, zerot);
+std::pair<sys::TimeValue, sys::TimeValue> syst(zerot, zerot);
+
+// Print name of variable according to its type
 static void printVarName(const Value *V, raw_ostream& OS) {
 	const Argument *A = NULL;
 	const Instruction *I = NULL;
@@ -63,6 +72,35 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 	else {
 		OS << V->getName();
 	}
+}
+
+// Get current rusage time. (false: before, true: after)
+static void getTime(bool f)
+{
+	// After
+	if (f) {
+		sys::Process::GetTimeUsage(clockt.second, usert.second, syst.second);
+	}
+	// Before
+	else {
+		sys::Process::GetTimeUsage(clockt.first, usert.first, syst.first);
+	}
+}
+
+// Measure elapsed time and print
+static void printTime(const Twine& name)
+{
+	sys::TimeValue elapsed_clockt = clockt.second - clockt.first;
+	sys::TimeValue elapsed_usert = usert.second - usert.first;
+	sys::TimeValue elapsed_syst = syst.second - syst.first;
+	
+	double elapsed_clockt_print = elapsed_clockt.seconds() + (1.e-3) * elapsed_clockt.milliseconds();
+	double elapsed_usert_print = elapsed_usert.seconds() + (1.e-3) * elapsed_usert.milliseconds();
+	double elapsed_syst_print = elapsed_syst.seconds() + (1.e-3) * elapsed_syst.milliseconds();
+	
+	errs() << elapsed_usert_print << "\t" << name << " elapsed user time\n";
+	//errs() << elapsed_syst_print << "\t" << name << " elapsed sys time\n";
+	//errs() << elapsed_clockt_print << "\t" << name << " elapsed clock time\n";
 }
 
 /// Selects the instructions that we are going to evaluate.
@@ -205,6 +243,7 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	
 
 	// Build the Constraint Graph by running on each function
+	getTime(false);
 	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
 		// If the function is only a declaration, or if it has variable number of arguments, do not match
 		if (I->isDeclaration() || I->isVarArg())
@@ -214,6 +253,8 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 
 		MatchParametersAndReturnValues(*I, *G);
 	}
+	getTime(true);
+	printTime("Graph building");
 
 	G->findIntervals();
 	//G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
@@ -1774,6 +1815,13 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 
 		APInt sigMin = constant->getValue();
 		APInt sigMax = sigMin;
+		
+		if (sigMin.getBitWidth() < MAX_BIT_INT) {
+			sigMin = sigMin.sext(MAX_BIT_INT);
+		}
+		if (sigMax.getBitWidth() < MAX_BIT_INT) {
+			sigMax = sigMax.sext(MAX_BIT_INT);
+		}
 
 //		if (sigMax.slt(sigMin)) {
 //			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
@@ -1798,10 +1846,6 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 
 void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 {
-//	if ((br->getParent()->getParent()->getName() == "uncompressStream") && (br->getParent()->getName() == "bb1")) {
-//		errs () << "Aqui\n";
-//	}
-
 	// Verify conditions
 	if (!br->isConditional())	return;
 
@@ -1831,6 +1875,13 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
 		APInt sigMin = tmpT.getSignedMin();
 		APInt sigMax = tmpT.getSignedMax();
+		
+		if (sigMin.getBitWidth() < MAX_BIT_INT) {
+			sigMin = sigMin.sext(MAX_BIT_INT);
+		}
+		if (sigMax.getBitWidth() < MAX_BIT_INT) {
+			sigMax = sigMax.sext(MAX_BIT_INT);
+		}
 
 		if (sigMax.slt(sigMin)) {
 			sigMax = Max;
@@ -1842,6 +1893,13 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		ConstantRange tmpF = tmpT.inverse();
 		sigMin = tmpF.getSignedMin();
 		sigMax = tmpF.getSignedMax();
+		
+		if (sigMin.getBitWidth() < MAX_BIT_INT) {
+			sigMin = sigMin.sext(MAX_BIT_INT);
+		}
+		if (sigMax.getBitWidth() < MAX_BIT_INT) {
+			sigMax = sigMax.sext(MAX_BIT_INT);
+		}
 
 		if (sigMax.slt(sigMin)) {
 			sigMax = Max;
@@ -2215,9 +2273,17 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 void ConstraintGraph::findIntervals() {
 	// Builds symbMap
 	buildSymbolicIntersectMap();
-
+	
+	
+	
 	// List of SCCs
+	getTime(false);
 	Nuutila sccList(vars, useMap, symbMap);
+	getTime(true);
+	printTime("Nuutila");
+	
+	
+	
 
 	// STATS
 	numSCCs = sccList.worklist.size();
@@ -2226,6 +2292,7 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 	// For each SCC in graph, do the following
+	getTime(false);
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end(); nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
 #ifdef SCC_DEBUG
@@ -2265,6 +2332,8 @@ void ConstraintGraph::findIntervals() {
 
 		//printResultIntervals();
 	}
+	getTime(true);
+	printTime("Proper analysis");
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
 #endif
@@ -2937,7 +3006,7 @@ bool RangeUnitTest::runOnModule(Module & M){
 	Range pos(Zero,Max);
 	Range neg(Min,Zero);
 	// -------------------------------- ADD --------------------------------//
-	// [a, b] − [c, d] = [a + c, b + d]
+	// [a, b] âˆ’ [c, d] = [a + c, b + d]
 	ASSERT_TRUE("ADD", add, infy, infy, infy);
 	ASSERT_TRUE("ADD", add, zero, infy, infy);
 	ASSERT_TRUE("ADD", add, zero, zero, zero);
@@ -2950,7 +3019,7 @@ bool RangeUnitTest::runOnModule(Module & M){
 	ASSERT_TRUE("ADD", add, pos, pos, pos);
 
 	// -------------------------------- SUB --------------------------------//
-	// [a, b] − [c, d] = [a − d, b − c]
+	// [a, b] âˆ’ [c, d] = [a âˆ’ d, b âˆ’ c]
 	ASSERT_TRUE("SUB", sub, infy, infy, infy);
 	ASSERT_TRUE("SUB", sub, infy, zero, infy);
 	ASSERT_TRUE("SUB", sub, infy, pos, infy);

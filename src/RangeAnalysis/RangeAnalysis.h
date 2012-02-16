@@ -45,6 +45,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ConstantRange.h"
 #include "llvm/Support/CallSite.h"
+#include "llvm/Support/TimeValue.h"
+#include "llvm/Support/Process.h"
 #include <deque>
 #include <stack>
 #include <set>
