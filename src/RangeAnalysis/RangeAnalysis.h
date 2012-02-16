@@ -722,7 +722,7 @@ public:
 };
 
 class RangeAnalysis{
-protected:
+public:
 	/** Gets the maximum bit width of the operands in the instructions of the
 	 * function. This function is necessary because the class APInt only
 	 * supports binary operations on operands that have the same number of
@@ -730,8 +730,8 @@ protected:
 	 * have the maximum bit size. The complexity of this function is linear on
 	 * the number of operands used in the function.
 	 */
-	unsigned getMaxBitWidth(const Function& F);
-	void updateMinMax(unsigned maxBitWidth);
+	static unsigned getMaxBitWidth(const Function& F);
+	static void updateMinMax(unsigned maxBitWidth);
 };
 
 template <class CGT>
@@ -740,9 +740,9 @@ public:
 	static char ID; // Pass identification, replacement for typeid
 	InterProceduralRA() : ModulePass(ID) { }
 	bool runOnModule(Module &M);
+	static unsigned getMaxBitWidth(Module &M);
 private:
 	void MatchParametersAndReturnValues(Function &F, ConstraintGraph &G);
-	unsigned getMaxBitWidth(Module &M);
 };
 
 template <class CGT>
@@ -754,6 +754,15 @@ public:
 	bool runOnFunction(Function &F);
 }; // end of class RangeAnalysis
 
+class RangeUnitTest: public ModulePass{
+	unsigned total;
+	unsigned failed;
+	void printStats();
+public:
+	static char ID; // Pass identification, replacement for typeid
+	RangeUnitTest() : ModulePass(ID), total(0), failed(0) {}
+	bool runOnModule(Module & M);
+};
 
 } // end namespace
 

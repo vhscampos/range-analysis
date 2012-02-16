@@ -42,6 +42,7 @@ DenseMap<const Value*, unsigned> FerMap;
 // The min and max integer values for a given bit width.
 APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
 APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
+APInt Zero(MAX_BIT_INT, 0, true);
 
 const std::string sigmaString = "vSSA_sigma";
 
@@ -126,6 +127,7 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth){
 	// Updates the Min and Max values.
 	Min = APInt::getSignedMinValue(maxBitWidth);
 	Max = APInt::getSignedMaxValue(maxBitWidth);
+	Zero = APInt(MAX_BIT_INT, 0, true);
 }
 
 // ========================================================================== //
@@ -407,85 +409,91 @@ Range Range::add(const Range& other) {
 /// max (a − c, a − d, b − c, b − d)] = [a − d, b − c]
 /// The other operations are just like this operation.
 Range Range::sub(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower() - other.getLower(); // lower lower
-	}
+//	APInt ll = Min, lu = Min, ul = Max, uu = Max;
+//	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
+//		ll = this->getLower() - other.getLower(); // lower lower
+//	}
+//
+//	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
+//		lu = this->getLower() - other.getUpper(); // lower upper
+//	}
+//
+//	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
+//		ul = this->getUpper() - other.getLower(); // upper lower
+//	}
+//
+//	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
+//		uu = this->getUpper() - other.getUpper(); // upper upper
+//	}
+//
+//	APInt l = ll.slt(lu) ? ll : lu;
+//	APInt u = uu.sgt(ul) ? uu : ul;
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower() - other.getUpper(); // lower upper
-	}
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+	APInt l,u;
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper() - other.getLower(); // upper lower
-	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper() - other.getUpper(); // upper upper
-	}
+	//a-d
+	if(a.eq(Min) || d.eq(Max))
+		l = Min;
+	else
+		//FIXME: handle overflow when a-d < Min
+		l = a - d;
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//b-c
+	if(b.eq(Max) || c.eq(Min))
+		u = Max;
+	else
+		//FIXME: handle overflow when b-c > Max
+		u = b - c;
 
 	return Range(l, u);
 }
 
+#define MUL_HELPER(x,y) x.eq(Max) ? \
+							(y.slt(Zero) ? Min : (y.eq(Zero) ? Zero : Max)) \
+							: (y.eq(Max) ? \
+								(x.slt(Zero) ? Min :(x.eq(Zero) ? Zero : Max)) \
+								:(x.eq(Min) ? \
+									(y.slt(Zero) ? Max : (y.eq(Zero) ? Zero : Min)) \
+									: (y.eq(Min) ? \
+										(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
+										:(x*y))))
+
 /// Add and Mul are commutatives. So, they are a little different 
 /// of the other operations.
+// [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
 Range Range::mul(const Range& other) {
 	if (this->isMaxRange() || other.isMaxRange()) {
-		return Range(Min, Max, Regular);
+		return Range(Min, Max);
 	}
 	
-	SmallVector<APInt, 2> range1;
-	range1.push_back(this->getLower());
-	range1.push_back(this->getUpper());
-	
-	SmallVector<APInt, 2> range2;
-	range2.push_back(other.getLower());
-	range2.push_back(other.getUpper());
-	
-	SmallVector<APInt, 4> candidates;
-	
-	// Calculate lower candidates
-	for (unsigned i = 0; i < 2; ++i) {
-		for (unsigned j = 0; j < 2; ++j) {
-			APInt value = Min;
-			
-			if ((range1[i].eq(Min) && range2[j].slt(0)) || (range2[j].eq(Min) && range1[i].slt(0))) {
-				value = Max;
-			}
-			else if ((range1[i].eq(Max) && range2[j].sgt(0)) || (range2[j].eq(Max) && range1[i].sgt(0))) {
-				value = Max;
-			}
-			else if ((range1[i].eq(Min) && range2[j].sgt(0)) || (range2[j].eq(Min) && range1[i].sgt(0))) {
-				value = Min;
-			}
-			else if ((range1[i].eq(Max) && range2[j].slt(0)) || (range2[j].eq(Max) && range1[i].slt(0))) {
-				value = Min;
-			}
-			else {
-				value = range1[i] * range2[j];
-			}
-			
-			candidates.push_back(value);
-		}
-	}
-	
-	// Lower bound is the min value from the vector, while upper bound is the max value
-	const APInt *min = &candidates[0];
-	const APInt *max = &candidates[0];
-	
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	APInt candidates[4];
+	candidates[0] = MUL_HELPER(a,c);
+	candidates[1] = MUL_HELPER(a,d);
+	candidates[2] = MUL_HELPER(b,c);
+	candidates[3] = MUL_HELPER(b,d);
+
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
+
 	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max)) {
+		if (candidates[i].sgt(*max))
 			max = &candidates[i];
-		}
-		if (candidates[i].slt(*min)) {
+		else if (candidates[i].slt(*min))
 			min = &candidates[i];
-		}
 	}
-	
-	return Range(*min, *max, Regular);
+
+	return Range(*min, *max);
 }
 
 Range Range::udiv(const Range& other) {
@@ -2894,3 +2902,89 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap){
     return isConsistent;
 }
 #endif
+
+#define ASSERT_TRUE(print_op,op,op1,op2,res) total++; if(op1.op(op2) != res){ \
+			failed++; \
+			errs() << "\t[" << total << "] " << print_op << ": "; \
+			op1.print(errs()); \
+			errs() << " "; \
+			op2.print(errs()); \
+			errs() << " RESULT: "; \
+			(op1.op(op2)).print(errs()); \
+			errs() << " EXPECTED: "; \
+			res.print(errs()); \
+			errs() << "\n";}
+
+void RangeUnitTest::printStats(){
+	errs() << "\n//********************** STATS *******************************//\n";
+	errs() << "\tFailed: " << failed << " ("  << failed/total;
+	if(failed > 0)
+		errs() << "." << 100/(total/failed);
+	errs() << "%)\n";
+	errs() << "\tTotal: " << total << "\n";
+	errs() << "//************************************************************//\n";
+}
+
+bool RangeUnitTest::runOnModule(Module & M){
+	MAX_BIT_INT = InterProceduralRA<Cousot>::getMaxBitWidth(M);
+	RangeAnalysis::updateMinMax(MAX_BIT_INT);
+	errs() << "Running unit tests for Range class!\n";
+	// --------------------------- Shared Objects -------------------------//
+	Range unknown(Min, Max, Unknown);
+	Range empty(Min, Max, Empty);
+	Range zero(Zero,Zero);
+	Range infy(Min,Max);
+	Range pos(Zero,Max);
+	Range neg(Min,Zero);
+	// -------------------------------- ADD --------------------------------//
+	// [a, b] − [c, d] = [a + c, b + d]
+	ASSERT_TRUE("ADD", add, infy, infy, infy);
+	ASSERT_TRUE("ADD", add, zero, infy, infy);
+	ASSERT_TRUE("ADD", add, zero, zero, zero);
+	ASSERT_TRUE("ADD", add, neg, zero, neg);
+	ASSERT_TRUE("ADD", add, neg, infy, infy);
+	ASSERT_TRUE("ADD", add, neg, neg, neg);
+	ASSERT_TRUE("ADD", add, pos, zero, pos);
+	ASSERT_TRUE("ADD", add, pos, infy, infy);
+	ASSERT_TRUE("ADD", add, pos, neg, infy);
+	ASSERT_TRUE("ADD", add, pos, pos, pos);
+
+	// -------------------------------- SUB --------------------------------//
+	// [a, b] − [c, d] = [a − d, b − c]
+	ASSERT_TRUE("SUB", sub, infy, infy, infy);
+	ASSERT_TRUE("SUB", sub, infy, zero, infy);
+	ASSERT_TRUE("SUB", sub, infy, pos, infy);
+	ASSERT_TRUE("SUB", sub, infy, neg, infy);
+	ASSERT_TRUE("SUB", sub, zero, zero, zero);
+	ASSERT_TRUE("SUB", sub, zero, infy, infy);
+	ASSERT_TRUE("SUB", sub, zero, pos, neg);
+	ASSERT_TRUE("SUB", sub, zero, neg, pos);
+	ASSERT_TRUE("SUB", sub, pos, zero, pos);
+	ASSERT_TRUE("SUB", sub, pos, infy, infy);
+	ASSERT_TRUE("SUB", sub, pos, neg, pos);
+	ASSERT_TRUE("SUB", sub, pos, pos, infy);
+	ASSERT_TRUE("SUB", sub, neg, zero, neg);
+	ASSERT_TRUE("SUB", sub, neg, infy, infy);
+	ASSERT_TRUE("SUB", sub, neg, neg, infy);
+	ASSERT_TRUE("SUB", sub, neg, pos, neg);
+
+	// -------------------------------- MUL --------------------------------//
+	//  [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
+	ASSERT_TRUE("MUL", mul, infy, infy, infy);
+	ASSERT_TRUE("MUL", mul, zero, infy, infy);
+	ASSERT_TRUE("MUL", mul, zero, zero, zero);
+	ASSERT_TRUE("MUL", mul, neg, zero, zero);
+	ASSERT_TRUE("MUL", mul, neg, infy, infy);
+	ASSERT_TRUE("MUL", mul, neg, neg, pos);
+	ASSERT_TRUE("MUL", mul, pos, zero, zero);
+	ASSERT_TRUE("MUL", mul, pos, infy, infy);
+	ASSERT_TRUE("MUL", mul, pos, neg, neg);
+	ASSERT_TRUE("MUL", mul, pos, pos, pos);
+
+
+	printStats();
+	return true;
+}
+
+char RangeUnitTest::ID = 3;
+static RegisterPass<RangeUnitTest > T("ra-test-range", "Run unit test for class Range");
