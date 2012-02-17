@@ -39,6 +39,7 @@
 #include "llvm/Instructions.h"
 #include "llvm/Module.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
@@ -554,6 +555,57 @@ public:
 	}
 	/// Clear memory allocated
 	void clear();
+};
+
+class Profile {
+	public:
+		class TimeValue: public sys::TimeValue {
+			public:
+				TimeValue():
+					sys::TimeValue(0.0) {}
+				
+				TimeValue(const sys::TimeValue &from):
+					sys::TimeValue(0.0)
+				{
+					seconds(from.seconds());
+					nanoseconds(from.nanoseconds());
+				}
+					
+				TimeValue operator-(const TimeValue &op) {
+					return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) - static_cast<sys::TimeValue>(op));
+				}
+		};
+	
+		// Map to store accumulated times
+		typedef StringMap<TimeValue> AccTimesMap;
+	
+	private:
+		AccTimesMap accumulatedtimes;
+	
+	public:
+		TimeValue timenow() {
+			TimeValue garbage, usertime;
+			sys::Process::GetTimeUsage(garbage, usertime, garbage);
+			
+			return usertime;
+		}
+	
+		void updateTime(StringRef key, const TimeValue &time) {
+			accumulatedtimes[key] += time;
+		}
+		
+		double getTimeDouble(StringRef key) {
+			return accumulatedtimes[key].seconds() + (0.001) * accumulatedtimes[key].milliseconds();
+		}
+		
+		TimeValue getTime(StringRef key) {
+			return accumulatedtimes[key];
+		}
+		
+		void printTime(StringRef key) {
+			double time = getTimeDouble(key);
+			errs() << time << "\t - " << key << " elapsed time\n";
+		}
 };
 
 // The VarNodes type.

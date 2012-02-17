@@ -51,12 +51,8 @@ const std::string sigmaString = "vSSA_sigma";
 std::string pestring;
 raw_string_ostream pseudoEdgesString(pestring);
 
-// Used in time measure
-sys::TimeValue zerot(0, 0);
-	
-std::pair<sys::TimeValue, sys::TimeValue> clockt(zerot, zerot);
-std::pair<sys::TimeValue, sys::TimeValue> usert(zerot, zerot);
-std::pair<sys::TimeValue, sys::TimeValue> syst(zerot, zerot);
+// Used to profile
+Profile prof;
 
 // Print name of variable according to its type
 static void printVarName(const Value *V, raw_ostream& OS) {
@@ -72,35 +68,6 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 	else {
 		OS << V->getName();
 	}
-}
-
-// Get current rusage time. (false: before, true: after)
-static void getTime(bool f)
-{
-	// After
-	if (f) {
-		sys::Process::GetTimeUsage(clockt.second, usert.second, syst.second);
-	}
-	// Before
-	else {
-		sys::Process::GetTimeUsage(clockt.first, usert.first, syst.first);
-	}
-}
-
-// Measure elapsed time and print
-static void printTime(const Twine& name)
-{
-	sys::TimeValue elapsed_clockt = clockt.second - clockt.first;
-	sys::TimeValue elapsed_usert = usert.second - usert.first;
-	sys::TimeValue elapsed_syst = syst.second - syst.first;
-	
-	double elapsed_clockt_print = elapsed_clockt.seconds() + (1.e-3) * elapsed_clockt.milliseconds();
-	double elapsed_usert_print = elapsed_usert.seconds() + (1.e-3) * elapsed_usert.milliseconds();
-	double elapsed_syst_print = elapsed_syst.seconds() + (1.e-3) * elapsed_syst.milliseconds();
-	
-	errs() << elapsed_usert_print << "\t" << name << " elapsed user time\n";
-	//errs() << elapsed_syst_print << "\t" << name << " elapsed sys time\n";
-	//errs() << elapsed_clockt_print << "\t" << name << " elapsed clock time\n";
 }
 
 /// Selects the instructions that we are going to evaluate.
@@ -243,7 +210,6 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	
 
 	// Build the Constraint Graph by running on each function
-	getTime(false);
 	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
 		// If the function is only a declaration, or if it has variable number of arguments, do not match
 		if (I->isDeclaration() || I->isVarArg())
@@ -253,8 +219,6 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 
 		MatchParametersAndReturnValues(*I, *G);
 	}
-	getTime(true);
-	printTime("Graph building");
 
 	G->findIntervals();
 	//G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
@@ -2277,10 +2241,12 @@ void ConstraintGraph::findIntervals() {
 	
 	
 	// List of SCCs
-	getTime(false);
+	Profile::TimeValue before = prof.timenow();
 	Nuutila sccList(vars, useMap, symbMap);
-	getTime(true);
-	printTime("Nuutila");
+	Profile::TimeValue after = prof.timenow();
+	Profile::TimeValue elapsed = after - before;
+	prof.updateTime("Nuutila", elapsed);
+	prof.printTime("Nuutila");
 	
 	
 	
@@ -2292,7 +2258,6 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 	// For each SCC in graph, do the following
-	getTime(false);
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end(); nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
 #ifdef SCC_DEBUG
@@ -2332,8 +2297,6 @@ void ConstraintGraph::findIntervals() {
 
 		//printResultIntervals();
 	}
-	getTime(true);
-	printTime("Proper analysis");
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
 #endif
