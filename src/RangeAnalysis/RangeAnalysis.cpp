@@ -8,7 +8,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #define DEBUG_TYPE "range-analysis"
 
 #include "RangeAnalysis.h"
@@ -61,11 +60,10 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 
 	if ((A = dyn_cast<Argument>(V))) {
 		OS << A->getParent()->getName() << "." << A->getName();
-	}
-	else if ((I = dyn_cast<Instruction>(V))) {
-		OS << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName();
-	}
-	else {
+	} else if ((I = dyn_cast<Instruction>(V))) {
+		OS << I->getParent()->getParent()->getName() << "."
+				<< I->getParent()->getName() << "." << I->getName();
+	} else {
 		OS << V->getName();
 	}
 }
@@ -128,7 +126,7 @@ unsigned RangeAnalysis::getMaxBitWidth(const Function& F) {
 	return max;
 }
 
-void RangeAnalysis::updateMinMax(unsigned maxBitWidth){
+void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
 	// Updates the Min and Max values.
 	Min = APInt::getSignedMinValue(maxBitWidth);
 	Max = APInt::getSignedMaxValue(maxBitWidth);
@@ -139,7 +137,7 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth){
 // IntraProceduralRangeAnalysis
 // ========================================================================== //
 
-template <class CGT>
+template<class CGT>
 bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	// The data structures
 	DenseMap<const Value*, VarNode*> VNodes;
@@ -148,26 +146,32 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
 	DenseMap<const Value*, ValueBranchMap> VBMap;
 	DenseMap<const Value*, ValueSwitchMap> VSMap;
-	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &DMap, &UMap, &VBMap, &VSMap);
+	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &DMap, &UMap, &VBMap,
+			&VSMap);
 
 	MAX_BIT_INT = getMaxBitWidth(F);
 	updateMinMax(MAX_BIT_INT);
 
 	// Build the graph and find the intervals of the variables.
+	Profile::TimeValue before = prof.timenow();
 	CG->buildGraph(F);
-	#ifdef PRINT_DEBUG
-	CG->printToFile(F,"/tmp/"+F.getName()+"cgpre.dot");
-	errs() << "Analysing function " << F.getName() << ":\n";
-	#endif
+	CG->buildVarNodes();
+	Profile::TimeValue elapsed = prof.timenow() - before;
+	prof.updateTime("BuildGraph", elapsed);
+	prof.printTime("BuildGraph");
+#ifdef PRINT_DEBUG
+	CG->printToFile(F, "/tmp/" + F.getName() + "cgpre.dot");
+	errs() << "Analyzing function " << F.getName() << ":\n";
+#endif
 	CG->findIntervals();
-	#ifdef PRINT_DEBUG
-	CG->printToFile(F,"/tmp/"+F.getName()+"cgpos.dot");
-	#endif
+#ifdef PRINT_DEBUG
+	CG->printToFile(F, "/tmp/" + F.getName() + "cgpos.dot");
+#endif
 	delete CG;
 	return false;
 }
 
-template <class CGT>
+template<class CGT>
 void IntraProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.setPreservesAll();
 }
@@ -176,8 +180,8 @@ void IntraProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 // InterProceduralRangeAnalysis
 // ========================================================================== //
 
-template <class CGT>
-unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M){
+template<class CGT>
+unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M) {
 	unsigned max = 0;
 	// Search through the functions for the max int bitwidth
 	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
@@ -191,7 +195,7 @@ unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M){
 	return max;
 }
 
-template <class CGT>
+template<class CGT>
 bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	DenseMap<const Value*, VarNode*> VarNodes;
 	SmallPtrSet<BasicOp*, 64> GenOprs;
@@ -202,12 +206,10 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 
 	// Constraint Graph
 	ConstraintGraph *G = new CGT(&VarNodes, &GenOprs, &DefMap, &UseMap,
-		&ValuesBranchMap, &ValuesSwitchMap);
-		
+			&ValuesBranchMap, &ValuesSwitchMap);
 
 	MAX_BIT_INT = getMaxBitWidth(M);
 	updateMinMax(MAX_BIT_INT);
-	
 
 	// Build the Constraint Graph by running on each function
 	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
@@ -215,14 +217,22 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 		if (I->isDeclaration() || I->isVarArg())
 			continue;
 
+		Profile::TimeValue before = prof.timenow();
 		G->buildGraph(*I);
-
+		Profile::TimeValue elapsed = prof.timenow() - before;
+		prof.updateTime("BuildGraph", elapsed);
 		MatchParametersAndReturnValues(*I, *G);
 	}
+	G->buildVarNodes();
+	prof.printTime("BuildGraph");
 
+#ifdef PRINT_DEBUG
+	G->printToFile(*(M.begin()), "/tmp/" + M.begin()->getName() + "cgpre.dot");
+#endif
 	G->findIntervals();
-	//G->printToFile(*M.begin(), M.getModuleIdentifier() + ".dot");
-
+#ifdef PRINT_DEBUG
+	G->printToFile(*(M.begin()), "/tmp/" + M.begin()->getName() + "cgpos.dot");
+#endif
 	// Collect statistics
 	numVars = VarNodes.size();
 	numOps = GenOprs.size();
@@ -233,8 +243,9 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	return true;
 }
 
-template <class CGT>
-void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, ConstraintGraph &G) {
+template<class CGT>
+void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F,
+		ConstraintGraph &G) {
 	// Only do the matching if F has any use
 	if (!F.hasNUsesOrMore(1)) {
 		return;
@@ -250,7 +261,8 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 	Function::arg_iterator e;
 	unsigned i;
 
-	for (i = 0, argptr = F.arg_begin(), e = F.arg_end(); argptr != e; ++i, ++argptr)
+	for (i = 0, argptr = F.arg_begin(), e = F.arg_end(); argptr != e;
+			++i, ++argptr)
 		Parameters[i].first = argptr;
 
 	// Check if the function returns a supported value type. If not, no return value matching is done
@@ -261,7 +273,8 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 
 	if (!noReturn) {
 		// Iterate over the basic blocks to fetch all possible return values
-		for (Function::iterator bb = F.begin(), bbend = F.end(); bb != bbend; ++bb) {
+		for (Function::iterator bb = F.begin(), bbend = F.end(); bb != bbend;
+				++bb) {
 			// Get the terminator instruction of the basic block and check if it's
 			// a return instruction: if it's not, continue to next basic block
 			Instruction *terminator = bb->getTerminator();
@@ -278,30 +291,33 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 
 	// For each use of F, get the real parameters and the caller instruction to do the matching
 	std::vector<PhiOp*> matchers(F.arg_size(), NULL);
-	
+
 	for (unsigned i = 0, e = Parameters.size(); i < e; ++i) {
 		VarNode *sink = G.addVarNode(Parameters[i].first);
-		
-		matchers[i] = new PhiOp(new BasicInterval(), sink, NULL, Instruction::PHI); 
-		
+
+		matchers[i] = new PhiOp(new BasicInterval(), sink, NULL,
+				Instruction::PHI);
+
 		// Insert the operation in the graph.
 		G.getOprs()->insert(matchers[i]);
-		
+
 		// Insert this definition in defmap
 		(*G.getDefMap())[sink->getValue()] = matchers[i];
 	}
-	
+
 	// For each return value, create a node
 	std::vector<VarNode*> returnvars;
-	
-	for (SmallPtrSetIterator<Value*> ri = ReturnValues.begin(), re = ReturnValues.end(); ri != re; ++ri) {
+
+	for (SmallPtrSetIterator<Value*> ri = ReturnValues.begin(), re =
+			ReturnValues.end(); ri != re; ++ri) {
 		// Add VarNode to the CG
 		VarNode *from = G.addVarNode(*ri);
-		
+
 		returnvars.push_back(from);
 	}
-	
-	for (Value::use_iterator UI = F.use_begin(), E = F.use_end(); UI != E; ++UI) {
+
+	for (Value::use_iterator UI = F.use_begin(), E = F.use_end(); UI != E;
+			++UI) {
 		User *U = *UI;
 
 		// Ignore blockaddress uses
@@ -310,7 +326,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 
 		// Used by a non-instruction, or not the callee of a function, do not
 		// match.
-		if (!isa<CallInst>(U) && !isa<InvokeInst> (U))
+		if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
 			continue;
 
 		Instruction *caller = cast<Instruction>(U);
@@ -326,7 +342,6 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 		for (i = 0, AI = CS.arg_begin(), EI = CS.arg_end(); AI != EI; ++i, ++AI)
 			Parameters[i].second = *AI;
 
-
 		// // Do the interprocedural construction of CG
 		VarNode* to = NULL;
 		VarNode* from = NULL;
@@ -338,7 +353,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 
 			// Connect nodes
 			matchers[i]->addSource(from);
-			
+
 			// Inserts the sources of the operation in the use map list.
 			G.getUseMap()->find(from->getValue())->second.insert(matchers[i]);
 		}
@@ -347,19 +362,21 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 		if (!noReturn) {
 			// Add caller instruction to the CG (it receives the return value)
 			to = G.addVarNode(caller);
-			
-			PhiOp *phiOp = new PhiOp(new BasicInterval(), to, NULL, Instruction::PHI);
-			
+
+			PhiOp *phiOp = new PhiOp(new BasicInterval(), to, NULL,
+					Instruction::PHI);
+
 			// Insert the operation in the graph.
 			G.getOprs()->insert(phiOp);
-			
+
 			// Insert this definition in defmap
 			(*G.getDefMap())[to->getValue()] = phiOp;
-			
-			for (std::vector<VarNode*>::iterator vit = returnvars.begin(), vend = returnvars.end(); vit != vend; ++vit) {
+
+			for (std::vector<VarNode*>::iterator vit = returnvars.begin(),
+					vend = returnvars.end(); vit != vend; ++vit) {
 				VarNode *var = *vit;
 				phiOp->addSource(var);
-				
+
 				// Inserts the sources of the operation in the use map list.
 				G.getUseMap()->find(var->getValue())->second.insert(phiOp);
 			}
@@ -373,22 +390,30 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F, Constra
 
 template<class CGT>
 char IntraProceduralRA<CGT>::ID = 0;
-static RegisterPass<IntraProceduralRA<Cousot> > Y("ra-intra-cousot", "Range Analysis with Cousot");
-static RegisterPass<IntraProceduralRA<CropDFS> > Z("ra-intra-crop", "Range Analysis with CropDFS");
+static RegisterPass<IntraProceduralRA<Cousot> > Y("ra-intra-cousot",
+		"Range Analysis with Cousot");
+static RegisterPass<IntraProceduralRA<CropDFS> > Z("ra-intra-crop",
+		"Range Analysis with CropDFS");
 template<class CGT>
 char InterProceduralRA<CGT>::ID = 2;
-static RegisterPass<InterProceduralRA<Cousot> > W("ra-inter-cousot", "Matching Pass with Cousot");
-static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop", "Matching Pass with CropDFS");
+static RegisterPass<InterProceduralRA<Cousot> > W("ra-inter-cousot",
+		"Matching Pass with Cousot");
+static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop",
+		"Matching Pass with CropDFS");
 
 // ========================================================================== //
 // Range
 // ========================================================================== //
-Range::Range() : l(Min), u(Max), type(Regular) {}
+Range::Range() :
+		l(Min), u(Max), type(Regular) {
+}
 
 Range::Range(APInt lb, APInt ub, RangeType rType = Regular) :
-	l(lb), u(ub), type(rType) {}
+		l(lb), u(ub), type(rType) {
+}
 
-Range::~Range() {}
+Range::~Range() {
+}
 
 bool Range::isMaxRange() const {
 	return this->getLower().eq(Min) && this->getUpper().eq(Max);
@@ -414,42 +439,21 @@ Range Range::add(const Range& other) {
 /// max (a − c, a − d, b − c, b − d)] = [a − d, b − c]
 /// The other operations are just like this operation.
 Range Range::sub(const Range& other) {
-//	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-//	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-//		ll = this->getLower() - other.getLower(); // lower lower
-//	}
-//
-//	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-//		lu = this->getLower() - other.getUpper(); // lower upper
-//	}
-//
-//	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-//		ul = this->getUpper() - other.getLower(); // upper lower
-//	}
-//
-//	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-//		uu = this->getUpper() - other.getUpper(); // upper upper
-//	}
-//
-//	APInt l = ll.slt(lu) ? ll : lu;
-//	APInt u = uu.sgt(ul) ? uu : ul;
-
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
 	const APInt &d = other.getUpper();
-	APInt l,u;
-
+	APInt l, u;
 
 	//a-d
-	if(a.eq(Min) || d.eq(Max))
+	if (a.eq(Min) || d.eq(Max))
 		l = Min;
 	else
 		//FIXME: handle overflow when a-d < Min
 		l = a - d;
 
 	//b-c
-	if(b.eq(Max) || c.eq(Min))
+	if (b.eq(Max) || c.eq(Min))
 		u = Max;
 	else
 		//FIXME: handle overflow when b-c > Max
@@ -475,7 +479,7 @@ Range Range::mul(const Range& other) {
 	if (this->isMaxRange() || other.isMaxRange()) {
 		return Range(Min, Max);
 	}
-	
+
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
@@ -565,7 +569,6 @@ Range Range::sdiv(const Range& other) {
 	return Range(l, u);
 }
 
-
 Range Range::urem(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
@@ -589,7 +592,6 @@ Range Range::urem(const Range& other) {
 
 	return Range(l, u);
 }
-
 
 Range Range::srem(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
@@ -615,7 +617,6 @@ Range Range::srem(const Range& other) {
 	return Range(l, u);
 }
 
-
 Range Range::shl(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
@@ -639,7 +640,6 @@ Range Range::shl(const Range& other) {
 
 	return Range(l, u);
 }
-
 
 Range Range::lshr(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
@@ -665,7 +665,6 @@ Range Range::lshr(const Range& other) {
 	return Range(l, u);
 }
 
-
 Range Range::ashr(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
@@ -690,7 +689,6 @@ Range Range::ashr(const Range& other) {
 	return Range(l, u);
 }
 
-
 Range Range::And(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
@@ -714,7 +712,6 @@ Range Range::And(const Range& other) {
 
 	return Range(l, u);
 }
-
 
 Range Range::Or(const Range& other) {
 	if (this->isUnknown() || other.isUnknown()) {
@@ -744,7 +741,6 @@ Range Range::Or(const Range& other) {
 	return Range(l, u);
 }
 
-
 Range Range::Xor(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
@@ -769,33 +765,30 @@ Range Range::Xor(const Range& other) {
 	return Range(l, u);
 }
 
-
 // Truncate
 //		- if the source range is entirely inside max bit range, he is the result
 //      - else, the result is the max bit range
 Range Range::truncate(unsigned bitwidht) const {
 	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
 	APInt maxlower = APInt::getSignedMinValue(bitwidht);
-	
+
 	if (bitwidht < MAX_BIT_INT) {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
-	
+
 	// Check if source range is contained by max bit range
 	if (this->getLower().sge(maxlower) && this->getUpper().sle(maxupper)) {
 		return *this;
-	}
-	else {
+	} else {
 		return Range(maxlower, maxupper);
 	}
 }
 
-
 Range Range::sextOrTrunc(unsigned bitwidht) const {
 	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
 	APInt maxlower = APInt::getSignedMinValue(bitwidht);
-	
+
 	if (bitwidht < MAX_BIT_INT) {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
@@ -803,12 +796,11 @@ Range Range::sextOrTrunc(unsigned bitwidht) const {
 
 	return Range(maxlower, maxupper);
 }
-
 
 Range Range::zextOrTrunc(unsigned bitwidht) const {
 	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
 	APInt maxlower = APInt::getSignedMinValue(bitwidht);
-	
+
 	if (bitwidht < MAX_BIT_INT) {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
@@ -817,10 +809,9 @@ Range Range::zextOrTrunc(unsigned bitwidht) const {
 	return Range(maxlower, maxupper);
 }
 
-
 Range Range::intersectWith(const Range& other) const {
 	if (this->isEmpty() || other.isEmpty())
-		return Range(Min,Max, Empty);
+		return Range(Min, Max, Empty);
 
 	if (this->isUnknown()) {
 		return other;
@@ -834,7 +825,6 @@ Range Range::intersectWith(const Range& other) const {
 	APInt u = getUpper().slt(other.getUpper()) ? getUpper() : other.getUpper();
 	return Range(l, u);
 }
-
 
 Range Range::unionWith(const Range& other) const {
 	if (this->isEmpty()) {
@@ -858,20 +848,15 @@ Range Range::unionWith(const Range& other) const {
 	return Range(l, u);
 }
 
-
 bool Range::operator==(const Range& other) const {
-	return this->type == other.type
-			&& getLower().eq(other.getLower())
+	return this->type == other.type && getLower().eq(other.getLower())
 			&& getUpper().eq(other.getUpper());
 }
 
-
 bool Range::operator!=(const Range& other) const {
-	return this->type != other.type
-			|| getLower().ne(other.getLower())
+	return this->type != other.type || getLower().ne(other.getLower())
 			|| getUpper().ne(other.getUpper());
 }
-
 
 void Range::print(raw_ostream& OS) const {
 	if (this->isUnknown()) {
@@ -902,40 +887,42 @@ raw_ostream& operator<<(raw_ostream& OS, const Range& R) {
 	return OS;
 }
 
-
 // ========================================================================== //
 // BasicInterval
 // ========================================================================== //
 
-BasicInterval::BasicInterval(const Range& range) : range(range) {}
+BasicInterval::BasicInterval(const Range& range) :
+		range(range) {
+}
 
-BasicInterval::BasicInterval() : range(Range(Min, Max)) {}
+BasicInterval::BasicInterval() :
+		range(Range(Min, Max)) {
+}
 
-BasicInterval::BasicInterval(const APInt& l, const APInt& u) : 
-							 range(Range(l, u)) {}
+BasicInterval::BasicInterval(const APInt& l, const APInt& u) :
+		range(Range(l, u)) {
+}
 
 // This is a base class, its dtor must be virtual.
-BasicInterval::~BasicInterval() {}
+BasicInterval::~BasicInterval() {
+}
 
 /// Pretty print.
 void BasicInterval::print(raw_ostream& OS) const {
 	this->getRange().print(OS);
 }
 
-
 // ========================================================================== //
 // SymbInterval
 // ========================================================================== //
 
-SymbInterval::SymbInterval(const Range& range,
-						   const Value* bound,
-						   CmpInst::Predicate pred) :
-						   BasicInterval(range),
-						   bound(bound),
-						   pred(pred) {}
+SymbInterval::SymbInterval(const Range& range, const Value* bound,
+		CmpInst::Predicate pred) :
+		BasicInterval(range), bound(bound), pred(pred) {
+}
 
-SymbInterval::~SymbInterval() {}
-
+SymbInterval::~SymbInterval() {
+}
 
 Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 	// Get the lower and the upper bound of the
@@ -956,9 +943,8 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 		break;
 	case ICmpInst::ICMP_SLT: // signed less than
 		if (u != Max) {
-			return Range(lower, u-1);
-		}
-		else {
+			return Range(lower, u - 1);
+		} else {
 			return Range(lower, u);
 		}
 		break;
@@ -967,9 +953,8 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 		break;
 	case ICmpInst::ICMP_SGT: // signed greater than
 		if (l != Min) {
-			return Range(l+1, upper);
-		}
-		else {
+			return Range(l + 1, upper);
+		} else {
 			return Range(l, upper);
 		}
 		break;
@@ -979,7 +964,6 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 
 	return Range(Min, Max);
 }
-
 
 /// Pretty print.
 void SymbInterval::print(raw_ostream& OS) const {
@@ -1016,17 +1000,18 @@ void SymbInterval::print(raw_ostream& OS) const {
 	}
 }
 
-
 // ========================================================================== //
 // VarNode
 // ========================================================================== //
 
 /// The ctor.
-VarNode::VarNode(const Value* V) : V(V), interval(Range(Min, Max, Unknown)) {}
+VarNode::VarNode(const Value* V) :
+		V(V), interval(Range(Min, Max, Unknown)) {
+}
 
 /// The dtor.
-VarNode::~VarNode() {}
-
+VarNode::~VarNode() {
+}
 
 /// Initializes the value of the node.
 void VarNode::init(bool outside) {
@@ -1035,18 +1020,15 @@ void VarNode::init(bool outside) {
 		APInt tmp = CI->getValue();
 		APInt value = tmp.sextOrTrunc(MAX_BIT_INT);
 		this->setRange(Range(value, value));
-	}
-	else {
+	} else {
 		if (!outside) {
 			// Initialize with a basic, unknown, interval.
 			this->setRange(Range(Min, Max, Unknown));
-		}
-		else {
+		} else {
 			this->setRange(Range(Min, Max));
 		}
 	}
 }
-
 
 /// Pretty print.
 void VarNode::print(raw_ostream& OS) const {
@@ -1059,28 +1041,24 @@ void VarNode::print(raw_ostream& OS) const {
 	this->getRange().print(OS);
 }
 
-void VarNode::storeAbstractState(){
-    ASSERT(!this->interval.isUnknown(), "storeAbstractState doesn't handle empty set")
-    errs() << "\n\t[VarNode] ";
-    this->getValue()->dump();
-    if(this->interval.getLower().eq(Min))
-        if(this->interval.getUpper().eq(Max))
-            this->abstractState = '?';
-        else
-            this->abstractState = '-';
-    else
-        if (this->interval.getUpper().eq(Max))
-            this->abstractState = '+';
-        else
-            this->abstractState = '0';
-}
+void VarNode::storeAbstractState() {
+	ASSERT(!this->interval.isUnknown(), "storeAbstractState doesn't handle empty set")
 
+	if (this->interval.getLower().eq(Min))
+		if (this->interval.getUpper().eq(Max))
+			this->abstractState = '?';
+		else
+			this->abstractState = '-';
+	else if (this->interval.getUpper().eq(Max))
+		this->abstractState = '+';
+	else
+		this->abstractState = '0';
+}
 
 raw_ostream& operator<<(raw_ostream& OS, const VarNode* VN) {
 	VN->print(OS);
 	return OS;
 }
-
 
 // ========================================================================== //
 // BasicOp
@@ -1088,11 +1066,10 @@ raw_ostream& operator<<(raw_ostream& OS, const VarNode* VN) {
 
 /// We can not want people creating objects of this class,
 /// but we want to inherit of it.
-BasicOp::BasicOp(BasicInterval* intersect, VarNode* sink, const Instruction *inst) :
-						 intersect(intersect),
-						 sink(sink),
-						 inst(inst) {}
-
+BasicOp::BasicOp(BasicInterval* intersect, VarNode* sink,
+		const Instruction *inst) :
+		intersect(intersect), sink(sink), inst(inst) {
+}
 
 /// We can not want people creating objects of this class,
 /// but we want to inherit of it.
@@ -1100,10 +1077,9 @@ BasicOp::~BasicOp() {
 	delete intersect;
 }
 
-
 /// Replace symbolic intervals with hard-wired constants.
 void BasicOp::fixIntersects(VarNode* V) {
-	if (SymbInterval* SI = dyn_cast<SymbInterval>(getIntersect())) {
+	if (SymbInterval * SI = dyn_cast<SymbInterval>(getIntersect())) {
 		Range r = SI->fixIntersects(V, getSink());
 		this->setIntersect(SI->fixIntersects(V, getSink()));
 	}
@@ -1114,33 +1090,31 @@ void BasicOp::fixIntersects(VarNode* V) {
 // ========================================================================== //
 
 ControlDep::ControlDep(VarNode* sink, VarNode* source) :
-								 BasicOp(new BasicInterval(), sink, NULL),
-								 source(source) {}
+		BasicOp(new BasicInterval(), sink, NULL), source(source) {
+}
 
-ControlDep::~ControlDep() {}
+ControlDep::~ControlDep() {
+}
 
 Range ControlDep::eval() const {
 	return Range(Min, Max);
 }
-	
-void ControlDep::print(raw_ostream& OS) const {}
+
+void ControlDep::print(raw_ostream& OS) const {
+}
 
 // ========================================================================== //
 // UnaryOp
 // ========================================================================== //
 
-UnaryOp::UnaryOp(BasicInterval* intersect,
-						 VarNode* sink,
-						 const Instruction *inst,
-						 VarNode* source,
-						 unsigned int opcode) :
-						 BasicOp(intersect, sink, inst),
-						 source(source),
-						 opcode(opcode) {}
-
+UnaryOp::UnaryOp(BasicInterval* intersect, VarNode* sink,
+		const Instruction *inst, VarNode* source, unsigned int opcode) :
+		BasicOp(intersect, sink, inst), source(source), opcode(opcode) {
+}
 
 // The dtor.
-UnaryOp::~UnaryOp() {}
+UnaryOp::~UnaryOp() {
+}
 
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
@@ -1150,7 +1124,7 @@ Range UnaryOp::eval() const {
 	Range oprnd = source->getRange();
 	Range result(Min, Max, Unknown);
 
-	if (oprnd.isRegular()){
+	if (oprnd.isRegular()) {
 		switch (this->getOpcode()) {
 		case Instruction::Trunc:
 			result = oprnd.truncate(bw);
@@ -1166,9 +1140,8 @@ Range UnaryOp::eval() const {
 			result = oprnd;
 			break;
 		}
-	}else
-		if(oprnd.isEmpty())
-			result = Range(Min, Max, Empty);
+	} else if (oprnd.isEmpty())
+		result = Range(Min, Max, Empty);
 
 	if (!getIntersect()->getRange().isMaxRange()) {
 		Range aux(getIntersect()->getRange());
@@ -1178,7 +1151,6 @@ Range UnaryOp::eval() const {
 	// To ensure that we always are dealing with the correct bit width.
 	return result;
 }
-
 
 /// Prints the content of the operation. I didn't it an operator overload
 /// because I had problems to access the members of the class outside it.
@@ -1190,19 +1162,19 @@ void UnaryOp::print(raw_ostream& OS) const {
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
 
 	switch (this->opcode) {
-		case Instruction::Trunc:
-			OS << "trunc i" << bw;
-			break;
-		case Instruction::ZExt:
-			OS << "zext i" << bw;
-			break;
-		case Instruction::SExt:
-			OS << "sext i" << bw;
-			break;
-		default:
-			// Phi functions, Loads and Stores are handled here.
-			this->getIntersect()->print(OS);
-			break;
+	case Instruction::Trunc:
+		OS << "trunc i" << bw;
+		break;
+	case Instruction::ZExt:
+		OS << "zext i" << bw;
+		break;
+	case Instruction::SExt:
+		OS << "sext i" << bw;
+		break;
+	default:
+		// Phi functions, Loads and Stores are handled here.
+		this->getIntersect()->print(OS);
+		break;
 	}
 
 	OS << "\"]\n";
@@ -1222,21 +1194,18 @@ void UnaryOp::print(raw_ostream& OS) const {
 	OS << quot << "\n";
 }
 
-
 // ========================================================================== //
 // SigmaOp
 // ========================================================================== //
 
-SigmaOp::SigmaOp(BasicInterval* intersect,
-						 VarNode* sink,
-						 const Instruction *inst,
-						 VarNode* source,
-						 unsigned int opcode) :
-						 UnaryOp(intersect, sink, inst, source, opcode), unresolved(false) {}
-
+SigmaOp::SigmaOp(BasicInterval* intersect, VarNode* sink,
+		const Instruction *inst, VarNode* source, unsigned int opcode) :
+		UnaryOp(intersect, sink, inst, source, opcode), unresolved(false) {
+}
 
 // The dtor.
-SigmaOp::~SigmaOp() {}
+SigmaOp::~SigmaOp() {
+}
 
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
@@ -1247,7 +1216,6 @@ Range SigmaOp::eval() const {
 
 	return result;
 }
-
 
 /// Prints the content of the operation. I didn't it an operator overload
 /// because I had problems to access the members of the class outside it.
@@ -1266,8 +1234,7 @@ void SigmaOp::print(raw_ostream& OS) const {
 	}
 
 	const Value* VS = this->getSink()->getValue();
-	OS << " " << quot << this << quot << " -> "
-	   << quot;
+	OS << " " << quot << this << quot << " -> " << quot;
 	printVarName(VS, OS);
 	OS << quot << "\n";
 }
@@ -1277,19 +1244,16 @@ void SigmaOp::print(raw_ostream& OS) const {
 // ========================================================================== //
 
 // The ctor.
-BinaryOp::BinaryOp(BasicInterval* intersect,
-						   VarNode* sink,
-						   const Instruction* inst,
-						   VarNode* source1,
-						   VarNode* source2,
-						   unsigned int opcode) :
-						   BasicOp(intersect, sink, inst),
-						   source1(source1),
-						   source2(source2),
-						   opcode(opcode) {}
+BinaryOp::BinaryOp(BasicInterval* intersect, VarNode* sink,
+		const Instruction* inst, VarNode* source1, VarNode* source2,
+		unsigned int opcode) :
+		BasicOp(intersect, sink, inst), source1(source1), source2(source2), opcode(
+				opcode) {
+}
 
 /// The dtor.
-BinaryOp::~BinaryOp() {}
+BinaryOp::~BinaryOp() {
+}
 
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
@@ -1302,7 +1266,7 @@ Range BinaryOp::eval() const {
 	Range result(Min, Max, Unknown);
 
 	//only evaluate if all operands are Regular
-	if(op1.isRegular() && op2.isRegular()){
+	if (op1.isRegular() && op2.isRegular()) {
 		switch (this->getOpcode()) {
 		case Instruction::Add:
 			result = op1.add(op2);
@@ -1349,20 +1313,18 @@ Range BinaryOp::eval() const {
 
 		//FIXME: check if this intersection happens
 		bool test = this->getIntersect()->getRange().isMaxRange();
-		
+
 		if (!test) {
 			Range aux = this->getIntersect()->getRange();
 			result = result.intersectWith(aux);
 		}
-	}else{
+	} else {
 		if (op1.isEmpty() || op2.isEmpty())
-			result = Range(Min,Max,Empty);
+			result = Range(Min, Max, Empty);
 	}
 
 	return result;
 }
-
-
 
 /// Pretty print.
 void BinaryOp::print(raw_ostream& OS) const {
@@ -1389,31 +1351,27 @@ void BinaryOp::print(raw_ostream& OS) const {
 	}
 
 	const Value* VS = this->getSink()->getValue();
-	OS << " " << quot << this << quot << " -> "
-	   << quot;
+	OS << " " << quot << this << quot << " -> " << quot;
 	printVarName(VS, OS);
 	OS << quot << "\n";
 }
-
 
 // ========================================================================== //
 // PhiOp
 // ========================================================================== //
 
-
 // The ctor.
-PhiOp::PhiOp(BasicInterval* intersect,
-				   VarNode* sink,
-				   const Instruction* inst,
-				   unsigned int opcode) :
-				   BasicOp(intersect, sink, inst), opcode(opcode) {}
+PhiOp::PhiOp(BasicInterval* intersect, VarNode* sink, const Instruction* inst,
+		unsigned int opcode) :
+		BasicOp(intersect, sink, inst), opcode(opcode) {
+}
 
 /// The dtor.
-PhiOp::~PhiOp() {}
+PhiOp::~PhiOp() {
+}
 
 // Add source to the vector of sources
-void PhiOp::addSource(const VarNode* newsrc)
-{
+void PhiOp::addSource(const VarNode* newsrc) {
 	this->sources.push_back(newsrc);
 }
 
@@ -1425,13 +1383,13 @@ Range PhiOp::eval() const {
 	Range result = this->getSource(0)->getRange();
 
 	// Iterate over the sources of the phiop
-	for (SmallVectorImpl<const VarNode*>::const_iterator sit = sources.begin()+1, send = sources.end(); sit != send; ++sit) {
+	for (SmallVectorImpl<const VarNode*>::const_iterator sit = sources.begin()
+			+ 1, send = sources.end(); sit != send; ++sit) {
 		result = result.unionWith((*sit)->getRange());
 	}
 
 	return result;
 }
-
 
 /// Prints the content of the operation. I didn't it an operator overload
 /// because I had problems to access the members of the class outside it.
@@ -1441,10 +1399,12 @@ void PhiOp::print(raw_ostream& OS) const {
 	OS << "phi";
 	OS << "\"]\n";
 
-	for (SmallVectorImpl<const VarNode*>::const_iterator sit = sources.begin(), send = sources.end(); sit != send; ++sit) {
+	for (SmallVectorImpl<const VarNode*>::const_iterator sit = sources.begin(),
+			send = sources.end(); sit != send; ++sit) {
 		const Value* V = (*sit)->getValue();
 		if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
-			OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
+			OS << " " << C->getValue() << " -> " << quot << this << quot
+					<< "\n";
 		} else {
 			OS << " " << quot;
 			printVarName(V, OS);
@@ -1453,8 +1413,7 @@ void PhiOp::print(raw_ostream& OS) const {
 	}
 
 	const Value* VS = this->getSink()->getValue();
-	OS << " " << quot << this << quot << " -> "
-	   << quot;
+	OS << " " << quot << this << quot << " -> " << quot;
 	printVarName(VS, OS);
 	OS << quot << "\n";
 }
@@ -1463,16 +1422,13 @@ void PhiOp::print(raw_ostream& OS) const {
 // ValueBranchMap
 // ========================================================================== //
 
+ValueBranchMap::ValueBranchMap(const Value* V, const BasicBlock* BBTrue,
+		const BasicBlock* BBFalse, BasicInterval* ItvT, BasicInterval* ItvF) :
+		V(V), BBTrue(BBTrue), BBFalse(BBFalse), ItvT(ItvT), ItvF(ItvF) {
+}
 
-ValueBranchMap::ValueBranchMap(const Value* V,
-											 const BasicBlock* BBTrue,
-											 const BasicBlock* BBFalse,
-											 BasicInterval* ItvT,
-											 BasicInterval* ItvF) :
-											 V(V), BBTrue(BBTrue),
-											 BBFalse(BBFalse), ItvT(ItvT), ItvF(ItvF) {}
-
-ValueBranchMap::~ValueBranchMap() {}
+ValueBranchMap::~ValueBranchMap() {
+}
 
 void ValueBranchMap::clear() {
 //	if (ItvT) {
@@ -1490,12 +1446,13 @@ void ValueBranchMap::clear() {
 // ValueSwitchMap
 // ========================================================================== //
 
-
 ValueSwitchMap::ValueSwitchMap(const Value* V,
-											 SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4 > &BBsuccs) :
-											 V(V), BBsuccs(BBsuccs) {}
+		SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4> &BBsuccs) :
+		V(V), BBsuccs(BBsuccs) {
+}
 
-ValueSwitchMap::~ValueSwitchMap() {}
+ValueSwitchMap::~ValueSwitchMap() {
+}
 
 void ValueSwitchMap::clear() {
 //	for (unsigned i = 0, e = BBsuccs.size(); i < e; ++i) {
@@ -1506,43 +1463,43 @@ void ValueSwitchMap::clear() {
 //	}
 }
 
-
 // ========================================================================== //
 // ConstraintGraph
 // ========================================================================== //
 
-ConstraintGraph::ConstraintGraph(VarNodes *varNodes, 
-								GenOprs *genOprs,
-								DefMap *defmap,
-								UseMap *usemap,
-								   ValuesBranchMap *valuesbranchmap,
-								   ValuesSwitchMap *valuesswitchMap) {
+ConstraintGraph::ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs,
+		DefMap *defmap, UseMap *usemap, ValuesBranchMap *valuesbranchmap,
+		ValuesSwitchMap *valuesswitchMap) {
 	this->vars = varNodes;
 	this->oprs = genOprs;
 	this->defMap = defmap;
 	this->useMap = usemap;
 	this->valuesBranchMap = valuesbranchmap;
 	this->valuesSwitchMap = valuesswitchMap;
-    this->func = NULL;
+	this->func = NULL;
 }
 
 /// The dtor.
 ConstraintGraph::~ConstraintGraph() {
 	delete symbMap;
 
-	for (VarNodes::iterator vit = vars->begin(), vend = vars->end(); vit != vend; ++vit) {
+	for (VarNodes::iterator vit = vars->begin(), vend = vars->end();
+			vit != vend; ++vit) {
 		delete vit->second;
 	}
 
-	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend; ++oit) {
+	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend;
+			++oit) {
 		delete *oit;
 	}
 
-	for (ValuesBranchMap::iterator vit = valuesBranchMap->begin(), vend = valuesBranchMap->end(); vit != vend; ++vit) {
+	for (ValuesBranchMap::iterator vit = valuesBranchMap->begin(), vend =
+			valuesBranchMap->end(); vit != vend; ++vit) {
 		vit->second.clear();
 	}
 
-	for (ValuesSwitchMap::iterator vit = valuesSwitchMap->begin(), vend = valuesSwitchMap->end(); vit != vend; ++vit) {
+	for (ValuesSwitchMap::iterator vit = valuesSwitchMap->begin(), vend =
+			valuesSwitchMap->end(); vit != vend; ++vit) {
 		vit->second.clear();
 	}
 }
@@ -1584,7 +1541,8 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	}
 
 	// Create the operation using the intersect to constrain sink's interval.
-	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, I, source, I->getOpcode());
+	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, I, source,
+			I->getOpcode());
 	this->oprs->insert(UOp);
 
 	// Insert this definition in defmap
@@ -1593,7 +1551,6 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	// Inserts the sources of the operation in the use map list.
 	this->useMap->find(source->getValue())->second.insert(UOp);
 }
-
 
 /// XXX: I'm assuming that we are always analyzing bytecodes in e-SSA form.
 /// So, we don't have intersections associated with binary oprs. 
@@ -1622,10 +1579,8 @@ void ConstraintGraph::addBinaryOp(const Instruction* I) {
 	this->useMap->find(source2->getValue())->second.insert(BOp);
 }
 
-
 /// Add a phi node (actual phi, does not include sigmas)
-void ConstraintGraph::addPhiOp(const PHINode* Phi)
-{
+void ConstraintGraph::addPhiOp(const PHINode* Phi) {
 	// Create the sink.
 	VarNode* sink = addVarNode(Phi);
 	PhiOp* phiOp = new PhiOp(new BasicInterval(), sink, Phi, Phi->getOpcode());
@@ -1637,7 +1592,8 @@ void ConstraintGraph::addPhiOp(const PHINode* Phi)
 	(*this->defMap)[sink->getValue()] = phiOp;
 
 	// Create the sources.
-	for (User::const_op_iterator it = Phi->op_begin(), e = Phi->op_end(); it != e; ++it) {
+	for (User::const_op_iterator it = Phi->op_begin(), e = Phi->op_end();
+			it != e; ++it) {
 		VarNode* source = addVarNode(*it);
 		phiOp->addSource(source);
 
@@ -1646,8 +1602,7 @@ void ConstraintGraph::addPhiOp(const PHINode* Phi)
 	}
 }
 
-void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
-{
+void ConstraintGraph::addSigmaOp(const PHINode* Sigma) {
 	// Create the sink.
 	VarNode* sink = addVarNode(Sigma);
 	BasicInterval* BItv = NULL;
@@ -1656,7 +1611,8 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 	const BasicBlock *thisbb = Sigma->getParent();
 
 	// Create the sources (FIXME: sigma has only 1 source. This 'for' may not be needed)
-	for (User::const_op_iterator it = Sigma->op_begin(), e = Sigma->op_end(); it != e; ++it) {
+	for (User::const_op_iterator it = Sigma->op_begin(), e = Sigma->op_end();
+			it != e; ++it) {
 		Value *operand = *it;
 		VarNode* source = addVarNode(operand);
 
@@ -1673,10 +1629,10 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 					BItv = VBM.getItvF();
 				}
 			}
-		}
-		else {
+		} else {
 			// Switch case
-			ValuesSwitchMap::iterator vsmit = this->valuesSwitchMap->find(operand);
+			ValuesSwitchMap::iterator vsmit = this->valuesSwitchMap->find(
+					operand);
 
 			if (vsmit == this->valuesSwitchMap->end()) {
 				continue;
@@ -1696,9 +1652,11 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma)
 		}
 
 		if (BItv == NULL) {
-			sigmaOp = new SigmaOp(new BasicInterval(), sink, Sigma, source, Sigma->getOpcode());
+			sigmaOp = new SigmaOp(new BasicInterval(), sink, Sigma, source,
+					Sigma->getOpcode());
 		} else {
-			sigmaOp = new SigmaOp(BItv, sink, Sigma, source, Sigma->getOpcode());
+			sigmaOp = new SigmaOp(BItv, sink, Sigma, source,
+					Sigma->getOpcode());
 		}
 
 		// Insert the operation in the graph.
@@ -1732,8 +1690,7 @@ void ConstraintGraph::buildOperations(const Instruction* I) {
 	}
 }
 
-void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
-{
+void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw) {
 	const Value *condition = sw->getCondition();
 
 	// Verify conditions
@@ -1745,9 +1702,7 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 	// Create VarNode for switch condition explicitly (need to do this when inlining is used!)
 	addVarNode(condition);
 
-
-	SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4 > BBsuccs;
-
+	SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4> BBsuccs;
 
 	// Treat when condition of switch is a cast of the real condition (same thing as in buildValueBranchMap)
 	const CastInst *castinst = NULL;
@@ -1755,7 +1710,6 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 	if ((castinst = dyn_cast<CastInst>(condition))) {
 		Op0_0 = castinst->getOperand(0);
 	}
-
 
 	// Handle 'default', if there is any
 	BasicBlock *succ = sw->getDefaultDest();
@@ -1779,7 +1733,7 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 
 		APInt sigMin = constant->getValue();
 		APInt sigMax = sigMin;
-		
+
 		if (sigMin.getBitWidth() < MAX_BIT_INT) {
 			sigMin = sigMin.sext(MAX_BIT_INT);
 		}
@@ -1808,13 +1762,14 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw)
 	}
 }
 
-void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
-{
+void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 	// Verify conditions
-	if (!br->isConditional())	return;
+	if (!br->isConditional())
+		return;
 
 	ICmpInst *ici = dyn_cast<ICmpInst>(br->getCondition());
-	if (!ici) return;
+	if (!ici)
+		return;
 
 	const Type* op0Type = ici->getOperand(0)->getType();
 	const Type* op1Type = ici->getOperand(1)->getType();
@@ -1831,7 +1786,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 	const BasicBlock *FBlock = br->getSuccessor(1);
 
 	// We have a Variable-Constant comparison.
-	if (ConstantInt *CI = dyn_cast<ConstantInt>(ici->getOperand(1))) {
+	if (ConstantInt * CI = dyn_cast<ConstantInt>(ici->getOperand(1))) {
 		// Calculate the range of values that would satisfy the comparison.
 		ConstantRange CR(CI->getValue(), CI->getValue() + 1);
 		unsigned int pred = ici->getPredicate();
@@ -1839,7 +1794,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
 		APInt sigMin = tmpT.getSignedMin();
 		APInt sigMax = tmpT.getSignedMax();
-		
+
 		if (sigMin.getBitWidth() < MAX_BIT_INT) {
 			sigMin = sigMin.sext(MAX_BIT_INT);
 		}
@@ -1857,7 +1812,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 		ConstantRange tmpF = tmpT.inverse();
 		sigMin = tmpF.getSignedMin();
 		sigMax = tmpF.getSignedMax();
-		
+
 		if (sigMin.getBitWidth() < MAX_BIT_INT) {
 			sigMin = sigMin.sext(MAX_BIT_INT);
 		}
@@ -1940,15 +1895,15 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br)
 }
 
 void ConstraintGraph::buildValueMaps(const Function& F) {
-	for (Function::const_iterator iBB = F.begin(), eBB = F.end(); iBB != eBB; ++iBB){
+	for (Function::const_iterator iBB = F.begin(), eBB = F.end(); iBB != eBB;
+			++iBB) {
 		const TerminatorInst* ti = iBB->getTerminator();
 		const BranchInst* br = dyn_cast<BranchInst>(ti);
 		const SwitchInst* sw = dyn_cast<SwitchInst>(ti);
 
 		if (br) {
 			buildValueBranchMap(br);
-		}
-		else if (sw) {
+		} else if (sw) {
 			buildValueSwitchMap(sw);
 		}
 	}
@@ -1956,8 +1911,8 @@ void ConstraintGraph::buildValueMaps(const Function& F) {
 
 /// Iterates through all instructions in the function and builds the graph.
 void ConstraintGraph::buildGraph(const Function& F) {
-    this->func = &F;
-    buildValueMaps(F);
+	this->func = &F;
+	buildValueMaps(F);
 
 //	for (Function::const_arg_iterator ait = F.arg_begin(), aend = F.arg_end(); ait != aend; ++ait) {
 //		const Value *argument = &*ait;
@@ -1982,7 +1937,9 @@ void ConstraintGraph::buildGraph(const Function& F) {
 
 		buildOperations(&*I);
 	}
+}
 
+void ConstraintGraph::buildVarNodes() {
 	// Initializes the nodes and the use map structure.
 	VarNodes::iterator bgn = this->vars->begin(), end = this->vars->end();
 	for (; bgn != end; ++bgn) {
@@ -1992,12 +1949,12 @@ void ConstraintGraph::buildGraph(const Function& F) {
 }
 
 //FIXME: do it just for component
-void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component){
-	for (SmallPtrSetIterator<VarNode*> cit = component->begin(), cend = component->end(); cit != cend; ++cit) {
+void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component) {
+	for (SmallPtrSetIterator<VarNode*> cit = component->begin(), cend =
+			component->end(); cit != cend; ++cit) {
 		(*cit)->storeAbstractState();
 	}
 }
-
 
 /// This is the meet operator of the growth analysis. The growth analysis
 /// will change the bounds of each variable, if necessary. Initially, each
@@ -2035,25 +1992,24 @@ bool Meet::widen(BasicOp* op) {
 	return oldInterval != sinkInterval;
 }
 
-bool Meet::growth(BasicOp* op){
+bool Meet::growth(BasicOp* op) {
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
 	if (oldInterval.isUnknown())
 		op->getSink()->setRange(newInterval);
-	else{
+	else {
 		APInt oldLower = oldInterval.getLower();
 		APInt oldUpper = oldInterval.getUpper();
 		APInt newLower = newInterval.getLower();
 		APInt newUpper = newInterval.getUpper();
-		if(newLower.slt(oldLower))
-			if(newUpper.sgt(oldUpper))
+		if (newLower.slt(oldLower))
+			if (newUpper.sgt(oldUpper))
 				op->getSink()->setRange(Range());
 			else
 				op->getSink()->setRange(Range(Min, oldUpper));
-		else
-			if(newUpper.sgt(oldUpper))
-				op->getSink()->setRange(Range(oldLower,Max));
+		else if (newUpper.sgt(oldUpper))
+			op->getSink()->setRange(Range(oldLower, Max));
 	}
 	Range sinkInterval = op->getSink()->getRange();
 	return oldInterval != sinkInterval;
@@ -2097,63 +2053,65 @@ bool Meet::narrow(BasicOp* op) {
 	return hasChanged;
 }
 
-bool Meet::crop(BasicOp* op){
+bool Meet::crop(BasicOp* op) {
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
 	bool hasChanged = false;
 	char abstractState = op->getSink()->getAbstractState();
 
-	if((abstractState == '-' || abstractState == '?') && newInterval.getLower().sgt(oldInterval.getLower())){
-		op->getSink()->setRange(Range(newInterval.getLower(), oldInterval.getUpper()));
+	if ((abstractState == '-' || abstractState == '?')
+			&& newInterval.getLower().sgt(oldInterval.getLower())) {
+		op->getSink()->setRange(
+				Range(newInterval.getLower(), oldInterval.getUpper()));
 		hasChanged = true;
 	}
 
-	if((abstractState == '+' || abstractState == '?') && newInterval.getUpper().slt(oldInterval.getUpper())){
-		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), newInterval.getUpper()));
+	if ((abstractState == '+' || abstractState == '?')
+			&& newInterval.getUpper().slt(oldInterval.getUpper())) {
+		op->getSink()->setRange(
+				Range(op->getSink()->getRange().getLower(),
+						newInterval.getUpper()));
 		hasChanged = true;
 	}
 
 	return hasChanged;
 }
 
-void Cousot::preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints)
-{
+void Cousot::preUpdate(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& entryPoints) {
 	update(compUseMap, entryPoints, Meet::widen);
 }
 
-void Cousot::posUpdate(const UseMap &compUseMap, 
-	SmallPtrSet<const Value*, 6>& entryPoints,
-	const SmallPtrSet<VarNode*, 32> *component)
-{
+void Cousot::posUpdate(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& entryPoints,
+		const SmallPtrSet<VarNode*, 32> *component) {
 	update(compUseMap, entryPoints, Meet::narrow);
 }
 
-void CropDFS::preUpdate(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& entryPoints)
-{
-	errs() << "::CropDFS::preUpdate\n";
+void CropDFS::preUpdate(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& entryPoints) {
 	update(compUseMap, entryPoints, Meet::growth);
 }
 
-void CropDFS::posUpdate(const UseMap &compUseMap, 
-	SmallPtrSet<const Value*, 6>& entryPoints,
-	const SmallPtrSet<VarNode*, 32> *component)
-{
-	errs() << "::CropDFS::posUpdate\n";
+void CropDFS::posUpdate(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& entryPoints,
+		const SmallPtrSet<VarNode*, 32> *component) {
 	storeAbstractStates(component);
 	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
 	for (; obgn != oend; ++obgn) {
 		BasicOp *op = *obgn;
 
-		if(component->count(op->getSink()))
+		if (component->count(op->getSink()))
 			//int_op
-			if(isa<UnaryOp>(op) && (op->getSink()->getRange().getLower().ne(Min)
-				|| op->getSink()->getRange().getUpper().ne(Max)))
+			if (isa<UnaryOp>(op)
+					&& (op->getSink()->getRange().getLower().ne(Min)
+							|| op->getSink()->getRange().getUpper().ne(Max)))
 				crop(compUseMap, op);
 	}
 }
 
-void CropDFS::crop(const UseMap &compUseMap, BasicOp *op){
+void CropDFS::crop(const UseMap &compUseMap, BasicOp *op) {
 	SmallPtrSet<BasicOp*, 8> activeOps;
 	SmallPtrSet<const VarNode*, 8> visitedOps;
 
@@ -2166,14 +2124,15 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op){
 		const VarNode* sink = V->getSink();
 
 		//if the sink has been visited go to the next activeOps
-		if(visitedOps.count(sink))
+		if (visitedOps.count(sink))
 			continue;
 
 		Meet::crop(V);
 		visitedOps.insert(sink);
 
 		// The use list.of sink
-		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(sink->getValue())->second;
+		const SmallPtrSet<BasicOp*, 8> &L =
+				compUseMap.find(sink->getValue())->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
 
 		for (; bgn != end; ++bgn) {
@@ -2182,38 +2141,39 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op){
 	}
 }
 
-void ConstraintGraph::update(SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op)) {
+void ConstraintGraph::update(SmallPtrSet<const Value*, 6>& actv
+		, bool(*meet)(BasicOp* op)) {
 	update(*useMap, actv, meet);
 }
 
-void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op)) {
+void ConstraintGraph::update(const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& actv, bool(*meet)(BasicOp* op)) {
 	/*
-	if (actv.empty()) {
-		return;
-	}
+	 if (actv.empty()) {
+	 return;
+	 }
 
-	const Value* V = *actv.begin();
-	actv.erase(V);
+	 const Value* V = *actv.begin();
+	 actv.erase(V);
 
-	// The use list.
-	SmallPtrSet<BasicOp*, 8> L = compUseMap.find(V)->second;
-	SmallPtrSet<BasicOp*, 8>::iterator bgn = L.begin(),	end = L.end();
-	for (; bgn != end; ++bgn) {
-		if (meet(*bgn)) {
-			// I want to use it as a set, but I also want
-			// keep an order or insertions and removals.
-			if (!actv.count((*bgn)->getSink()->getValue())) {
-				actv.insert((*bgn)->getSink()->getValue());
-			}
+	 // The use list.
+	 SmallPtrSet<BasicOp*, 8> L = compUseMap.find(V)->second;
+	 SmallPtrSet<BasicOp*, 8>::iterator bgn = L.begin(),	end = L.end();
+	 for (; bgn != end; ++bgn) {
+	 if (meet(*bgn)) {
+	 // I want to use it as a set, but I also want
+	 // keep an order or insertions and removals.
+	 if (!actv.count((*bgn)->getSink()->getValue())) {
+	 actv.insert((*bgn)->getSink()->getValue());
+	 }
 
-		}
-	}
+	 }
+	 }
 
-	update(compUseMap, actv, meet);
-	*/
+	 update(compUseMap, actv, meet);
+	 */
 
 //	int i = 20;
-
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
@@ -2237,9 +2197,7 @@ void ConstraintGraph::update(const UseMap &compUseMap, SmallPtrSet<const Value*,
 void ConstraintGraph::findIntervals() {
 	// Builds symbMap
 	buildSymbolicIntersectMap();
-	
-	
-	
+
 	// List of SCCs
 	Profile::TimeValue before = prof.timenow();
 	Nuutila sccList(vars, useMap, symbMap);
@@ -2247,9 +2205,6 @@ void ConstraintGraph::findIntervals() {
 	Profile::TimeValue elapsed = after - before;
 	prof.updateTime("Nuutila", elapsed);
 	prof.printTime("Nuutila");
-	
-	
-	
 
 	// STATS
 	numSCCs = sccList.worklist.size();
@@ -2258,7 +2213,8 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 	// For each SCC in graph, do the following
-	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end(); nit != nend; ++nit) {
+	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
+			nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
 #ifdef SCC_DEBUG
 		--numberOfSCCs;
@@ -2270,23 +2226,22 @@ void ConstraintGraph::findIntervals() {
 		if (component.size() > sizeMaxSCC) {
 			sizeMaxSCC = component.size();
 		}
-		
+
 		//PRINTCOMPONENT(component)
 
 		UseMap compUseMap = buildUseMap(component);
-		#ifdef PRINT_DEBUG
-        if(func)
-            printToFile(*func,"/tmp/"+func->getName()+"cgint.dot");
-       #endif
+#ifdef PRINT_DEBUG
+		if (func)
+			printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
+#endif
 		// Get the entry points of the SCC
 		SmallPtrSet<const Value*, 6> entryPoints;
 		generateEntryPoints(component, entryPoints);
 		// Primeiro iterate till fix point
 		preUpdate(compUseMap, entryPoints);
 		fixIntersects(component);
-		
+
 		//printResultIntervals();
-		
 
 		// Segundo iterate till fix point
 		SmallPtrSet<const Value*, 6> activeVars;
@@ -2303,27 +2258,29 @@ void ConstraintGraph::findIntervals() {
 	computeStats();
 }
 
-void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &entryPoints){
+void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component
+		, SmallPtrSet<const Value*, 6> &entryPoints) {
 	if (!entryPoints.empty()) {
 		errs() << "Set não vazio\n";
 	}
 
 	// Iterate over the varnodes in the component
-	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend =
+			component.end(); cit != cend; ++cit) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
-		
+
 		// FIXME: trocar strcmp por enumeraçao de varnodes
 		if (V->getName().startswith(sigmaString)) {
 			DefMap::iterator dit = this->defMap->find(V);
-			
+
 			if (dit != this->defMap->end()) {
 				BasicOp *bop = dit->second;
 				SigmaOp *defop = dyn_cast<SigmaOp>(bop);
-		
+
 				if (defop && defop->isUnresolved()) {
 					//printVarName(defop->getSink()->getValue(), errs());
-				
+
 					//errs() << defop->getSink()->getRange();
 					defop->getSink()->setRange(bop->eval());
 					//errs() << defop->getSink()->getRange();
@@ -2339,16 +2296,18 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component, 
 	}
 }
 
-void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
+void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component) {
 	// Iterate again over the varnodes in the component
-	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend =
+			component.end(); cit != cend; ++cit) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
 
 		SymbMap::iterator sit = symbMap->find(V);
 
 		if (sit != symbMap->end()) {
-			for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend = sit->second.end(); opit != opend; ++opit) {
+			for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(),
+					opend = sit->second.end(); opit != opend; ++opit) {
 				BasicOp *op = *opit;
 
 				op->fixIntersects(var);
@@ -2357,12 +2316,14 @@ void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component){
 	}
 }
 
-void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component, SmallPtrSet<const Value*, 6> &activeVars){
+void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component
+		, SmallPtrSet<const Value*, 6> &activeVars) {
 	if (!activeVars.empty()) {
 		errs() << "Set não vazio\n";
 	}
 
-	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend =
+			component.end(); cit != cend; ++cit) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
 
@@ -2402,9 +2363,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 			OS << quot;
 		}
 
-		OS << " [label=\"";
-		bgn->second->print(OS);
-		OS << "\"]\n";
+		OS << " [label=\"" << bgn->second << "\"]\n";
 	}
 
 	GenOprs::const_iterator B = oprs->begin(), E = oprs->end();
@@ -2419,15 +2378,16 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 	OS << "}\n";
 }
 
-void ConstraintGraph::printToFile(const Function& F, Twine FileName){
+void ConstraintGraph::printToFile(const Function& F, Twine FileName) {
 	std::string ErrorInfo;
 	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo);
-	print(F,file);
+	print(F, file);
 	file.close();
 }
 
-void ConstraintGraph::printResultIntervals(){
-	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+void ConstraintGraph::printResultIntervals() {
+	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end();
+			vbgn != vend; ++vbgn) {
 		if (const ConstantInt* C = dyn_cast<ConstantInt>(vbgn->first)) {
 			errs() << C->getValue() << " ";
 		} else {
@@ -2441,8 +2401,9 @@ void ConstraintGraph::printResultIntervals(){
 	errs() << "\n";
 }
 
-void ConstraintGraph::computeStats(){
-	for (VarNodes::const_iterator vbgn = vars->begin(), vend = vars->end(); vbgn != vend; ++vbgn) {
+void ConstraintGraph::computeStats() {
+	for (VarNodes::const_iterator vbgn = vars->begin(), vend = vars->end();
+			vbgn != vend; ++vbgn) {
 		// We only count the instructions that have uses.
 		if (vbgn->first->getNumUses() == 0) {
 			continue;
@@ -2457,14 +2418,14 @@ void ConstraintGraph::computeStats(){
 		unsigned total = vbgn->first->getType()->getPrimitiveSizeInBits();
 		usedBits += total;
 		Range CR = vbgn->second->getRange();
-		
+
 		// If range is unknown, we have total needed bits
 		if (CR.isUnknown()) {
 			++numUnknown;
 			needBits += total;
 			continue;
 		}
-		
+
 		// If range is empty, we have 0 needed bits
 		if (CR.isEmpty()) {
 			++numEmpty;
@@ -2478,9 +2439,8 @@ void ConstraintGraph::computeStats(){
 
 			unsigned log = abs.ceilLogBase2();
 
-			lb = (log > 1) ? log : log+1;
-		}
-		else {
+			lb = (log > 1) ? log : log + 1;
+		} else {
 			lb = CR.getLower().getActiveBits() + 1;
 		}
 
@@ -2489,12 +2449,10 @@ void ConstraintGraph::computeStats(){
 
 			unsigned log = abs.ceilLogBase2();
 
-			ub = (log > 1) ? log : log+1;
-		}
-		else {
+			ub = (log > 1) ? log : log + 1;
+		} else {
 			ub = CR.getUpper().getActiveBits() + 1;
 		}
-
 
 		unsigned nBits = lb > ub ? lb : ub;
 
@@ -2537,16 +2495,16 @@ void ConstraintGraph::computeStats(){
 //	return defMap;
 //}
 
-
 /*
  *	This method builds a map that binds each variable label to the operations
  *  where this variable is used.
  */
-UseMap ConstraintGraph::buildUseMap(const SmallPtrSet<VarNode*, 32> &component)
-{
+UseMap ConstraintGraph::buildUseMap(
+		const SmallPtrSet<VarNode*, 32> &component) {
 	UseMap compUseMap;
 
-	for (SmallPtrSetIterator<VarNode*> vit = component.begin(), vend = component.end(); vit != vend; ++vit) {
+	for (SmallPtrSetIterator<VarNode*> vit = component.begin(), vend =
+			component.end(); vit != vend; ++vit) {
 		const VarNode *var = *vit;
 		const Value *V = var->getValue();
 
@@ -2557,7 +2515,8 @@ UseMap ConstraintGraph::buildUseMap(const SmallPtrSet<VarNode*, 32> &component)
 		UseMap::iterator p = this->useMap->find(V);
 
 		// For each operation in the list, verify if its sink is in the component
-		for (SmallPtrSetIterator<BasicOp*> opit = p->second.begin(), opend = p->second.end(); opit != opend; ++opit) {
+		for (SmallPtrSetIterator<BasicOp*> opit = p->second.begin(), opend =
+				p->second.end(); opit != opend; ++opit) {
 			VarNode *sink = (*opit)->getSink();
 
 			// If it is, add op to the component's use map
@@ -2575,13 +2534,13 @@ UseMap ConstraintGraph::buildUseMap(const SmallPtrSet<VarNode*, 32> &component)
  *  these variables are used as futures. Its C++ type should be something like
  *  map<VarNode, List<Operation>>.
  */
-void ConstraintGraph::buildSymbolicIntersectMap()
-{
+void ConstraintGraph::buildSymbolicIntersectMap() {
 	// Creates the symbolic intervals map
 	symbMap = new SymbMap();
 
 	// Iterate over the operations set
-	for(GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend; ++oit) {
+	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend;
+			++oit) {
 		BasicOp *op = *oit;
 
 		// If the operation is unary and its interval is symbolic
@@ -2595,8 +2554,7 @@ void ConstraintGraph::buildSymbolicIntersectMap()
 
 			if (p != symbMap->end()) {
 				p->second.insert(uop);
-			}
-			else {
+			} else {
 				SmallPtrSet<BasicOp*, 8> l;
 
 				if (!l.empty()) {
@@ -2608,7 +2566,6 @@ void ConstraintGraph::buildSymbolicIntersectMap()
 			}
 		}
 
-
 	}
 }
 
@@ -2617,20 +2574,22 @@ void ConstraintGraph::buildSymbolicIntersectMap()
  *  component, so that the next SCCs after component will have entry
  *  points to kick start the range analysis algorithm.
  */
-void ConstraintGraph::propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &component)
-{
-	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+void ConstraintGraph::propagateToNextSCC(
+		const SmallPtrSet<VarNode*, 32> &component) {
+	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend =
+			component.end(); cit != cend; ++cit) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
 
 		UseMap::iterator p = this->useMap->find(V);
 
-		for (SmallPtrSetIterator<BasicOp*> sit = p->second.begin(), send = p->second.end(); sit != send; ++sit) {
+		for (SmallPtrSetIterator<BasicOp*> sit = p->second.begin(), send =
+				p->second.end(); sit != send; ++sit) {
 			BasicOp *op = *sit;
 			SigmaOp *sigmaop = dyn_cast<SigmaOp>(op);
-			
+
 			op->getSink()->setRange(op->eval());
-			
+
 			if (sigmaop && sigmaop->getIntersect()->getRange().isUnknown()) {
 				sigmaop->markUnresolved();
 			}
@@ -2645,10 +2604,12 @@ void ConstraintGraph::propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &compon
  *  one just need to go over the map of uses removing every instance of the
  *  ControlDep class.
  */
-void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNodes* vars)
-{
-	for (SymbMap::iterator sit = symbMap->begin(), send = symbMap->end(); sit != send; ++sit) {
-		for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend = sit->second.end(); opit != opend; ++opit) {
+void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap,
+		VarNodes* vars) {
+	for (SymbMap::iterator sit = symbMap->begin(), send = symbMap->end();
+			sit != send; ++sit) {
+		for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(), opend =
+				sit->second.end(); opit != opend; ++opit) {
 			// Cria uma operação pseudo-aresta
 			VarNodes::iterator source_value = vars->find(sit->first);
 			VarNode* source = source_value->second;
@@ -2660,8 +2621,6 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 //			if (source == NULL) {
 //				continue;
 //			}
-
-		
 
 			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
 //			BasicOp *cdedge = new ControlDep((cast<UnaryOp>(*opit))->getSource(), source);
@@ -2675,9 +2634,9 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNod
 /*
  *	Removes the control dependence edges from the constraint graph.
  */
-void Nuutila::delControlDependenceEdges(UseMap *useMap)
-{
-	for (UseMap::iterator it = useMap->begin(), end = useMap->end(); it != end; ++it) {
+void Nuutila::delControlDependenceEdges(UseMap *useMap) {
+	for (UseMap::iterator it = useMap->begin(), end = useMap->end(); it != end;
+			++it) {
 
 		std::deque<ControlDep*> ops;
 
@@ -2685,7 +2644,8 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap)
 			errs() << "Erro na lista\n";
 		}
 
-		for (SmallPtrSetIterator<BasicOp*> sit = it->second.begin(), send = it->second.end(); sit != send; ++sit) {
+		for (SmallPtrSetIterator<BasicOp*> sit = it->second.begin(), send =
+				it->second.end(); sit != send; ++sit) {
 			ControlDep *op = NULL;
 
 			if ((op = dyn_cast<ControlDep>(*sit))) {
@@ -2693,9 +2653,9 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap)
 			}
 		}
 
-		for (std::deque<ControlDep*>::iterator dit = ops.begin(), dend = ops.end(); dit != dend; ++dit) {
+		for (std::deque<ControlDep*>::iterator dit = ops.begin(), dend =
+				ops.end(); dit != dend; ++dit) {
 			ControlDep *op = *dit;
-
 
 			// Add pseudo edge to the string
 			const Value* V = op->getSource()->getValue();
@@ -2714,7 +2674,6 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap)
 
 			pseudoEdgesString << " [style=dashed]\n";
 
-
 			// Remove pseudo edge from the map
 			it->second.erase(op);
 		}
@@ -2727,14 +2686,14 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap)
  *  in the constraint graph. The second phase revisits these nodes,
  *  grouping them in components.
  */
-void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap)
-{
+void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap) {
 	dfs[V] = index;
 	++index;
 	root[V] = V;
 
 	// Visit every node defined in an instruction that uses V
-	for (SmallPtrSetIterator<BasicOp*> sit = (*useMap)[V].begin(), send = (*useMap)[V].end(); sit != send; ++sit) {
+	for (SmallPtrSetIterator<BasicOp*> sit = (*useMap)[V].begin(), send =
+			(*useMap)[V].end(); sit != send; ++sit) {
 		BasicOp *op = *sit;
 		Value *name = const_cast<Value*>(op->getSink()->getValue());
 
@@ -2742,7 +2701,8 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap)
 			visit(name, stack, useMap);
 		}
 
-		if ((inComponent.count(name) == false) && (dfs[root[V]] >= dfs[root[name]])) {
+		if ((inComponent.count(name) == false)
+				&& (dfs[root[V]] >= dfs[root[name]])) {
 			root[V] = root[name];
 		}
 	}
@@ -2775,8 +2735,7 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap)
 		}
 
 		components[V] = SCC;
-	}
-	else {
+	} else {
 		stack.push(V);
 	}
 }
@@ -2787,29 +2746,31 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap)
  *  control dependence edges in the contraint graph. These edges are removed
  *  after the class is done computing the SCCs.
  */
-Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single)
-{
+Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap,
+		bool single) {
 	if (single) {
 		/* FERNANDO */
 		SmallPtrSet<VarNode*, 32> SCC;
-		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
-				SCC.insert(vit->second);
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end();
+				vit != vend; ++vit) {
+			SCC.insert(vit->second);
 		}
 
-		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
-				Value *V = const_cast<Value*>(vit->first);
-				components[V] = SCC;
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end();
+				vit != vend; ++vit) {
+			Value *V = const_cast<Value*>(vit->first);
+			components[V] = SCC;
 		}
 
 		this->worklist.push_back(const_cast<Value*>(varNodes->begin()->first));
-	}
-	else {
+	} else {
 		// Copy structures
 		this->variables = varNodes;
 		this->index = 0;
 
 		// Iterate over all varnodes of the constraint graph
-		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end();
+				vit != vend; ++vit) {
 			// Initialize DFS control variable for each Value in the graph
 			Value *V = const_cast<Value*>(vit->first);
 			dfs[V] = -1;
@@ -2818,7 +2779,8 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool sing
 		addControlDependenceEdges(symbMap, useMap, varNodes);
 
 		// Iterate again over all varnodes of the constraint graph
-		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end(); vit != vend; ++vit) {
+		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end();
+				vit != vend; ++vit) {
 			Value *V = const_cast<Value*>(vit->first);
 
 			// If the Value has not been visited yet, call visit for him
@@ -2836,22 +2798,22 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool sing
 	}
 
 #ifdef SCC_DEBUG
-    ASSERT(checkWorklist(),"an inconsistency in SCC worklist have been found")
-    ASSERT(checkComponents(), "a component has been used more than once")
-    ASSERT(checkTopologicalSort(useMap), "topological sort is incorrect")
+	ASSERT(checkWorklist(),"an inconsistency in SCC worklist have been found")
+	ASSERT(checkComponents(), "a component has been used more than once")
+	ASSERT(checkTopologicalSort(useMap), "topological sort is incorrect")
 #endif
 }
 
 #ifdef SCC_DEBUG
-bool Nuutila::checkWorklist(){
+bool Nuutila::checkWorklist() {
 	bool consistent = true;
 	for (Nuutila::iterator nit = this->begin(), nend = this->end();
-		nit != nend; ++nit) {
+			nit != nend; ++nit) {
 		Value *v = *nit;
 		for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
-			nit2 != nend2; ++nit2) {
+				nit2 != nend2; ++nit2) {
 			Value *v2 = *nit2;
-			if (v == v2 && nit != nit2){
+			if (v == v2 && nit != nit2) {
 				errs() << "[Nuutila::checkWorklist] Duplicated entry in worklist\n";
 				v->dump();
 				consistent = false;
@@ -2861,77 +2823,77 @@ bool Nuutila::checkWorklist(){
 	return consistent;
 }
 
-bool Nuutila::checkComponents(){
-    bool isConsistent = true;
-    for (Nuutila::iterator nit = this->begin(), nend = this->end();
-        nit != nend; ++nit) {
-        SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
-        for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
-            nit2 != nend2; ++nit2) {
-            SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
-            if (component == component2 && nit != nit2){
-                errs() << "[Nuutila::checkComponent] Component ["<< component
-                    << ", " << component->size() << "]\n";
-                isConsistent = false;
-            }
-        }
-    }
-    return isConsistent;
+bool Nuutila::checkComponents() {
+	bool isConsistent = true;
+	for (Nuutila::iterator nit = this->begin(), nend = this->end();
+			nit != nend; ++nit) {
+		SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+		for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
+				nit2 != nend2; ++nit2) {
+			SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
+			if (component == component2 && nit != nit2) {
+				errs() << "[Nuutila::checkComponent] Component ["<< component
+				<< ", " << component->size() << "]\n";
+				isConsistent = false;
+			}
+		}
+	}
+	return isConsistent;
 }
 
 /**
  * Check if a component has an edge to another component
  */
 bool Nuutila::hasEdge(SmallPtrSet<VarNode*, 32> *componentFrom,
-    SmallPtrSet<VarNode*, 32> *componentTo, UseMap *useMap)
+		SmallPtrSet<VarNode*, 32> *componentTo, UseMap *useMap)
 {
-    for (SmallPtrSetIterator<VarNode*> vit = componentFrom->begin(),
-        vend = componentFrom->end(); vit != vend; ++vit)
-    {
-        const Value *source = (*vit)->getValue();
-        for (SmallPtrSetIterator<BasicOp*> sit = (*useMap)[source].begin(),
-            send = (*useMap)[source].end(); sit != send; ++sit)
-        {
-            BasicOp *op = *sit;
-            if(componentTo->count(op->getSink())){
-                return true;
-            }
-        }
-    }
-    return false;
+	for (SmallPtrSetIterator<VarNode*> vit = componentFrom->begin(),
+			vend = componentFrom->end(); vit != vend; ++vit)
+	{
+		const Value *source = (*vit)->getValue();
+		for (SmallPtrSetIterator<BasicOp*> sit = (*useMap)[source].begin(),
+				send = (*useMap)[source].end(); sit != send; ++sit)
+		{
+			BasicOp *op = *sit;
+			if(componentTo->count(op->getSink())) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
-bool Nuutila::checkTopologicalSort(UseMap *useMap){
-    bool isConsistent = true;
-    DenseMap<SmallPtrSet<VarNode*, 32>*,bool> visited;
-    for (Nuutila::iterator nit = this->begin(), nend = this->end();
-        nit != nend; ++nit) {
-        SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
-        visited[component] = false;
-    }
+bool Nuutila::checkTopologicalSort(UseMap *useMap) {
+	bool isConsistent = true;
+	DenseMap<SmallPtrSet<VarNode*, 32>*,bool> visited;
+	for (Nuutila::iterator nit = this->begin(), nend = this->end();
+			nit != nend; ++nit) {
+		SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+		visited[component] = false;
+	}
 
-    for (Nuutila::iterator nit = this->begin(), nend = this->end();
-            nit != nend; ++nit) {
-        SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+	for (Nuutila::iterator nit = this->begin(), nend = this->end();
+			nit != nend; ++nit) {
+		SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
 
-        if(!visited[component]){
-            visited[component] = true;
-            //check if this component points to another component that has already been visited
-            for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
-                nit2 != nend2; ++nit2) {
-                SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
-                if(nit != nit2 && visited[component2] &&
-                    hasEdge(component, component2, useMap)){
-                    isConsistent = false;
-                }
-            }
-        }else{
-            errs() << "[Nuutila::checkTopologicalSort] Component visited more than once time\n";
-        }
+		if(!visited[component]) {
+			visited[component] = true;
+			//check if this component points to another component that has already been visited
+			for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
+					nit2 != nend2; ++nit2) {
+				SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
+				if(nit != nit2 && visited[component2] &&
+						hasEdge(component, component2, useMap)) {
+					isConsistent = false;
+				}
+			}
+		} else {
+			errs() << "[Nuutila::checkTopologicalSort] Component visited more than once time\n";
+		}
 
-    }
+	}
 
-    return isConsistent;
+	return isConsistent;
 }
 #endif
 
@@ -2947,29 +2909,30 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap){
 			res.print(errs()); \
 			errs() << "\n";}
 
-void RangeUnitTest::printStats(){
+void RangeUnitTest::printStats() {
 	errs() << "\n//********************** STATS *******************************//\n";
-	errs() << "\tFailed: " << failed << " ("  << failed/total;
-	if(failed > 0)
-		errs() << "." << 100/(total/failed);
+	errs() << "\tFailed: " << failed << " (" << failed / total;
+	if (failed > 0)
+		errs() << "." << 100 / (total / failed);
 	errs() << "%)\n";
 	errs() << "\tTotal: " << total << "\n";
-	errs() << "//************************************************************//\n";
+	errs()
+			<< "//************************************************************//\n";
 }
 
-bool RangeUnitTest::runOnModule(Module & M){
+bool RangeUnitTest::runOnModule(Module & M) {
 	MAX_BIT_INT = InterProceduralRA<Cousot>::getMaxBitWidth(M);
 	RangeAnalysis::updateMinMax(MAX_BIT_INT);
 	errs() << "Running unit tests for Range class!\n";
 	// --------------------------- Shared Objects -------------------------//
 	Range unknown(Min, Max, Unknown);
 	Range empty(Min, Max, Empty);
-	Range zero(Zero,Zero);
-	Range infy(Min,Max);
-	Range pos(Zero,Max);
-	Range neg(Min,Zero);
+	Range zero(Zero, Zero);
+	Range infy(Min, Max);
+	Range pos(Zero, Max);
+	Range neg(Min, Zero);
 	// -------------------------------- ADD --------------------------------//
-	// [a, b] âˆ’ [c, d] = [a + c, b + d]
+	// [a, b] - [c, d] = [a + c, b + d]
 	ASSERT_TRUE("ADD", add, infy, infy, infy);
 	ASSERT_TRUE("ADD", add, zero, infy, infy);
 	ASSERT_TRUE("ADD", add, zero, zero, zero);
@@ -2982,7 +2945,7 @@ bool RangeUnitTest::runOnModule(Module & M){
 	ASSERT_TRUE("ADD", add, pos, pos, pos);
 
 	// -------------------------------- SUB --------------------------------//
-	// [a, b] âˆ’ [c, d] = [a âˆ’ d, b âˆ’ c]
+	// [a, b] - [c, d] = [a - d, b - c]
 	ASSERT_TRUE("SUB", sub, infy, infy, infy);
 	ASSERT_TRUE("SUB", sub, infy, zero, infy);
 	ASSERT_TRUE("SUB", sub, infy, pos, infy);
@@ -3013,10 +2976,10 @@ bool RangeUnitTest::runOnModule(Module & M){
 	ASSERT_TRUE("MUL", mul, pos, neg, neg);
 	ASSERT_TRUE("MUL", mul, pos, pos, pos);
 
-
 	printStats();
 	return true;
 }
 
 char RangeUnitTest::ID = 3;
-static RegisterPass<RangeUnitTest > T("ra-test-range", "Run unit test for class Range");
+static RegisterPass<RangeUnitTest> T("ra-test-range",
+		"Run unit test for class Range");

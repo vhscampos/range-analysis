@@ -56,6 +56,9 @@
 // generated.
 //#define SCC_DEBUG
 
+//TODO: comment the line below to disable the dot printing of Constraint Graphs
+#define PRINT_DEBUG
+
 #define PRINTCOMPONENT(component) errs() << "\n--------------\n"; \
 		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) { \
 			const VarNode *var = *cit; \
@@ -681,7 +684,7 @@ public:
 	// parameters.
 	ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
 		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap);
-	~ConstraintGraph();
+	virtual ~ConstraintGraph();
 	/// Adds a VarNode in the graph.
 	VarNode* addVarNode(const Value* V);
 	
@@ -692,6 +695,7 @@ public:
 	void addUnaryOp(const Instruction* I);
 	/// Iterates through all instructions in the function and builds the graph.
 	void buildGraph(const Function& F);
+	void buildVarNodes();
 	void buildSymbolicIntersectMap();
 	UseMap buildUseMap(const SmallPtrSet<VarNode*, 32> &component);
 	void propagateToNextSCC(const SmallPtrSet<VarNode*, 32> &component);
