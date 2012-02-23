@@ -86,6 +86,13 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 		
 		if (isa<Instruction>(condition) || isa<Argument>(condition)) {
 			insertSigmas(ti, condition);
+			
+			// If the operand is a result of a indirect instruction (e.g. ZExt, SExt, Trunc),
+			// Create sigmas for the operands of the operands too
+			CastInst *cinst = NULL;
+			if ((cinst = dyn_cast<CastInst>(condition))) {
+				insertSigmas(ti, cinst->getOperand(0));
+			}
 		}
 	}
 	
@@ -191,11 +198,14 @@ void vSSA::renameUsesToSigma(Value *V, PHINode *sigma)
 		if (usepointers[i] ==  NULL) {
 			continue;
 		}
+		if (usepointers[i] == sigma) {
+			continue;
+		}
+		if (isa<GetElementPtrInst>(usepointers[i])) {
+			continue;
+		}
 		
 		BasicBlock *BB_user = usepointers[i]->getParent();
-		
-		if (usepointers[i] == sigma)
-			continue;
 		
 		// Check if the use is in the dominator tree of sigma(V)
 		if (DT_->dominates(BB_next, BB_user)){
@@ -581,7 +591,8 @@ bool vSSA::dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *v
 	for (Value::use_iterator begin = value->use_begin(), end = value->use_end(); begin != end; ++begin) {
 		Instruction *I = dyn_cast<Instruction>(*begin);
 		
-		if (I == NULL) {
+		// ATTENTION: GEP uses are not taken into account
+		if (I == NULL || isa<GetElementPtrInst>(I)) {
 			continue;
 		}
 		

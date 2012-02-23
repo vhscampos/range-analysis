@@ -212,18 +212,20 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	updateMinMax(MAX_BIT_INT);
 
 	// Build the Constraint Graph by running on each function
+	Profile::TimeValue before = prof.timenow();
+	
 	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
 		// If the function is only a declaration, or if it has variable number of arguments, do not match
 		if (I->isDeclaration() || I->isVarArg())
 			continue;
-
-		Profile::TimeValue before = prof.timenow();
+			
 		G->buildGraph(*I);
-		Profile::TimeValue elapsed = prof.timenow() - before;
-		prof.updateTime("BuildGraph", elapsed);
 		MatchParametersAndReturnValues(*I, *G);
 	}
 	G->buildVarNodes();
+	
+	Profile::TimeValue elapsed = prof.timenow() - before;
+	prof.updateTime("BuildGraph", elapsed);
 	prof.printTime("BuildGraph");
 
 #ifdef PRINT_DEBUG
@@ -1018,8 +1020,10 @@ void VarNode::init(bool outside) {
 	const Value* V = this->getValue();
 	if (const ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
 		APInt tmp = CI->getValue();
-		APInt value = tmp.sextOrTrunc(MAX_BIT_INT);
-		this->setRange(Range(value, value));
+		if (tmp.getBitWidth() < MAX_BIT_INT) {
+			tmp = tmp.sext(MAX_BIT_INT);
+		}
+		this->setRange(Range(tmp, tmp));
 	} else {
 		if (!outside) {
 			// Initialize with a basic, unknown, interval.
@@ -1506,8 +1510,10 @@ ConstraintGraph::~ConstraintGraph() {
 
 /// Adds a VarNode to the graph.
 VarNode* ConstraintGraph::addVarNode(const Value* V) {
-	if (this->vars->count(V)) {
-		return this->vars->find(V)->second;
+	VarNodes::iterator vit = this->vars->find(V);
+	
+	if (vit != this->vars->end()) {
+		return vit->second;
 	}
 
 	VarNode* node = new VarNode(V);
@@ -1944,7 +1950,6 @@ void ConstraintGraph::buildVarNodes() {
 	VarNodes::iterator bgn = this->vars->begin(), end = this->vars->end();
 	for (; bgn != end; ++bgn) {
 		bgn->second->init(!this->defMap->count(bgn->first));
-//		bgn->second->init(false);
 	}
 }
 
@@ -2205,6 +2210,8 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 	// For each SCC in graph, do the following
+	before = prof.timenow();
+	
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
 			nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
@@ -2214,47 +2221,52 @@ void ConstraintGraph::findIntervals() {
 		// STATS
 		if (component.size() == 1) {
 			++numAloneSCCs;
-		}/*else{*/
-			if (component.size() > sizeMaxSCC) {
-				sizeMaxSCC = component.size();
-			}
+		}
+		if (component.size() > sizeMaxSCC) {
+			sizeMaxSCC = component.size();
+		}
 
-			//PRINTCOMPONENT(component)
+		//PRINTCOMPONENT(component)
 
-			UseMap compUseMap = buildUseMap(component);
+		UseMap compUseMap = buildUseMap(component);
 
-			// Get the entry points of the SCC
-			SmallPtrSet<const Value*, 6> entryPoints;
+		// Get the entry points of the SCC
+		SmallPtrSet<const Value*, 6> entryPoints;
 
-			generateEntryPoints(component, entryPoints);
-			//iterate a fixed number of time before widening
-			update(component.size()*2 | NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
+		generateEntryPoints(component, entryPoints);
+		//iterate a fixed number of time before widening
+		update(component.size()*2 | NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
 
 #ifdef PRINT_DEBUG
-			if (func)
-				printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
+		if (func)
+			printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
 #endif
+		// Primeiro iterate till fix point
+		generateEntryPoints(component, entryPoints);
+		// Primeiro iterate till fix point
+		preUpdate(compUseMap, entryPoints);
+		fixIntersects(component);
 
-			generateEntryPoints(component, entryPoints);
-			// Primeiro iterate till fix point
-			preUpdate(compUseMap, entryPoints);
-			fixIntersects(component);
-
-			//printResultIntervals();
+		//printResultIntervals();
 #ifdef PRINT_DEBUG
-			if (func)
-				printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
+		if (func)
+			printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
 #endif
 
-			// Segundo iterate till fix point
-			SmallPtrSet<const Value*, 6> activeVars;
-			generateActivesVars(component, activeVars);
-			posUpdate(compUseMap, activeVars, &component);
-		//}
+		// Segundo iterate till fix point
+		SmallPtrSet<const Value*, 6> activeVars;
+		generateActivesVars(component, activeVars);
+		posUpdate(compUseMap, activeVars, &component);
+
 		propagateToNextSCC(component);
 
 		//printResultIntervals();
 	}
+	
+	elapsed = prof.timenow() - before;
+	prof.updateTime("SCCs resolution", elapsed);
+	prof.printTime("SCCs resolution");
+	
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
 #endif
@@ -2464,7 +2476,6 @@ void ConstraintGraph::computeStats() {
 		} else {
 			needBits += total;
 		}
-//		errs() << "\nVar [" << vbgn->first->getNameStr() <<"] Used ["<<usedBits<<"] Needed ["<<needBits <<"]";
 	}
 
 	double totalB = usedBits;
