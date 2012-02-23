@@ -3,12 +3,12 @@
 import sys
 import os
 
-passPath = "/work/victorsc/llvm-3.0/Debug/lib/"
+passPath = "~/workspace/ra/llvm-3.0/Debug/lib/"
 
 def checkArgs(args):
     if len(args) != 3:
         return False
-    if args[1] in ["-ra-inter-crop","-ra-inter-cousot","-ra-intra-crop","-ra-intra-cousot"]:
+    if args[1] in ["-ra-inter-crop","-ra-inter-cousot","-ra-intra-crop","-ra-intra-cousot","-ra-test-range"]:
         return True
     else:
         return False
@@ -25,9 +25,7 @@ if checkArgs(sys.argv):
     os.system("opt -load "+passPath+"vSSA.so -vssa "+fileName+".bc -o "+fileName+".essa.bc")
     print("Running the Range Analysis Pass")
     print("opt -load "+passPath+"RangeAnalysis.so "+sys.argv[1]+" "+fileName+".essa.bc")
-    os.system("opt -load "+passPath+"RangeAnalysis.so "+sys.argv[1]+" "+fileName+".essa.bc")
-
-#    os.system("opt -load "+passPath+"RangeAnalysis.so -load "+passPath+"Matching.so -matching "+fileName+".essa.bc")    
+    os.system("opt -load "+passPath+"RangeAnalysis.so "+sys.argv[1]+" "+fileName+".essa.bc -stats")
 else:
     print "./compile.py <OPTION> <FILE.c>"
     print "\tOPTION:"
