@@ -1956,6 +1956,14 @@ void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component) {
 	}
 }
 
+bool Meet::fixed(BasicOp* op){
+	Range oldInterval = op->getSink()->getRange();
+	Range newInterval = op->eval();
+
+	op->getSink()->setRange(newInterval);
+	return oldInterval != newInterval;
+}
+
 /// This is the meet operator of the growth analysis. The growth analysis
 /// will change the bounds of each variable, if necessary. Initially, each
 /// variable is bound to either the undefined interval, e.g. [., .], or to
@@ -1963,7 +1971,6 @@ void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component) {
 /// be no undefined interval. Each variable will be either bound to a
 /// constant interval, or to [-, c], or to [c, +], or to [-, +].
 bool Meet::widen(BasicOp* op) {
-
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
@@ -2141,44 +2148,11 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op) {
 	}
 }
 
-void ConstraintGraph::update(SmallPtrSet<const Value*, 6>& actv
-		, bool(*meet)(BasicOp* op)) {
-	update(*useMap, actv, meet);
-}
-
 void ConstraintGraph::update(const UseMap &compUseMap,
 		SmallPtrSet<const Value*, 6>& actv, bool(*meet)(BasicOp* op)) {
-	/*
-	 if (actv.empty()) {
-	 return;
-	 }
-
-	 const Value* V = *actv.begin();
-	 actv.erase(V);
-
-	 // The use list.
-	 SmallPtrSet<BasicOp*, 8> L = compUseMap.find(V)->second;
-	 SmallPtrSet<BasicOp*, 8>::iterator bgn = L.begin(),	end = L.end();
-	 for (; bgn != end; ++bgn) {
-	 if (meet(*bgn)) {
-	 // I want to use it as a set, but I also want
-	 // keep an order or insertions and removals.
-	 if (!actv.count((*bgn)->getSink()->getValue())) {
-	 actv.insert((*bgn)->getSink()->getValue());
-	 }
-
-	 }
-	 }
-
-	 update(compUseMap, actv, meet);
-	 */
-
-//	int i = 20;
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
-//		i--;
-//		if(i==0) exit(0);
 		// The use list.
 		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
@@ -2189,6 +2163,24 @@ void ConstraintGraph::update(const UseMap &compUseMap,
 				// keep an order or insertions and removals.
 				actv.insert((*bgn)->getSink()->getValue());
 			}
+		}
+	}
+}
+
+void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
+		SmallPtrSet<const Value*, 6>& actv){
+	while (!actv.empty()) {
+		const Value* V = *actv.begin();
+		actv.erase(V);
+		// The use list.
+		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
+		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
+		for (; bgn != end; ++bgn) {
+			if(nIterations == 0) break;
+			else --nIterations;
+
+			Meet::fixed(*bgn);
+			actv.insert((*bgn)->getSink()->getValue());
 		}
 	}
 }
@@ -2230,18 +2222,27 @@ void ConstraintGraph::findIntervals() {
 		//PRINTCOMPONENT(component)
 
 		UseMap compUseMap = buildUseMap(component);
-#ifdef PRINT_DEBUG
-		if (func)
-			printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
-#endif
+
 		// Get the entry points of the SCC
 		SmallPtrSet<const Value*, 6> entryPoints;
 		generateEntryPoints(component, entryPoints);
+
+		//iterate a fixed number of time before widening
+		update(NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
+
+#ifdef PRINT_DEBUG
+		if (func)
+			printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
+#endif
 		// Primeiro iterate till fix point
 		preUpdate(compUseMap, entryPoints);
 		fixIntersects(component);
 
 		//printResultIntervals();
+#ifdef PRINT_DEBUG
+		if (func)
+			printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
+#endif
 
 		// Segundo iterate till fix point
 		SmallPtrSet<const Value*, 6> activeVars;

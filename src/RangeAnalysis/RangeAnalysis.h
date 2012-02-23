@@ -85,6 +85,8 @@
 #define ASSERT(cond,msg)
 #endif
 
+#define NUMBER_FIXED_ITERATIONS 20
+
 using namespace llvm;
 
 namespace {
@@ -668,9 +670,10 @@ private:
 	// Perform the widening and narrowing operations
 
 protected:
-	void update(SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op));
 	void update(const UseMap &compUseMap,
 		SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op));
+	void update(unsigned nIterations, const UseMap &compUseMap,
+			SmallPtrSet<const Value*, 6>& actv);
 
 	virtual void preUpdate(const UseMap &compUseMap,
 		SmallPtrSet<const Value*, 6>& entryPoints) = 0;
@@ -777,6 +780,7 @@ public:
 	static bool narrow(BasicOp* op);
 	static bool crop(BasicOp* op);
 	static bool growth(BasicOp* op);
+	static bool fixed(BasicOp* op);
 };
 
 class RangeAnalysis{
