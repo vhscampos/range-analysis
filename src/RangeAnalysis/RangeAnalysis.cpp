@@ -2179,8 +2179,8 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 			if(nIterations == 0) break;
 			else --nIterations;
 
-			Meet::fixed(*bgn);
-			actv.insert((*bgn)->getSink()->getValue());
+			if(Meet::fixed(*bgn))
+				actv.insert((*bgn)->getSink()->getValue());
 		}
 	}
 }
@@ -2214,41 +2214,43 @@ void ConstraintGraph::findIntervals() {
 		// STATS
 		if (component.size() == 1) {
 			++numAloneSCCs;
-		}
-		if (component.size() > sizeMaxSCC) {
-			sizeMaxSCC = component.size();
-		}
+		}/*else{*/
+			if (component.size() > sizeMaxSCC) {
+				sizeMaxSCC = component.size();
+			}
 
-		//PRINTCOMPONENT(component)
+			//PRINTCOMPONENT(component)
 
-		UseMap compUseMap = buildUseMap(component);
+			UseMap compUseMap = buildUseMap(component);
 
-		// Get the entry points of the SCC
-		SmallPtrSet<const Value*, 6> entryPoints;
-		generateEntryPoints(component, entryPoints);
+			// Get the entry points of the SCC
+			SmallPtrSet<const Value*, 6> entryPoints;
 
-		//iterate a fixed number of time before widening
-		update(NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
+			generateEntryPoints(component, entryPoints);
+			//iterate a fixed number of time before widening
+			update(component.size()*2 | NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
 
 #ifdef PRINT_DEBUG
-		if (func)
-			printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
+			if (func)
+				printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
 #endif
-		// Primeiro iterate till fix point
-		preUpdate(compUseMap, entryPoints);
-		fixIntersects(component);
 
-		//printResultIntervals();
+			generateEntryPoints(component, entryPoints);
+			// Primeiro iterate till fix point
+			preUpdate(compUseMap, entryPoints);
+			fixIntersects(component);
+
+			//printResultIntervals();
 #ifdef PRINT_DEBUG
-		if (func)
-			printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
+			if (func)
+				printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
 #endif
 
-		// Segundo iterate till fix point
-		SmallPtrSet<const Value*, 6> activeVars;
-		generateActivesVars(component, activeVars);
-		posUpdate(compUseMap, activeVars, &component);
-
+			// Segundo iterate till fix point
+			SmallPtrSet<const Value*, 6> activeVars;
+			generateActivesVars(component, activeVars);
+			posUpdate(compUseMap, activeVars, &component);
+		//}
 		propagateToNextSCC(component);
 
 		//printResultIntervals();
@@ -2462,6 +2464,7 @@ void ConstraintGraph::computeStats() {
 		} else {
 			needBits += total;
 		}
+//		errs() << "\nVar [" << vbgn->first->getNameStr() <<"] Used ["<<usedBits<<"] Needed ["<<needBits <<"]";
 	}
 
 	double totalB = usedBits;
