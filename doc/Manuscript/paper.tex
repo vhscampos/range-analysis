@@ -91,24 +91,28 @@ runtime.
 % Our contribution.
 In this paper we provide a complete description of a range analysis algorithm,
 and show extensive experimental data that justifies our engineering choices.
-Our main algorithmic contribution on top of previous works is a three-phases
+Our first algorithmic contribution on top of previous works is a three-phases
 approach to handle comparisons between variables without resorting to any
 exponential time technique.
 The few publicly available implementations of range analyses that we are
-aware of, such as those in Java Hotspot~\footnote{} and gcc~\footnote{} only
-deal with comparisons between variables and constants.
-Even the theoretical works, such as Su and Wagner's~\cite{Su05} or Gawlitza
+aware of, such as those in FLEX~\footnote{The MIT's FLEX/Harpoon compiler
+provides an implementation of Stephenson's algorithm~\cite{Stephenson00}, and
+is available at \texttt{http://flex.cscott.net/Harpoon/}.} and
+gcc~\footnote{Gcc's VRP pass implements a variant of Patterson's
+algorithm~\cite{Patterson95}} only deal with comparisons between variables and
+constants.
+Even theoretical works, such as Su and Wagner's~\cite{Su05} or Gawlitza
 {\em et al.}'s~\cite{Gawlitza09} suffer from this limitation.
 This deficiency is one of the reasons explaining why none of these works has
 made their way into industrial-strength compilers.
 Two other insights allow our implementation to scale up to very large
 programs.
-Firstly, we use Bodik's Extended Static Single Assignment (e-SSA) form to
+We use Bodik's Extended Static Single Assignment (e-SSA) form~\cite{Bodik00} to
 perform range analysis sparsely.
 This program representation ensures that the interval associated with
 a variable is constant along its entire live range, and allows us to compute
 path-sensitive results.
-Secondly, we process the strongly connected components that underlines our
+Finally, we process the strongly connected components that underline our
 constraint system in topological ordering.
 It is well-know that this technique is essential to speedup constraint solving
 algorithms~\cite[Sec 6.3]{Nielson99}; however, we show that a careful
@@ -142,11 +146,12 @@ have used it to analyze a test suite with 1.4 million lines of code.
 In Section~\ref{sec:exp} we provide empirical evidence showing that our
 implementation is fast: it analyzes the gcc source code in XX seconds, for
 instance.
-It is also precise: our results are similar to Stephenson {\em et al}'s,
-even though, contrary to them, we do not assume that the program is correct.
+It is also precise: our results are similar to Stephenson
+{\em et al}'s~\cite{Stephenson00}, even though, contrary to them, we do not
+assume that the program is correct.
 Furthermore, we have been able to find tight bounds to many of the examples
 used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
-{\em et al.}~\cite{Lakhdar11}, even though they use much more costly methods.
+{\em et al.}~\cite{Lakhdar11}, who rely on much more costly methods.
 
 % The rest of this paper.
 
@@ -197,7 +202,7 @@ variables. \\
 $V \in \varset{V}$, e(V) = I[V].
 \end{definition}
 
-\begin{figure}[t!]
+\begin{figure}[hbt]
 \begin{small}
 \begin{eqnarray*}
 \begin{array}{r@{\hspace{0.5cm}}c}
@@ -672,7 +677,10 @@ Cousot and Cousot's operators.
 %approach is guaranteed to find the least fixpoint.
 %The same is true if we have a SCC with only {\em descending constraints}.
 
+\section{Experiments}
+\label{sec:exp}
+
 \bibliographystyle{plain}
-\bibliography{bibtex/references}
+\bibliography{references}
 
 \end{document}
