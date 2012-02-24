@@ -142,11 +142,11 @@ public:
 	Range And(const Range& other);
 	Range Or(const Range& other);
 	Range Xor(const Range& other);
-	Range truncate(unsigned bitwidht) const;
-//	Range signExtend(unsigned bitwidht) const;
-//	Range zeroExtend(unsigned bitwidht) const;
-	Range sextOrTrunc(unsigned bitwidht) const;
-	Range zextOrTrunc(unsigned bitwidht) const;
+	Range truncate(unsigned bitwidth) const;
+//	Range signExtend(unsigned bitwidth) const;
+//	Range zeroExtend(unsigned bitwidth) const;
+	Range sextOrTrunc(unsigned bitwidth) const;
+	Range zextOrTrunc(unsigned bitwidth) const;
 	Range intersectWith(const Range& other) const;
 	Range unionWith(const Range& other) const;
 	bool operator==(const Range& other) const;

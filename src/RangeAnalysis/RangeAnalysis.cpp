@@ -597,6 +597,15 @@ Range Range::urem(const Range& other) {
 
 Range Range::srem(const Range& other) {
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
+
+	if(other == Range(Zero,Zero) || other == Range(Min, Max, Empty))
+		return Range(Min, Max, Empty);
+
+	if((other.getLower().slt(Zero) && other.getUpper().sgt(Zero))
+		|| other.getLower().eq(Zero)
+		|| other.getUpper().eq(Zero))
+		return Range(Min, Max);
+
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().srem(other.getLower()); // lower lower
 	}
@@ -770,11 +779,11 @@ Range Range::Xor(const Range& other) {
 // Truncate
 //		- if the source range is entirely inside max bit range, he is the result
 //      - else, the result is the max bit range
-Range Range::truncate(unsigned bitwidht) const {
-	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
-	APInt maxlower = APInt::getSignedMinValue(bitwidht);
+Range Range::truncate(unsigned bitwidth) const {
+	APInt maxupper = APInt::getSignedMaxValue(bitwidth);
+	APInt maxlower = APInt::getSignedMinValue(bitwidth);
 
-	if (bitwidht < MAX_BIT_INT) {
+	if (bitwidth < MAX_BIT_INT) {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
@@ -787,23 +796,15 @@ Range Range::truncate(unsigned bitwidht) const {
 	}
 }
 
-Range Range::sextOrTrunc(unsigned bitwidht) const {
-	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
-	APInt maxlower = APInt::getSignedMinValue(bitwidht);
-
-	if (bitwidht < MAX_BIT_INT) {
-		maxupper = maxupper.sext(MAX_BIT_INT);
-		maxlower = maxlower.sext(MAX_BIT_INT);
-	}
-
-	return Range(maxlower, maxupper);
+Range Range::sextOrTrunc(unsigned bitwidth) const {
+	return truncate(bitwidth);
 }
 
-Range Range::zextOrTrunc(unsigned bitwidht) const {
-	APInt maxupper = APInt::getSignedMaxValue(bitwidht);
-	APInt maxlower = APInt::getSignedMinValue(bitwidht);
+Range Range::zextOrTrunc(unsigned bitwidth) const {
+	APInt maxupper = APInt::getSignedMaxValue(bitwidth);
+	APInt maxlower = APInt::getSignedMinValue(bitwidth);
 
-	if (bitwidht < MAX_BIT_INT) {
+	if (bitwidth < MAX_BIT_INT) {
 		maxupper = maxupper.sext(MAX_BIT_INT);
 		maxlower = maxlower.sext(MAX_BIT_INT);
 	}
@@ -2181,7 +2182,7 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
 		for (; bgn != end; ++bgn) {
-			if(nIterations == 0) break;
+			if(nIterations == 0) {actv.clear(); return;}
 			else --nIterations;
 
 			if(Meet::fixed(*bgn))
@@ -2221,43 +2222,44 @@ void ConstraintGraph::findIntervals() {
 		// STATS
 		if (component.size() == 1) {
 			++numAloneSCCs;
-		}
-		if (component.size() > sizeMaxSCC) {
-			sizeMaxSCC = component.size();
-		}
+			fixIntersects(component);
+		}else{
+			if (component.size() > sizeMaxSCC) {
+				sizeMaxSCC = component.size();
+			}
 
-		//PRINTCOMPONENT(component)
+			//PRINTCOMPONENT(component)
 
-		UseMap compUseMap = buildUseMap(component);
+			UseMap compUseMap = buildUseMap(component);
 
-		// Get the entry points of the SCC
-		SmallPtrSet<const Value*, 6> entryPoints;
+			// Get the entry points of the SCC
+			SmallPtrSet<const Value*, 6> entryPoints;
 
-		generateEntryPoints(component, entryPoints);
-		//iterate a fixed number of time before widening
-		update(component.size()*2 | NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
+			generateEntryPoints(component, entryPoints);
+			//iterate a fixed number of time before widening
+			update(component.size()*2 | NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
 
 #ifdef PRINT_DEBUG
-		if (func)
-			printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
+			if (func)
+				printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
 #endif
-		// Primeiro iterate till fix point
-		generateEntryPoints(component, entryPoints);
-		// Primeiro iterate till fix point
-		preUpdate(compUseMap, entryPoints);
-		fixIntersects(component);
+			// Primeiro iterate till fix point
+			generateEntryPoints(component, entryPoints);
+			// Primeiro iterate till fix point
+			preUpdate(compUseMap, entryPoints);
+			fixIntersects(component);
 
-		//printResultIntervals();
+			//printResultIntervals();
 #ifdef PRINT_DEBUG
-		if (func)
-			printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
+			if (func)
+				printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
 #endif
 
-		// Segundo iterate till fix point
-		SmallPtrSet<const Value*, 6> activeVars;
-		generateActivesVars(component, activeVars);
-		posUpdate(compUseMap, activeVars, &component);
-
+			// Segundo iterate till fix point
+			SmallPtrSet<const Value*, 6> activeVars;
+			generateActivesVars(component, activeVars);
+			posUpdate(compUseMap, activeVars, &component);
+		}
 		propagateToNextSCC(component);
 
 		//printResultIntervals();
@@ -2476,6 +2478,7 @@ void ConstraintGraph::computeStats() {
 		} else {
 			needBits += total;
 		}
+//		errs() << "\nVar [" << vbgn->first->getNameStr() <<"] Range"<< CR <<" Total ["<<total<<"] Needed ["<<nBits <<"]";
 	}
 
 	double totalB = usedBits;
