@@ -24,6 +24,9 @@ $TrimRepeatedPrefix = 1;
  [],
  ["SCCs", '([0-9]+).*Number of strongly connected components'],
  ["SCCs 1", '([0-9]+).*Number of SCCs containing only one node'],
- []
+ [],
+ ["vSSA", '([0-9.]+).*Static Single Assignment Construction'],
+ ["Analysis", '([0-9.]+).*Range Analysis*'],
+ [],
  );
 

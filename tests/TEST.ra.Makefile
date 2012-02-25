@@ -11,6 +11,10 @@ CURDIR  := $(shell cd .; pwd)
 PROGDIR := $(PROJ_SRC_ROOT)
 RELDIR  := $(subst $(PROGDIR),,$(CURDIR))
 
+LLVM_DIR = "/home/vhscampos/IC"
+LLVM_BUILD = "Debug+Asserts"
+
+
 $(PROGRAMS_TO_TEST:%=test.$(TEST).%): \
 test.$(TEST).%: Output/%.$(TEST).report.txt
 	@cat $<
@@ -22,10 +26,14 @@ Output/%.$(TEST).report.txt: Output/%.linked.rbc $(LOPT) \
 	@echo "---------------------------------------------------------------" >> $@
 	@echo ">>> ========= '$(RELDIR)/$*' Program" >> $@
 	@echo "---------------------------------------------------------------" >> $@
-	@-$(LOPT) -mem2reg -instnamer -inline -internalize -load \
-	/home/vhscampos/IC/llvm-3.0/Debug/lib/vSSA.so -vssa \
-	-load /home/vhscampos/IC/llvm-3.0/Debug/lib/RangeAnalysis.so -load \
-	/home/vhscampos/IC/llvm-3.0/Debug/lib/Matching.so -matching -stats \
-	-time-passes -disable-output $< 2>>$@ 
+	@-$(LOPT) -mem2reg -stats -time-passes $< > $<.m2r.bc 2>>$@ 
+	@if [ -n "$(INLINE)" ]; then \
+		$(LOPT) -internalize -inline -break-crit-edges -instnamer -stats -time-passes $<.m2r.bc > $<.more.bc 2>>$@; \
+	else \
+		$(LOPT) -break-crit-edges -instnamer -stats -time-passes $<.m2r.bc > $<.more.bc 2>>$@; \
+	fi
+	@-$(LOPT) -load $(LLVM_DIR)/llvm-3.0/$(LLVM_BUILD)/lib/vSSA.so -vssa \
+	-load $(LLVM_DIR)/llvm-3.0/$(LLVM_BUILD)/lib/RangeAnalysis.so \
+	$(ANALYSIS) -stats -time-passes -disable-output $<.more.bc 2>>$@
 
 REPORT_DEPENDENCIES := $(LOPT)
