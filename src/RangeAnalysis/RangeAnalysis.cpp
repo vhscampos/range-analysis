@@ -123,6 +123,9 @@ unsigned RangeAnalysis::getMaxBitWidth(const Function& F) {
 		}
 	}
 
+	// Bitwidth equal to 0 is not valid, so we increment to 1
+//	if (max == 0) ++max;
+	
 	return max;
 }
 
@@ -158,7 +161,6 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	CG->buildVarNodes();
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
-	prof.printTime("BuildGraph");
 #ifdef PRINT_DEBUG
 	CG->printToFile(F, "/tmp/" + F.getName() + "cgpre.dot");
 	errs() << "Analyzing function " << F.getName() << ":\n";
@@ -168,6 +170,11 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	CG->printToFile(F, "/tmp/" + F.getName() + "cgpos.dot");
 #endif
 	delete CG;
+	
+//	prof.printTime("BuildGraph");
+//	prof.printTime("Nuutila");
+//	prof.printTime("SCCs resolution");
+	
 	return false;
 }
 
@@ -240,6 +247,8 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	numOps = GenOprs.size();
 
 	delete G;
+	
+	prof.printTime("SCCs resolution");
 
 	// FIXME: Não sei se tem que retornar true ou false
 	return true;
@@ -393,15 +402,15 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F,
 template<class CGT>
 char IntraProceduralRA<CGT>::ID = 0;
 static RegisterPass<IntraProceduralRA<Cousot> > Y("ra-intra-cousot",
-		"Range Analysis with Cousot");
+		"Range Analysis (Cousot - intra)");
 static RegisterPass<IntraProceduralRA<CropDFS> > Z("ra-intra-crop",
-		"Range Analysis with CropDFS");
+		"Range Analysis (Crop - intra)");
 template<class CGT>
 char InterProceduralRA<CGT>::ID = 2;
 static RegisterPass<InterProceduralRA<Cousot> > W("ra-inter-cousot",
-		"Matching Pass with Cousot");
+		"Range Analysis (Cousot - inter)");
 static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop",
-		"Matching Pass with CropDFS");
+		"Range Analysis (Crop - inter)");
 
 // ========================================================================== //
 // Range
@@ -2205,7 +2214,7 @@ void ConstraintGraph::findIntervals() {
 	prof.printTime("Nuutila");
 
 	// STATS
-	numSCCs = sccList.worklist.size();
+	numSCCs += sccList.worklist.size();
 #ifdef SCC_DEBUG
 	unsigned numberOfSCCs = numSCCs;
 #endif
@@ -2228,7 +2237,7 @@ void ConstraintGraph::findIntervals() {
 				sizeMaxSCC = component.size();
 			}
 
-			//PRINTCOMPONENT(component)
+			PRINTCOMPONENT(component)
 
 			UseMap compUseMap = buildUseMap(component);
 
@@ -2267,7 +2276,6 @@ void ConstraintGraph::findIntervals() {
 	
 	elapsed = prof.timenow() - before;
 	prof.updateTime("SCCs resolution", elapsed);
-	prof.printTime("SCCs resolution");
 	
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
