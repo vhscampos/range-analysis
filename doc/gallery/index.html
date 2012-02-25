@@ -1,0 +1,492 @@
+<HTML>
+
+<HEAD>
+   <TITLE>
+      Gallery
+   </TITLE>
+</HEAD>
+
+<BODY>
+
+<H1>Gallery</H1>
+
+In this page we show some examples of programs, and the results that out range
+analysis produces for them.
+We use the following keys in the table:
+
+<UL>
+<LI>
+<STRONG>C</STRONG>: the C program that we have analyzed. This is an actual
+program, i.e., the very input to our analyzer. The comments in the program
+explain why this test is relevant.
+</LI>
+<LI>
+<STRONG>CFG-O</STRONG>: the Control Flow Graph (CFG) of the program, as
+Originally produced by LLVM without any preprocessing other than the
+conversion to SSA-form.
+</LI>
+<LI>
+<STRONG>CFG-E</STRONG>: the Control Flow Graph of the program, this time
+converted to the <I>Extended</I> Static Single Assignment (E-SSA) form.
+This intermediate representation increases the precision of our
+analysis.
+</LI>
+<LI>
+<STRONG>CG-ItP</STRONG>: the Contraint Graph (CG) produced during the
+inter-procedural range analysis. Notice that this analysis is not
+context-sensitive.
+</LI>
+<LI>
+<STRONG>CG-Inl</STRONG>: the Contraint Graph produced after we perform
+function inlining. LLVM is able to inline every non-recursive call in the
+program, so this gives us some sort of context-sensitiveness.
+</LI>
+</UL>
+
+<TABLE cellspacing="10">
+
+<TH>
+C
+</TH>
+<TH>
+CFG-O
+</TH>
+<TH>
+CFG-E
+</TH>
+<TH>
+CG-InP
+</TH>
+<TH>
+CG-Inl
+</TH>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t1.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t1.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t1.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t1.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t1.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t2.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t2.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t2.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t2.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t2.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t3.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t3.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t3.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t3.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t3.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t4.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t4.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t4.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t4.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t4.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t5.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t5.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t5.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t5.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t5.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t6.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t6.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t6.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t6.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t6.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t7.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t7.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t7.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t7.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t7.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+<TR>
+
+<TD>
+<A HREF="srcs/t10.c" target="blank">
+<img
+    align= "center"
+    src ="../images/c.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t10.main.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cfgs/t10.essa.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/flowchart.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t10.inter.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+<TD>
+<A HREF="pdfs/cgs/t10.inline.pdf" target="blank">
+<img
+    align= "center"
+    src ="../images/cg.jpg"
+    ALT="Download it"
+    width=45
+>
+</A>
+</TD>
+
+</TABLE>
+
+</BODY>
+
+</HTML>
