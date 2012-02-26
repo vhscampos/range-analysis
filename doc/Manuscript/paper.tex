@@ -36,13 +36,13 @@ Fernando Magno Quint\~{a}o Pereira}
 This paper describes an inter-procedural range analysis algorithm that scales
 up to programs with millions of assembly instructions.
 Contrary to many previous techniques, we handle comparisons between variables
-without resorting to expensive algorithms.
+without resorting to relational lattices or expensive algorithms.
 We achieve path sensitiveness by using Bodik's Extended Static Single
 Assignment form as the intermediate representation.
 We show that by processing the strongly connected components that constitute
 the graph of dependences between variables in topological order we not only
 gain in time, but also in precision.
-We have implemented our technique into LLVM, an industrial strenght compiler,
+We have implemented our technique in LLVM, an industrial strenght compiler,
 and have been able to process over 4 million assembly instructions in a
 few seconds.
 \end{abstract}
@@ -52,10 +52,10 @@ few seconds.
 
 % The context: why range analysis is necessary.
 The analysis of integer variables on the interval lattice has been the
-canonical example of abstract interpretation since its introduction by
-Cousot and Cousot~\cite{Cousot77}.
+canonical example of abstract interpretation since its introduction in
+Cousot and Cousot's seminal paper~\cite{Cousot77}.
 Compilers use range analysis to infer the possible values that discrete
-variables may assume during the execution of programs.
+variables may assume during program execution.
 This analysis has many uses.
 For instance, it allows the optimizing compiler to remove from the program text
 redundant overflow tests~\cite{Sol11} and unnecessary array bound
@@ -79,9 +79,9 @@ their approaches are able to deal with very large programs.
 There are researchers who have implemented range analyses that scale up to
 large programs~\cite{Blanchet03,Venet04}; nevertheless, because the
 algorithm itself is not the main focus of their works, they neither give
-details about their design choices nor provide experimental data about.
+details about their design choices nor provide experimental data about it.
 This scenario was recently changed by Oh {\em et al.}~\cite{Oh12}, who
-introduced an abstract interpretation framework which handles programs with
+introduced an abstract interpretation framework which processes programs with
 hundreds of thousands of lines of code.
 Nevertheless, Oh {\em et al.} have designed a very simple range analysis,
 which does not handle comparisons between variables, for instance.
@@ -99,7 +99,7 @@ aware of, such as those in FLEX~\footnote{The MIT's FLEX/Harpoon compiler
 provides an implementation of Stephenson's algorithm~\cite{Stephenson00}, and
 is available at \texttt{http://flex.cscott.net/Harpoon/}.} and
 gcc~\footnote{Gcc's VRP pass implements a variant of Patterson's
-algorithm~\cite{Patterson95}} only deal with comparisons between variables and
+algorithm~\cite{Patterson95}.} only deal with comparisons between variables and
 constants.
 Even theoretical works, such as Su and Wagner's~\cite{Su05} or Gawlitza
 {\em et al.}'s~\cite{Gawlitza09} suffer from this limitation.
@@ -136,15 +136,15 @@ via a simple widening operator.
 A detailed description of our implementation has been published by
 Couto and Pereira~\cite{Couto11}.
 Nevertheless, the inability to handle comparisons between variables, and the
-cubic complexity of the Bellman-Ford method eventually leads us to seek
+cubic complexity of the Bellman-Ford method eventually lead us to seek
 alternative solutions to range analysis.
 This quest reached a pinnacle in the present work.
 
 % Our experimental numbers.
 We have implemented our algorithm in the LLVM compiler~\cite{Lattner04}, and
-have used it to analyze a test suite with 1.4 million lines of code.
+have used it to analyze a test suite with 1.4 million lines of C code.
 In Section~\ref{sec:exp} we provide empirical evidence showing that our
-implementation is fast: it analyzes the gcc source code in XX seconds, for
+implementation is fast: it analyzes the gcc source code in 4 seconds, for
 instance.
 It is also precise: our results are similar to Stephenson
 {\em et al}'s~\cite{Stephenson00}, even though, contrary to them, we do not
@@ -183,9 +183,9 @@ $\varset{Z}^2$ is defined as follows:
 
 Given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
 $\ub{\iota} = u$.
-We let \varset{V} be a set of variables, and
+We let \varset{V} be a set of constraint variables, and
 $I: \varset{V} \mapsto \varset{Z}^2$ a
-mapping from variables to intervals in $\varset{Z}^2$.
+mapping from these variables to intervals in $\varset{Z}^2$.
 Our objective is to solve a constraint system $C$, formed by instances of the
 six different types of constraints seen in Figure~\ref{fig:eval_function}
 (left).
@@ -248,15 +248,17 @@ The constraint system that produces instances of the range analysis problem.}
 
 We will use the program in Figure~\ref{fig:ex1}(a) as the running example
 to illustrate our range analysis.
-Figure~\ref{fig:ex1}(b) shows the same program in SSA form, and
-Figure~\ref{fig:ex1}(c) outlines the constraints that we extract from this
+Figure~\ref{fig:ex1}(b) shows the same program in SSA form~\cite{Cytron91},
+and Figure~\ref{fig:ex1}(c) outlines the constraints that we extract from this
 program.
 There is a clear correspondence between instructions and constraints.
-A possible solution to the range analysis problem is given in
+A possible solution to the range analysis problem, as obtained via the
+techniques that we will introduce in Section~\ref{sec:algo}, is given in
 Figure~\ref{fig:ex1}(d).
-This is a very conservative solution.
+The SSA form, so conspicuous in modern compilers, leads to a very conservative
+solution.
 As we will see shortly, we can improve this solution substantially by using
-a more sophisticated program representation.
+a more sophisticated program representation -- the e-SSA form.
 
 \begin{figure}[t!]
 \begin{center}
@@ -269,7 +271,7 @@ a more sophisticated program representation.
 (d) A possible solution to the range analysis problem.}
 \end{figure}
 
-\section{Range Analysis in Three Steps}
+\section{Our Design of a Range Analysis Algorithm}
 \label{sec:algo}
 
 % Program representation
@@ -341,18 +343,22 @@ As we will show in Section~\ref{sub:micro}, once the growth pattern of $v$ is
 known, we can replace $\fun{ft}(v)$ by an actual value.
 Once we are done placing copies, we insert $\phi$-functions into the
 transformed program to convert it to SSA form.
-This last step prevents that two different names given to the same original
+This last step avoids that two different names given to the same original
 variable be simultaneously alive at the program code.
-Figure~\ref{fig:ex_standard_eSSA} shows our running example changed into
+Figure~\ref{fig:ex_standard_eSSA}(a) shows our running example changed into
 standard e-SSA form.
+The part (b) of this figure shows the solution that we get to this new
+program.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=0.5\textwidth]{images/ex_standard_eSSA}
+\includegraphics[width=0.9\textwidth]{images/ex_standard_eSSA}
 \end{center}
 \caption{\label{fig:ex_standard_eSSA}
-The control flow graph from Figure~\ref{fig:ex1}(b) converted to standard
-e-SSA form.}
+(a) The control flow graph from Figure~\ref{fig:ex1}(b) converted to standard
+e-SSA form.
+(b) A solution to the range analysis problem
+}
 \end{figure}
 
 The standard e-SSA form serves well analysis that need range information
@@ -361,7 +367,7 @@ redundant code elimination and detection of buffer overflows.
 On the other hand, there exist compilation algorithms that require range
 information at the whole live range of variables.
 Examples of such algorithms include the family of
-bitwidth aware register allocators~\cite{Barik06,Tallam03,Pereira08} and
+bitwidth aware register allocators~\cite{Barik06,Pereira08,Tallam03} and
 hardware synthesizers~\cite{Cong05,Mahlke01,Stephenson00}.
 In order to provide extra precision to these algorithms, we may work with a
 non-pruned version of e-SSA form, which we produce by simply inserting copies
@@ -385,20 +391,21 @@ program code, which can be removed by standard dead code elimination.
 \subsection{Extracting Constraints}
 \label{sub:constraints}
 
-The constraints shown in Figure~\ref{fig:eval_function} let us handle
-many different assembly instructions.
-We use $\phi$ assignments, such as $Y = \phi(X_1, X_2)$ to represent
+The constraints in Figure~\ref{fig:eval_function} handles
+many different programming instructions.
+The $\phi$ assignments, such as $Y = \phi(X_1, X_2)$, represent
 the $\phi$-functions typically found in SSA form programs.
-As we have discussed in Section~\ref{sub:rep}, we use intersection
+As discussed in Section~\ref{sub:rep}, we use intersection
 constraints to bound the variables created due to live range splitting
 at conditionals.
 The widening analysis that we will introduce in Section~\ref{sub:micro}
 require monotonic transfer functions.
 Many assembly operations, such as modulus or division, do not afford us
-this property.
-However, several of these non-monotonic instructions have a conservative
-translation to our constraint system, as we show in
-Figure~\ref{fig:constraints}.
+this monotonicity.
+However, these non-monotonic instructions have a conservative
+translation to our constraint system.
+Figure~\ref{fig:constraints} shows some examples of constraints that we
+derive from typical assembly instructions.
 
 \begin{figure}[t!]\begin{center}
 \begin{tabular}{|l@{\hspace{0.2cm}}l@{\hspace{0.3cm}}l|} \hline
@@ -431,10 +438,11 @@ We add an edge from $N_v$ to $N_c$ if the name $V$ is used in $C$.
 We add an edge from $N_c$ to $V$ if the constraint $C$ defines the name
 $V$.
 Figure~\ref{fig:ex_graph} shows the dependence graph that we build for the
-e-SSA form program given in Figure~\ref{fig:ex_standard_eSSA}.
+e-SSA form program given in Figure~\ref{fig:ex_standard_eSSA}(a).
 If $V$ is used by $C$ as the input of a future, then the edge from
-$N_v$ to $N_c$ represents a {\em control
+$N_v$ to $N_c$ represents what Ferrante {\em et al.} call a {\em control
 dependence}~\cite[p.323]{Ferrante87}.
+We use dashed lines to represent these edges.
 All the other edges denote {\em data dependences}~\cite[p.322]{Ferrante87}.
 
 \begin{figure}[t!]
@@ -446,7 +454,7 @@ The dependence graph that we build to the program in
 Figure~\ref{fig:ex_standard_eSSA}.}
 \end{figure}
 
-\subsection{Finding Ranges: the Macro Algorithm}
+\subsection{Solving Range Analysis on Strong Components}
 \label{sub:macro}
 
 Having built the dependence graph, we proceed to solve the range analysis
@@ -468,6 +476,18 @@ when analyzing a strongly connected component $S$ we can rest assured that
 any influence that $S$ might suffer from nodes outside it has been already
 taken into consideration.
 
+When finding strongly connected components, we take control dependence
+edges into consideration.
+For instance, in Figure~\ref{fig:ex_graph} the nodes that correspond to the
+variables $i_1$, $i_2$, $i_t$, $j_1$, $j_2$ and $j_t$ form a single component.
+The dashed edges, which represent control dependences, keep all these variables
+connected.
+In this way, we ensure that, upon stumbling upon an interval associated with
+future bounds, e.g., $\fun{ft}(v)$, either variable $v$ has been solved in a
+previous component, or it belongs to the current component.
+In the latter case, as we will see soon, we can still take $v$'s interval into
+consideration.
+
 \subsection{Finding Ranges: the Micro Algorithm}
 \label{sub:micro}
 
@@ -481,7 +501,7 @@ we solve the range analysis problem in three-steps:
 \item Run narrowing analysis: $O(N^2)$.
 
 \end{enumerate}
-However, before we start, we remove the control dependence edges from the
+However, before we start, we remove control dependence edges from the
 strongly connected component, as they have no semantics to our transfer
 functions.
 
@@ -496,8 +516,8 @@ The possible behaviors of an interval are:
 (ii) grows towards $+\infty$;
 (iii) grows towards $-\infty$; and
 (iv) grows in both directions.
-The lattice of this dataflow analysis, plus its meet operator is given in
-Figure~\ref{fig:growth_analysis}.
+The lattice of abstract states, plus a constraint system that represents our
+widening analysis is given in Figure~\ref{fig:growth_analysis}.
 Because the lattice has height three, the intervals bound to each variable can
 change at most three times.
 
@@ -622,27 +642,40 @@ Figure~\ref{fig:crop_analysis}.
 Continuing with our example, Figure~\ref{fig:ex_partition_grow_crop} shows
 the application of our algorithm on the last strongly connected component of
 Figure~\ref{fig:ex_graph}.
-Notice that upon meeting this SCC, we have already found the interval
-$[0, 0]$ to $I_0$ and the interval $[100, 100]$ to $J_0$, as we show in
-Figure~\ref{fig:ex_graph}(a).
+Notice that upon meeting this SCC, we have already determined that the interval
+$[0, 0]$ is bound to $I_0$ and that the interval $[100, 100]$ is bound to
+$J_0$, as we show in Figure~\ref{fig:ex_graph}(a).
 We are not guaranteed to find the least fix point of a constraint system.
 However, in this example we did it.
 We emphasize that finding this tight solution was only possible because of
 the topological ordering of the constraint graph in
 Figure~\ref{fig:ex_graph}.
 Had we applied the widening operator onto the whole graph, then we would
-have found out that variable $J_0$ is bound to $[-\infty, +\infty]$,
+have found out that variable $j_0$ is bound to $[-\infty, +\infty]$,
 because
-(i) it receives its interval directly from variable $K_t$, which is upper
+(i) it receives its interval directly from variable $k_t$, which is upper
 bounded by $+\infty$, and
 (ii) it is part of a negative cycle.
-On the other hand, because we only analyze the $J$'s SCC after we have
-analyzed $K$'s, $K$ only contribute the constant range $[0, 99]$ to $J_0$.
+On the other hand, because we only analyze $j$'s SCC after we have
+analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
 
+Figure~\ref{fig:ex_standard_eSSA}(b) shows the final solution that we find
+for this example.
+This solution is very precise, in the sense that it is the maximum fixed
+point of the constraint system given in Figure~\ref{fig:eval_function}.
+However, the solution is still an over approximation of the dynamic behavior of
+the program in Figure~\ref{fig:ex_standard_eSSA}.
+For instance, we have found that variable $i$ could reach the upper value of
+99.
+In any actual run of the program, $i$ could be at most 50.
+There exist static methods that are able to infer this tighter bound, such as
+Lakhdar-Chaouch's analysis on the relational domain~\cite{Lakhdar11}.
+However, analyses like this are much more expensive than ours, and seem, so
+far, unable to scale up to very large code bodies. 
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=0.8\textwidth]{images/ex_partition_grow_crop}
+\includegraphics[width=\textwidth]{images/ex_partition_grow_crop}
 \end{center}
 \caption{\label{fig:ex_partition_grow_crop}
 Four snapshots of the last SCC of Figure~\ref{fig:ex_partition_grow_crop}.
@@ -679,6 +712,14 @@ Cousot and Cousot's operators.
 
 \section{Experiments}
 \label{sec:exp}
+
+
+%In our experiments we have observed that the vast majority of strongly
+%connected components that constitute typical dependence graphs contain only
+%one element.
+%Furthermore, composite components tend to be small.
+%Therefore, range analysis admit very fast solution.
+
 
 \bibliographystyle{plain}
 \bibliography{references}
