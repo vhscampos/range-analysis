@@ -212,7 +212,7 @@ void vSSA::renameUsesToSigma(Value *V, PHINode *sigma)
 			usepointers[i]->replaceUsesOfWith(V, sigma);
 		}
 		// Check if the use is in the dominance frontier of sigma(V)
-		else if (DF_BB->second.find(BB_user) != DF_BB->second.end()) {
+		else if ((DF_BB != DF_->end()) && (DF_BB->second.find(BB_user) != DF_BB->second.end())) {
 			// Check if the user is a PHI node (it has to be, but only for precaution)
 			if (PHINode *phi = dyn_cast<PHINode>(usepointers[i])) {
 				for (unsigned i = 0, e = phi->getNumIncomingValues(); i < e; ++i) {
@@ -605,7 +605,7 @@ bool vSSA::dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *v
 		
 		//If the BB_father is in the dominance frontier of BB then we need to create a sigma in BB_next 
 		//to split the lifetime of variables
-		if ((BB_father != BB) && (DF_BB->second.find(BB_father) != DF_BB->second.end()))
+		if ((BB_father != BB) && (DF_BB != DF_->end()) && (DF_BB->second.find(BB_father) != DF_BB->second.end()))
 			return true;
 	}
 	return false;

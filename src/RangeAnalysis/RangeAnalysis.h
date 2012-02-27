@@ -51,6 +51,7 @@
 #include <deque>
 #include <stack>
 #include <set>
+#include <sstream>
 
 //TODO: comment the line below to disable the debug of SCCs and optimize the code
 // generated.
@@ -59,26 +60,26 @@
 //TODO: comment the line below to disable the dot printing of Constraint Graphs
 //#define PRINT_DEBUG
 
-#define PRINTCOMPONENT(component)
-//errs() << "\n--------------\n"; \
-//		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) { \
-//			const VarNode *var = *cit; \
-//			const Value *V = var->getValue(); \
-//			const Argument *A = NULL; \
-//			const Instruction *I = NULL; \
-//			const ConstantInt *CI = NULL; \
-//			if ((A = dyn_cast<Argument>(V))) { \
-//				errs() << A->getParent()->getName() << "." << A->getName(); \
-//			} \
-//			else if ((I = dyn_cast<Instruction>(V))) { \
-//				errs() << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName(); \
-//			} \
-//			else if ((CI = dyn_cast<ConstantInt>(V))) { \
-//				errs() << CI->getValue(); \
-//			} \
-//			errs() << "\n"; \
-//		} \
-//		errs() << "\n----------\n";
+#define PRINTCOMPONENT(component) \
+errs() << "\n--------------\n"; \
+		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) { \
+			const VarNode *var = *cit; \
+			const Value *V = var->getValue(); \
+			const Argument *A = NULL; \
+			const Instruction *I = NULL; \
+			const ConstantInt *CI = NULL; \
+			if ((A = dyn_cast<Argument>(V))) { \
+				errs() << A->getParent()->getName() << "." << A->getName(); \
+			} \
+			else if ((I = dyn_cast<Instruction>(V))) { \
+				errs() << I->getParent()->getParent()->getName() << "." << I->getParent()->getName() << "." << I->getName(); \
+			} \
+			else if ((CI = dyn_cast<ConstantInt>(V))) { \
+				errs() << CI->getValue(); \
+			} \
+			errs() << "\n"; \
+		} \
+		errs() << "\n----------\n";
 
 #ifdef SCC_DEBUG
 #define ASSERT(cond,msg) if(!cond){ errs() << "ERROR: " << msg << "\n"; }
@@ -610,7 +611,9 @@ class Profile {
 		
 		void printTime(StringRef key) {
 			double time = getTimeDouble(key);
-			errs() << time << "\t - " << key << " elapsed time\n";
+			std::ostringstream formatted;
+			formatted << time;
+			errs() << formatted.str() << "\t - " << key << " elapsed time\n";
 		}
 };
 

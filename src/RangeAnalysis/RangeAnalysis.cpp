@@ -169,6 +169,11 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 #ifdef PRINT_DEBUG
 	CG->printToFile(F, "/tmp/" + F.getName() + "cgpos.dot");
 #endif
+
+	// Collect statistics
+	numVars += VNodes.size();
+	numOps += GOprs.size();
+	
 	delete CG;
 	
 	return false;
@@ -184,6 +189,10 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
+	
+	std::ostringstream formated;
+	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
+	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
 }
 
 // ========================================================================== //
@@ -404,6 +413,10 @@ InterProceduralRA<CGT>::~InterProceduralRA(){
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
+	
+	std::ostringstream formated;
+	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
+	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
 }
 
 template<class CGT>
@@ -2243,7 +2256,7 @@ void ConstraintGraph::findIntervals() {
 				sizeMaxSCC = component.size();
 			}
 
-			PRINTCOMPONENT(component)
+			//PRINTCOMPONENT(component)
 
 			UseMap compUseMap = buildUseMap(component);
 
@@ -2444,6 +2457,12 @@ void ConstraintGraph::computeStats() {
 		if (isa<ConstantInt>(vbgn->first)) {
 			continue;
 		}
+		
+		// Variables that are not IntegerTy are ignored
+		if (!vbgn->first->getType()->isIntegerTy()) {
+			continue;
+		}
+
 
 		// Count original (used) bits
 		unsigned total = vbgn->first->getType()->getPrimitiveSizeInBits();
