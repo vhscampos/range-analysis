@@ -171,16 +171,19 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 #endif
 	delete CG;
 	
-//	prof.printTime("BuildGraph");
-//	prof.printTime("Nuutila");
-//	prof.printTime("SCCs resolution");
-	
 	return false;
 }
 
 template<class CGT>
 void IntraProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.setPreservesAll();
+}
+
+template <class CGT>
+IntraProceduralRA<CGT>::~IntraProceduralRA(){
+	prof.printTime("BuildGraph");
+	prof.printTime("Nuutila");
+	prof.printTime("SCCs resolution");
 }
 
 // ========================================================================== //
@@ -233,7 +236,6 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
-	prof.printTime("BuildGraph");
 
 #ifdef PRINT_DEBUG
 	G->printToFile(*(M.begin()), "/tmp/" + M.begin()->getName() + "cgpre.dot");
@@ -247,8 +249,6 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	numOps = GenOprs.size();
 
 	delete G;
-	
-	prof.printTime("SCCs resolution");
 
 	// FIXME: Não sei se tem que retornar true ou false
 	return true;
@@ -397,6 +397,13 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F,
 		for (i = 0; i < Parameters.size(); ++i)
 			Parameters[i].second = NULL;
 	}
+}
+
+template <class CGT>
+InterProceduralRA<CGT>::~InterProceduralRA(){
+	prof.printTime("BuildGraph");
+	prof.printTime("Nuutila");
+	prof.printTime("SCCs resolution");
 }
 
 template<class CGT>
@@ -2211,7 +2218,6 @@ void ConstraintGraph::findIntervals() {
 	Profile::TimeValue after = prof.timenow();
 	Profile::TimeValue elapsed = after - before;
 	prof.updateTime("Nuutila", elapsed);
-	prof.printTime("Nuutila");
 
 	// STATS
 	numSCCs += sccList.worklist.size();
