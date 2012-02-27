@@ -32,7 +32,7 @@ touch TEST.ra.Makefile TEST.ra.report
 cd $testpath
 make TEST=ra ANALYSIS=-ra-intra-cousot INLINE=1 report report.csv
 
-mv report.ra.csv ${output-path}exp2.csv
+mv report.ra.csv ${outputpath}exp2.csv
 
 # Experiment 3
 cd $llvmpath
@@ -42,7 +42,7 @@ touch TEST.ra.Makefile TEST.ra.report
 cd $testpath
 make TEST=ra ANALYSIS=-ra-inter-cousot report report.csv
 
-mv report.ra.csv ${output-path}exp3.csv
+mv report.ra.csv ${outputpath}exp3.csv
 
 # Experiment 4
 cd $llvmpath
@@ -52,4 +52,4 @@ touch TEST.ra.Makefile TEST.ra.report
 cd $testpath
 make TEST=ra ANALYSIS=-ra-inter-cousot INLINE=1 report report.csv
 
-mv report.ra.csv ${output-path}exp4.csv
+mv report.ra.csv ${outputpath}exp4.csv
