@@ -11,7 +11,7 @@ CURDIR  := $(shell cd .; pwd)
 PROGDIR := $(PROJ_SRC_ROOT)
 RELDIR  := $(subst $(PROGDIR),,$(CURDIR))
 
-LLVM_DIR = "/home/vhscampos/IC"
+LLVM_DIR = "/work/victorsc"
 LLVM_BUILD = "Debug+Asserts"
 
 
@@ -26,7 +26,7 @@ Output/%.$(TEST).report.txt: Output/%.linked.rbc $(LOPT) \
 	@echo "---------------------------------------------------------------" >> $@
 	@echo ">>> ========= '$(RELDIR)/$*' Program" >> $@
 	@echo "---------------------------------------------------------------" >> $@
-	@-$(LOPT) -mem2reg -stats -time-passes $< > $<.m2r.bc 2>>$@ 
+	@-$(LOPT) -mem2reg -stats -time-passes $< > $<.m2r.bc 2>>$@
 	@if [ -n "$(INLINE)" ]; then \
 		$(LOPT) -internalize -inline -break-crit-edges -instnamer -stats -time-passes $<.m2r.bc > $<.more.bc 2>>$@; \
 	else \

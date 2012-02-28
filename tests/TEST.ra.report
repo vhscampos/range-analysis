@@ -20,13 +20,16 @@ $TrimRepeatedPrefix = 1;
  [],
  ["Init", '([0-9]+).*Initial number of bits'],
  ["Needed", '([0-9]+).*Needed bits'],
- ["Pct", '([0-9]+).*Percentage of reduction of the number of bits'],
+ ["Pct", '([0-9.]+).*Percentage of reduction'],
  [],
  ["SCCs", '([0-9]+).*Number of strongly connected components'],
  ["SCCs 1", '([0-9]+).*Number of SCCs containing only one node'],
  [],
  ["vSSA", '([0-9.]+).*Static Single Assignment Construction'],
- ["Analysis", '([0-9.]+).*Range Analysis*'],
+ ["RangeAnalysis", '([0-9.]+).*Range Analysis*'],
+ ["BuildGraph", '([0-9.]+).*BuildGraph elapsed time'],
+ ["Nuutila", '([0-9.]+).*Nuutila elapsed time'],
+ ["SCCs resolution", '([0-9.]+).*SCCs resolution elapsed time'],
  [],
  );
 

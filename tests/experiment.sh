@@ -9,9 +9,9 @@
 #
 
 # Do not forget to put the ending / in every path below
-llvmpath=/home/vhscampos/IC/llvm-3.0/
+llvmpath=/work/victorsc/llvm-3.0/
 testpath=${llvmpath}projects/test-suite/External/SPEC/CINT2006/
-outputpath=/home/vhscampos/output/
+outputpath=/work/victorsc/output/
 build=Debug+Asserts/
 
 # Experiment 1
