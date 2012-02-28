@@ -568,9 +568,11 @@ class Profile {
 	public:
 		class TimeValue: public sys::TimeValue {
 			public:
+				// Default constructor
 				TimeValue():
 					sys::TimeValue(0.0) {}
 				
+				// Copy constructor related to parent class
 				TimeValue(const sys::TimeValue &from):
 					sys::TimeValue(0.0)
 				{
@@ -586,15 +588,38 @@ class Profile {
 					nanoseconds(from.nanoseconds());
 				}
 				
-				TimeValue operator=(const TimeValue &from) {
-					TimeValue result;
-					result.seconds(from.seconds());
-					result.nanoseconds(from.nanoseconds());
-					return result;
-				}
+				// Assignment operator
+				TimeValue& operator=(const TimeValue &from) {
+					if (*this == from) {
+						return *this;
+					}
 					
+					seconds(from.seconds());
+					nanoseconds(from.nanoseconds());
+					
+					return *this;
+				}
+				
+				// Add operator
+				TimeValue operator+(const TimeValue &op) {
+					return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) + static_cast<sys::TimeValue>(op));
+				}
+				
+				TimeValue& operator+=(const TimeValue &op) {
+					TimeValue result = *this + op;
+					*this = result;
+					return *this;
+				}
+				
+				// Sub operator
 				TimeValue operator-(const TimeValue &op) {
 					return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) - static_cast<sys::TimeValue>(op));
+				}
+				
+				TimeValue& operator-=(const TimeValue &op) {
+					TimeValue result = *this - op;
+					*this = result;
+					return *this;
 				}
 		};
 	

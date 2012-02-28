@@ -1515,7 +1515,7 @@ ConstraintGraph::ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs,
 
 /// The dtor.
 ConstraintGraph::~ConstraintGraph() {
-	delete symbMap;
+	//delete symbMap;
 
 	for (VarNodes::iterator vit = vars->begin(), vend = vars->end();
 			vit != vend; ++vit) {
