@@ -577,6 +577,21 @@ class Profile {
 					seconds(from.seconds());
 					nanoseconds(from.nanoseconds());
 				}
+				
+				// Copy constructor
+				TimeValue(const TimeValue &from):
+					sys::TimeValue(0.0)
+				{
+					seconds(from.seconds());
+					nanoseconds(from.nanoseconds());
+				}
+				
+				TimeValue operator=(const TimeValue &from) {
+					TimeValue result;
+					result.seconds(from.seconds());
+					result.nanoseconds(from.nanoseconds());
+					return result;
+				}
 					
 				TimeValue operator-(const TimeValue &op) {
 					return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) - static_cast<sys::TimeValue>(op));

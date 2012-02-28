@@ -124,7 +124,7 @@ unsigned RangeAnalysis::getMaxBitWidth(const Function& F) {
 	}
 
 	// Bitwidth equal to 0 is not valid, so we increment to 1
-//	if (max == 0) ++max;
+	if (max == 0) ++max;
 	
 	return max;
 }
@@ -2223,10 +2223,10 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
 	// Builds symbMap
+	Profile::TimeValue before = prof.timenow();
 	buildSymbolicIntersectMap();
 
 	// List of SCCs
-	Profile::TimeValue before = prof.timenow();
 	Nuutila sccList(vars, useMap, symbMap);
 	Profile::TimeValue after = prof.timenow();
 	Profile::TimeValue elapsed = after - before;
