@@ -189,6 +189,7 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
+	prof.printTime("ComputeStats");
 	
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
@@ -413,6 +414,7 @@ InterProceduralRA<CGT>::~InterProceduralRA(){
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
+	prof.printTime("ComputeStats");
 	
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
@@ -2299,7 +2301,10 @@ void ConstraintGraph::findIntervals() {
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
 #endif
+	before = prof.timenow();
 	computeStats();
+	elapsed = prof.timenow() - before;
+	prof.updateTime("ComputeStats", elapsed);
 }
 
 void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component
@@ -2486,25 +2491,24 @@ void ConstraintGraph::computeStats() {
 
 		if (CR.getLower().isNegative()) {
 			APInt abs = CR.getLower().abs();
-
-			unsigned log = abs.ceilLogBase2();
-
-			lb = (log > 1) ? log : log + 1;
+			lb = abs.getActiveBits() + 1;
 		} else {
 			lb = CR.getLower().getActiveBits() + 1;
 		}
 
 		if (CR.getUpper().isNegative()) {
 			APInt abs = CR.getUpper().abs();
-
-			unsigned log = abs.ceilLogBase2();
-
-			ub = (log > 1) ? log : log + 1;
+			ub = abs.getActiveBits() + 1;
 		} else {
 			ub = CR.getUpper().getActiveBits() + 1;
 		}
 
 		unsigned nBits = lb > ub ? lb : ub;
+		
+		// If both bounds are positive, decrement needed bits by 1
+		if (!CR.getLower().isNegative() && !CR.getUpper().isNegative()) {
+			--nBits;
+		}
 
 		if (nBits < total) {
 			needBits += nBits;
