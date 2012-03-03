@@ -26,19 +26,10 @@ Output/%.$(TEST).report.txt: Output/%.linked.rbc $(LOPT) \
 	@echo "---------------------------------------------------------------" >> $@
 	@echo ">>> ========= '$(RELDIR)/$*' Program" >> $@
 	@echo "---------------------------------------------------------------" >> $@
-	@-$(LOPT) -mem2reg -stats -time-passes $< > $<.m2r.bc 2>>$@
 	@if [ -n "$(INLINE)" ]; then \
-		$(LOPT) -internalize -inline -break-crit-edges -instnamer -stats -time-passes $<.m2r.bc > $<.more.bc 2>>$@; \
+		@$(LOPT) -mem2reg -internalize -inline -instcount -stats -time-passes -disable-output $< 2>>$@
 	else \
-		$(LOPT) -break-crit-edges -instnamer -stats -time-passes $<.m2r.bc > $<.more.bc 2>>$@; \
-	fi
-	@if [ -n "$(ESSA)" ]; then \
-		$(LOPT) -load $(LLVM_DIR)/llvm-3.0/$(LLVM_BUILD)/lib/vSSA.so -vssa \
-		-load $(LLVM_DIR)/llvm-3.0/$(LLVM_BUILD)/lib/RangeAnalysis.so \
-		$(ANALYSIS) -instcount -stats -time-passes -disable-output $<.more.bc 2>>$@; \
-	else \
-		$(LOPT) -load $(LLVM_DIR)/llvm-3.0/$(LLVM_BUILD)/lib/RangeAnalysis.so \
-		$(ANALYSIS) -instcount -stats -time-passes -disable-output $<.more.bc 2>>$@; \
+		@$(LOPT) -mem2reg -instcount -stats -time-passes -disable-output $< 2>>$@
 	fi
 
 REPORT_DEPENDENCIES := $(LOPT)

@@ -17,6 +17,7 @@ $TrimRepeatedPrefix = 1;
  [],
  ["Oprs", '([0-9]+).*Number of operations'],
  ["Vars", '([0-9]+).*Number of variables'],
+ ["Insts", '([0-9]+).*Number of instructions (of all types)'],
  [],
  ["Init", '([0-9]+).*Initial number of bits'],
  ["Needed", '([0-9]+).*Needed bits'],
@@ -30,6 +31,7 @@ $TrimRepeatedPrefix = 1;
  ["BuildGraph", '([0-9.]+).*BuildGraph elapsed time'],
  ["Nuutila", '([0-9.]+).*Nuutila elapsed time'],
  ["SCCs resolution", '([0-9.]+).*SCCs resolution elapsed time'],
+ ["ComputeStats", '([0-9.]+).*ComputeStats elapsed time'],
  [],
  );
 
