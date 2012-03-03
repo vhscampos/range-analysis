@@ -248,11 +248,11 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	prof.updateTime("BuildGraph", elapsed);
 
 #ifdef PRINT_DEBUG
-	G->printToFile(*(M.begin()), "/tmp/" + M.begin()->getName() + "cgpre.dot");
+	G->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpre.dot");
 #endif
 	G->findIntervals();
 #ifdef PRINT_DEBUG
-	G->printToFile(*(M.begin()), "/tmp/" + M.begin()->getName() + "cgpos.dot");
+	G->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpos.dot");
 #endif
 	// Collect statistics
 	numVars = VarNodes.size();
@@ -684,7 +684,14 @@ Range Range::shl(const Range& other) {
 }
 
 Range Range::lshr(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
+	
+	// If any of the bounds is negative, result is [0, +inf] automatically
+	if (this->getLower().isNegative() || this->getUpper().isNegative()) {
+		return Range(Zero, Max);
+	}
+	
+	APInt ll = Min, lu = Min, ul = Max, uu = Max;	
+	
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().lshr(other.getLower()); // lower lower
 	}
@@ -2258,7 +2265,15 @@ void ConstraintGraph::findIntervals() {
 				sizeMaxSCC = component.size();
 			}
 
-			//PRINTCOMPONENT(component)
+			PRINTCOMPONENT(component)
+			
+			for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+				VarNode *var = *cit;
+				if (var->getValue()->getName() == "vSSA_sigma.i420.i" || var->getValue()->getName() == "shr.i1110.i") {
+					errs() << "";
+					break;
+				}
+			}
 
 			UseMap compUseMap = buildUseMap(component);
 

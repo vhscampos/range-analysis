@@ -58,7 +58,7 @@
 //#define SCC_DEBUG
 
 //TODO: comment the line below to disable the dot printing of Constraint Graphs
-//#define PRINT_DEBUG
+#define PRINT_DEBUG
 
 #define PRINTCOMPONENT(component) \
 errs() << "\n--------------\n"; \
