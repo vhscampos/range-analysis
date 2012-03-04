@@ -11,7 +11,7 @@ CURDIR  := $(shell cd .; pwd)
 PROGDIR := $(PROJ_SRC_ROOT)
 RELDIR  := $(subst $(PROGDIR),,$(CURDIR))
 
-LLVM_DIR = "/work/victorsc"
+LLVM_DIR = "/home/vhscampos/IC"
 LLVM_BUILD = "Debug+Asserts"
 
 

@@ -21,44 +21,44 @@ build=Debug+Asserts/
 mkdir -p $outputpath
 
 # Experiment 1
-#cd $llvmpath
-#cd projects/test-suite
-#touch TEST.ra.Makefile TEST.ra.report
+cd $llvmpath
+cd projects/test-suite
+touch TEST.ra.Makefile TEST.ra.report
 
-#cd $testpath
-#make TEST=ra ANALYSIS=-ra-intra-cousot report report.csv
+cd $testpath
+make TEST=ra ANALYSIS=-ra-intra-cousot report report.csv
 
-#mv ${testpath}report.ra.csv ${outputpath}exp1.csv
+mv ${testpath}report.ra.csv ${outputpath}exp1.csv
 
 # Experiment 2
-#cd $llvmpath
-#cd projects/test-suite
-#touch TEST.ra.Makefile TEST.ra.report
+cd $llvmpath
+cd projects/test-suite
+touch TEST.ra.Makefile TEST.ra.report
 
-#cd $testpath
-#make TEST=ra ESSA=1 ANALYSIS=-ra-intra-cousot report report.csv
+cd $testpath
+make TEST=ra ESSA=1 ANALYSIS=-ra-intra-cousot report report.csv
 
-#mv ${testpath}report.ra.csv ${outputpath}exp2.csv
+mv ${testpath}report.ra.csv ${outputpath}exp2.csv
 
 # Experiment 3
-#cd $llvmpath
-#cd projects/test-suite
-#touch TEST.ra.Makefile TEST.ra.report
+cd $llvmpath
+cd projects/test-suite
+touch TEST.ra.Makefile TEST.ra.report
 
-#cd $testpath
-#make TEST=ra ANALYSIS=-ra-intra-cousot INLINE=1 report report.csv
+cd $testpath
+make TEST=ra ANALYSIS=-ra-intra-cousot INLINE=1 report report.csv
 
-#mv ${testpath}report.ra.csv ${outputpath}exp3.csv
+mv ${testpath}report.ra.csv ${outputpath}exp3.csv
 
 # Experiment 4
-#cd $llvmpath
-#cd projects/test-suite
-#touch TEST.ra.Makefile TEST.ra.report
+cd $llvmpath
+cd projects/test-suite
+touch TEST.ra.Makefile TEST.ra.report
 
-#cd $testpath
-#make TEST=ra ESSA=1 ANALYSIS=-ra-intra-cousot INLINE=1 report report.csv
+cd $testpath
+make TEST=ra ESSA=1 ANALYSIS=-ra-intra-cousot INLINE=1 report report.csv
 
-#mv ${testpath}report.ra.csv ${outputpath}exp4.csv
+mv ${testpath}report.ra.csv ${outputpath}exp4.csv
 
 # Experiment 5
 cd $llvmpath

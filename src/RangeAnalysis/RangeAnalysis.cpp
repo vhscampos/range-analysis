@@ -25,6 +25,13 @@ STATISTIC(sizeMaxSCC, "Size of largest SCC.");
 STATISTIC(numVars, "Number of variables");
 STATISTIC(numUnknown, "Number of unknown variables");
 STATISTIC(numEmpty, "Number of empty-set variables");
+STATISTIC(numCPlusInf, "Number of variables [c, +inf].");
+STATISTIC(numCC, "Number of variables [c, c].");
+STATISTIC(numMinInfC, "Number of variables [-inf, c].");
+STATISTIC(numMaxRange, "Number of variables [-inf, +inf].");
+STATISTIC(numConstants, "Number of constants.");
+STATISTIC(numZeroUses, "Number of variables without any use.");
+STATISTIC(numNotInt, "Number of variables that are not Integer.");
 STATISTIC(numOps, "Number of operations");
 
 // The number of bits needed to store the largest variable of the function (APInt).
@@ -2470,16 +2477,19 @@ void ConstraintGraph::computeStats() {
 			vbgn != vend; ++vbgn) {
 		// We only count the instructions that have uses.
 		if (vbgn->first->getNumUses() == 0) {
-			continue;
+			++numZeroUses;
+			//continue;
 		}
 
 		// ConstantInts must NOT be counted!!
 		if (isa<ConstantInt>(vbgn->first)) {
+			++numConstants;
 			continue;
 		}
 		
 		// Variables that are not IntegerTy are ignored
 		if (!vbgn->first->getType()->isIntegerTy()) {
+			++numNotInt;
 			continue;
 		}
 
@@ -2500,6 +2510,21 @@ void ConstraintGraph::computeStats() {
 		if (CR.isEmpty()) {
 			++numEmpty;
 			continue;
+		}
+		
+		if (CR.getLower().eq(Min)) {
+			if (CR.getUpper().eq(Max)) {
+				++numMaxRange;
+			}
+			else {
+				++numMinInfC;
+			}
+		}
+		else if (CR.getUpper().eq(Max)) {
+			++numCPlusInf;
+		}
+		else {
+			++numCC;
 		}
 
 		unsigned ub, lb;
