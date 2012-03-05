@@ -146,18 +146,16 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
 // ========================================================================== //
 // IntraProceduralRangeAnalysis
 // ========================================================================== //
+template <class CGT>
+Range IntraProceduralRA<CGT>::getRange(const Value *v){
+	return CG->getRange(v);
+}
 
 template<class CGT>
 bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
-	// The data structures
-	DenseMap<const Value*, VarNode*> VNodes;
-	SmallPtrSet<BasicOp*, 64> GOprs;
-	DenseMap<const Value*, BasicOp*> DMap;
-	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UMap;
-	DenseMap<const Value*, ValueBranchMap> VBMap;
-	DenseMap<const Value*, ValueSwitchMap> VSMap;
-	ConstraintGraph *CG = new CGT(&VNodes, &GOprs, &DMap, &UMap, &VBMap,
-			&VSMap);
+	errs() << "\nIntraProceduralRA<CGT>::runOnFunction of " << F.getName() << ":\n";
+//	if(CG) delete CG;
+	CG = new CGT();
 
 	MAX_BIT_INT = getMaxBitWidth(F);
 	updateMinMax(MAX_BIT_INT);
@@ -177,12 +175,6 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	CG->printToFile(F, "/tmp/" + F.getName() + "cgpos.dot");
 #endif
 
-	// Collect statistics
-	numVars += VNodes.size();
-	numOps += GOprs.size();
-	
-	delete CG;
-	
 	return false;
 }
 
@@ -201,11 +193,17 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
+
+//	delete CG;
 }
 
 // ========================================================================== //
 // InterProceduralRangeAnalysis
 // ========================================================================== //
+template <class CGT>
+Range InterProceduralRA<CGT>::getRange(const Value *v){
+	return CG->getRange(v);
+}
 
 template<class CGT>
 unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M) {
@@ -224,16 +222,9 @@ unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M) {
 
 template<class CGT>
 bool InterProceduralRA<CGT>::runOnModule(Module &M) {
-	DenseMap<const Value*, VarNode*> VarNodes;
-	SmallPtrSet<BasicOp*, 64> GenOprs;
-	DenseMap<const Value*, BasicOp*> DefMap;
-	DenseMap<const Value*, SmallPtrSet<BasicOp*, 8> > UseMap;
-	DenseMap<const Value*, ValueBranchMap> ValuesBranchMap;
-	DenseMap<const Value*, ValueSwitchMap> ValuesSwitchMap;
-
 	// Constraint Graph
-	ConstraintGraph *G = new CGT(&VarNodes, &GenOprs, &DefMap, &UseMap,
-			&ValuesBranchMap, &ValuesSwitchMap);
+//	if(CG) delete CG;
+	CG = new CGT();
 
 	MAX_BIT_INT = getMaxBitWidth(M);
 	updateMinMax(MAX_BIT_INT);
@@ -246,27 +237,21 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 		if (I->isDeclaration() || I->isVarArg())
 			continue;
 			
-		G->buildGraph(*I);
-		MatchParametersAndReturnValues(*I, *G);
+		CG->buildGraph(*I);
+		MatchParametersAndReturnValues(*I, *CG);
 	}
-	G->buildVarNodes();
+	CG->buildVarNodes();
 	
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
 
 #ifdef PRINT_DEBUG
-	G->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpre.dot");
+	CG->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpre.dot");
 #endif
-	G->findIntervals();
+	CG->findIntervals();
 #ifdef PRINT_DEBUG
-	G->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpos.dot");
+	CG->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpos.dot");
 #endif
-	// Collect statistics
-	numVars = VarNodes.size();
-	numOps = GenOprs.size();
-
-	delete G;
-
 	// FIXME: Não sei se tem que retornar true ou false
 	return true;
 }
@@ -1517,57 +1502,58 @@ void ValueSwitchMap::clear() {
 // ConstraintGraph
 // ========================================================================== //
 
-ConstraintGraph::ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs,
-		DefMap *defmap, UseMap *usemap, ValuesBranchMap *valuesbranchmap,
-		ValuesSwitchMap *valuesswitchMap) {
-	this->vars = varNodes;
-	this->oprs = genOprs;
-	this->defMap = defmap;
-	this->useMap = usemap;
-	this->valuesBranchMap = valuesbranchmap;
-	this->valuesSwitchMap = valuesswitchMap;
+ConstraintGraph::ConstraintGraph() {
 	this->func = NULL;
 }
 
 /// The dtor.
 ConstraintGraph::~ConstraintGraph() {
+	errs() << "\nConstraintGraph::~ConstraintGraph : "<< this->vars.size();
 	//delete symbMap;
 
-	for (VarNodes::iterator vit = vars->begin(), vend = vars->end();
+	for (VarNodes::iterator vit = vars.begin(), vend = vars.end();
 			vit != vend; ++vit) {
 		delete vit->second;
 	}
 
-	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend;
+	for (GenOprs::iterator oit = oprs.begin(), oend = oprs.end(); oit != oend;
 			++oit) {
 		delete *oit;
 	}
 
-	for (ValuesBranchMap::iterator vit = valuesBranchMap->begin(), vend =
-			valuesBranchMap->end(); vit != vend; ++vit) {
+	for (ValuesBranchMap::iterator vit = valuesBranchMap.begin(), vend =
+			valuesBranchMap.end(); vit != vend; ++vit) {
 		vit->second.clear();
 	}
 
-	for (ValuesSwitchMap::iterator vit = valuesSwitchMap->begin(), vend =
-			valuesSwitchMap->end(); vit != vend; ++vit) {
+	for (ValuesSwitchMap::iterator vit = valuesSwitchMap.begin(), vend =
+			valuesSwitchMap.end(); vit != vend; ++vit) {
 		vit->second.clear();
 	}
 }
 
+Range ConstraintGraph::getRange(const Value *v) {
+	errs() << "\nInconsistency " << this->vars.size();
+//	VarNodes::iterator vit = this->vars.find(v);
+//	if (vit == this->vars.end())
+		return Range(Min, Max, Unknown);
+//	return vit->second->getRange();
+}
+
 /// Adds a VarNode to the graph.
 VarNode* ConstraintGraph::addVarNode(const Value* V) {
-	VarNodes::iterator vit = this->vars->find(V);
+	VarNodes::iterator vit = this->vars.find(V);
 	
-	if (vit != this->vars->end()) {
+	if (vit != this->vars.end()) {
 		return vit->second;
 	}
 
 	VarNode* node = new VarNode(V);
-	this->vars->insert(std::make_pair(V, node));
+	this->vars.insert(std::make_pair(V, node));
 
 	// Inserts the node in the use map list.
 	SmallPtrSet<BasicOp*, 8> useList;
-	this->useMap->insert(std::make_pair(V, useList));
+	this->useMap.insert(std::make_pair(V, useList));
 	return node;
 }
 
@@ -1595,13 +1581,13 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	// Create the operation using the intersect to constrain sink's interval.
 	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, I, source,
 			I->getOpcode());
-	this->oprs->insert(UOp);
+	this->oprs.insert(UOp);
 
 	// Insert this definition in defmap
-	(*this->defMap)[sink->getValue()] = UOp;
+	this->defMap[sink->getValue()] = UOp;
 
 	// Inserts the sources of the operation in the use map list.
-	this->useMap->find(source->getValue())->second.insert(UOp);
+	this->useMap.find(source->getValue())->second.insert(UOp);
 }
 
 /// XXX: I'm assuming that we are always analyzing bytecodes in e-SSA form.
@@ -1621,14 +1607,14 @@ void ConstraintGraph::addBinaryOp(const Instruction* I) {
 	BinaryOp* BOp = new BinaryOp(BI, sink, I, source1, source2, I->getOpcode());
 
 	// Insert the operation in the graph.
-	this->oprs->insert(BOp);
+	this->oprs.insert(BOp);
 
 	// Insert this definition in defmap
-	(*this->defMap)[sink->getValue()] = BOp;
+	this->defMap[sink->getValue()] = BOp;
 
 	// Inserts the sources of the operation in the use map list.
-	this->useMap->find(source1->getValue())->second.insert(BOp);
-	this->useMap->find(source2->getValue())->second.insert(BOp);
+	this->useMap.find(source1->getValue())->second.insert(BOp);
+	this->useMap.find(source2->getValue())->second.insert(BOp);
 }
 
 /// Add a phi node (actual phi, does not include sigmas)
@@ -1638,10 +1624,10 @@ void ConstraintGraph::addPhiOp(const PHINode* Phi) {
 	PhiOp* phiOp = new PhiOp(new BasicInterval(), sink, Phi, Phi->getOpcode());
 
 	// Insert the operation in the graph.
-	this->oprs->insert(phiOp);
+	this->oprs.insert(phiOp);
 
 	// Insert this definition in defmap
-	(*this->defMap)[sink->getValue()] = phiOp;
+	this->defMap[sink->getValue()] = phiOp;
 
 	// Create the sources.
 	for (User::const_op_iterator it = Phi->op_begin(), e = Phi->op_end();
@@ -1650,7 +1636,7 @@ void ConstraintGraph::addPhiOp(const PHINode* Phi) {
 		phiOp->addSource(source);
 
 		// Inserts the sources of the operation in the use map list.
-		this->useMap->find(source->getValue())->second.insert(phiOp);
+		this->useMap.find(source->getValue())->second.insert(phiOp);
 	}
 }
 
@@ -1669,10 +1655,10 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma) {
 		VarNode* source = addVarNode(operand);
 
 		// Create the operation (two cases from: branch or switch)
-		ValuesBranchMap::iterator vbmit = this->valuesBranchMap->find(operand);
+		ValuesBranchMap::iterator vbmit = this->valuesBranchMap.find(operand);
 
 		// Branch case
-		if (vbmit != this->valuesBranchMap->end()) {
+		if (vbmit != this->valuesBranchMap.end()) {
 			const ValueBranchMap &VBM = vbmit->second;
 			if (thisbb == VBM.getBBTrue()) {
 				BItv = VBM.getItvT();
@@ -1683,10 +1669,10 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma) {
 			}
 		} else {
 			// Switch case
-			ValuesSwitchMap::iterator vsmit = this->valuesSwitchMap->find(
+			ValuesSwitchMap::iterator vsmit = this->valuesSwitchMap.find(
 					operand);
 
-			if (vsmit == this->valuesSwitchMap->end()) {
+			if (vsmit == this->valuesSwitchMap.end()) {
 				continue;
 			}
 
@@ -1712,13 +1698,13 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma) {
 		}
 
 		// Insert the operation in the graph.
-		this->oprs->insert(sigmaOp);
+		this->oprs.insert(sigmaOp);
 
 		// Insert this definition in defmap
-		(*this->defMap)[sink->getValue()] = sigmaOp;
+		this->defMap[sink->getValue()] = sigmaOp;
 
 		// Inserts the sources of the operation in the use map list.
-		this->useMap->find(source->getValue())->second.insert(sigmaOp);
+		this->useMap.find(source->getValue())->second.insert(sigmaOp);
 	}
 }
 
@@ -1806,11 +1792,11 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw) {
 	}
 
 	ValueSwitchMap VSM(condition, BBsuccs);
-	valuesSwitchMap->insert(std::make_pair(condition, VSM));
+	valuesSwitchMap.insert(std::make_pair(condition, VSM));
 
 	if (Op0_0) {
 		ValueSwitchMap VSM_0(Op0_0, BBsuccs);
-		valuesSwitchMap->insert(std::make_pair(Op0_0, VSM_0));
+		valuesSwitchMap.insert(std::make_pair(Op0_0, VSM_0));
 	}
 }
 
@@ -1884,7 +1870,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 
 		const Value *Op0 = ici->getOperand(0);
 		ValueBranchMap VBM(Op0, TBlock, FBlock, BT, BF);
-		valuesBranchMap->insert(std::make_pair(Op0, VBM));
+		valuesBranchMap.insert(std::make_pair(Op0, VBM));
 
 		// Do the same for the operand of Op0 (if Op0 is a cast instruction)
 		const CastInst *castinst = NULL;
@@ -1895,7 +1881,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 			BasicInterval* BF = new BasicInterval(FValues);
 
 			ValueBranchMap VBM(Op0_0, TBlock, FBlock, BT, BF);
-			valuesBranchMap->insert(std::make_pair(Op0_0, VBM));
+			valuesBranchMap.insert(std::make_pair(Op0_0, VBM));
 		}
 	} else {
 		// Create the interval using the intersection in the branch.
@@ -1912,7 +1898,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 		SymbInterval* SFOp0 = new SymbInterval(CR, Op1, invPred);
 
 		ValueBranchMap VBMOp0(Op0, TBlock, FBlock, STOp0, SFOp0);
-		valuesBranchMap->insert(std::make_pair(Op0, VBMOp0));
+		valuesBranchMap.insert(std::make_pair(Op0, VBMOp0));
 
 		// Symbolic intervals for operand of op0 (if op0 is a cast instruction)
 		const CastInst *castinst = NULL;
@@ -1923,14 +1909,14 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 			SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
 
 			ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
-			valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
+			valuesBranchMap.insert(std::make_pair(Op0_0, VBMOp1_1));
 		}
 
 		// Symbolic intervals for op1
 		SymbInterval* STOp1 = new SymbInterval(CR, Op0, invPred);
 		SymbInterval* SFOp1 = new SymbInterval(CR, Op0, pred);
 		ValueBranchMap VBMOp1(Op1, TBlock, FBlock, STOp1, SFOp1);
-		valuesBranchMap->insert(std::make_pair(Op1, VBMOp1));
+		valuesBranchMap.insert(std::make_pair(Op1, VBMOp1));
 
 		// Symbolic intervals for operand of op1 (if op1 is a cast instruction)
 		castinst = NULL;
@@ -1941,7 +1927,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 			SymbInterval* SFOp1_1 = new SymbInterval(CR, Op1, invPred);
 
 			ValueBranchMap VBMOp1_1(Op0_0, TBlock, FBlock, STOp1_1, SFOp1_1);
-			valuesBranchMap->insert(std::make_pair(Op0_0, VBMOp1_1));
+			valuesBranchMap.insert(std::make_pair(Op0_0, VBMOp1_1));
 		}
 	}
 }
@@ -1993,9 +1979,9 @@ void ConstraintGraph::buildGraph(const Function& F) {
 
 void ConstraintGraph::buildVarNodes() {
 	// Initializes the nodes and the use map structure.
-	VarNodes::iterator bgn = this->vars->begin(), end = this->vars->end();
+	VarNodes::iterator bgn = this->vars.begin(), end = this->vars.end();
 	for (; bgn != end; ++bgn) {
-		bgn->second->init(!this->defMap->count(bgn->first));
+		bgn->second->init(!this->defMap.count(bgn->first));
 	}
 }
 
@@ -2156,7 +2142,7 @@ void CropDFS::posUpdate(const UseMap &compUseMap,
 		SmallPtrSet<const Value*, 6>& entryPoints,
 		const SmallPtrSet<VarNode*, 32> *component) {
 	storeAbstractStates(component);
-	GenOprs::iterator obgn = oprs->begin(), oend = oprs->end();
+	GenOprs::iterator obgn = oprs.begin(), oend = oprs.end();
 	for (; obgn != oend; ++obgn) {
 		BasicOp *op = *obgn;
 
@@ -2243,7 +2229,7 @@ void ConstraintGraph::findIntervals() {
 	buildSymbolicIntersectMap();
 
 	// List of SCCs
-	Nuutila sccList(vars, useMap, symbMap);
+	Nuutila sccList(&vars, &useMap, &symbMap);
 	Profile::TimeValue after = prof.timenow();
 	Profile::TimeValue elapsed = after - before;
 	prof.updateTime("Nuutila", elapsed);
@@ -2323,10 +2309,13 @@ void ConstraintGraph::findIntervals() {
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
 #endif
+
+#ifdef STATS
 	before = prof.timenow();
 	computeStats();
 	elapsed = prof.timenow() - before;
 	prof.updateTime("ComputeStats", elapsed);
+#endif
 }
 
 void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component
@@ -2343,9 +2332,9 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component
 
 		// FIXME: trocar strcmp por enumeraçao de varnodes
 		if (V->getName().startswith(sigmaString)) {
-			DefMap::iterator dit = this->defMap->find(V);
+			DefMap::iterator dit = this->defMap.find(V);
 
-			if (dit != this->defMap->end()) {
+			if (dit != this->defMap.end()) {
 				BasicOp *bop = dit->second;
 				SigmaOp *defop = dyn_cast<SigmaOp>(bop);
 
@@ -2374,9 +2363,9 @@ void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
 
-		SymbMap::iterator sit = symbMap->find(V);
+		SymbMap::iterator sit = symbMap.find(V);
 
-		if (sit != symbMap->end()) {
+		if (sit != symbMap.end()) {
 			for (SmallPtrSetIterator<BasicOp*> opit = sit->second.begin(),
 					opend = sit->second.end(); opit != opend; ++opit) {
 				BasicOp *op = *opit;
@@ -2425,7 +2414,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 
 	// Print the body of the .dot file.
 	VarNodes::const_iterator bgn, end;
-	for (bgn = vars->begin(), end = vars->end(); bgn != end; ++bgn) {
+	for (bgn = vars.begin(), end = vars.end(); bgn != end; ++bgn) {
 		if (const ConstantInt* C = dyn_cast<ConstantInt>(bgn->first)) {
 			OS << " " << C->getValue();
 		} else {
@@ -2437,7 +2426,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 		OS << " [label=\"" << bgn->second << "\"]\n";
 	}
 
-	GenOprs::const_iterator B = oprs->begin(), E = oprs->end();
+	GenOprs::const_iterator B = oprs.begin(), E = oprs.end();
 	for (; B != E; ++B) {
 		(*B)->print(OS);
 		OS << "\n";
@@ -2457,7 +2446,7 @@ void ConstraintGraph::printToFile(const Function& F, Twine FileName) {
 }
 
 void ConstraintGraph::printResultIntervals() {
-	for (VarNodes::iterator vbgn = vars->begin(), vend = vars->end();
+	for (VarNodes::iterator vbgn = vars.begin(), vend = vars.end();
 			vbgn != vend; ++vbgn) {
 		if (const ConstantInt* C = dyn_cast<ConstantInt>(vbgn->first)) {
 			errs() << C->getValue() << " ";
@@ -2473,7 +2462,7 @@ void ConstraintGraph::printResultIntervals() {
 }
 
 void ConstraintGraph::computeStats() {
-	for (VarNodes::const_iterator vbgn = vars->begin(), vend = vars->end();
+	for (VarNodes::const_iterator vbgn = vars.begin(), vend = vars.end();
 			vbgn != vend; ++vbgn) {
 		// We only count the instructions that have uses.
 		if (vbgn->first->getNumUses() == 0) {
@@ -2562,6 +2551,10 @@ void ConstraintGraph::computeStats() {
 	double needB = needBits;
 	double reduction = (double) (totalB - needB) * 100 / totalB;
 	percentReduction = (unsigned int) reduction;
+
+
+	numVars = this->vars.size();
+	numOps = this->oprs.size();
 }
 
 /*
@@ -2572,7 +2565,7 @@ void ConstraintGraph::computeStats() {
 //DefMap ConstraintGraph::buildDefMap(const SmallPtrSet<VarNode*, 32> &component)
 //{
 //	std::deque<BasicOp*> list;
-//	for (GenOprs::iterator opit = oprs->begin(), opend = oprs->end(); opit != opend; ++opit) {
+//	for (GenOprs::iterator opit = oprs.begin(), opend = oprs.end(); opit != opend; ++opit) {
 //		BasicOp *op = *opit;
 //
 //		if (std::find(component.begin(), component.end(), op->getSink()) != component.end()) {
@@ -2607,7 +2600,7 @@ UseMap ConstraintGraph::buildUseMap(
 		SmallPtrSet<BasicOp*, 8> &list = compUseMap[V];
 
 		// Get the use list of the variable in component
-		UseMap::iterator p = this->useMap->find(V);
+		UseMap::iterator p = this->useMap.find(V);
 
 		// For each operation in the list, verify if its sink is in the component
 		for (SmallPtrSetIterator<BasicOp*> opit = p->second.begin(), opend =
@@ -2631,10 +2624,11 @@ UseMap ConstraintGraph::buildUseMap(
  */
 void ConstraintGraph::buildSymbolicIntersectMap() {
 	// Creates the symbolic intervals map
-	symbMap = new SymbMap();
+	//FIXME: Why this map is beeing recreated?
+	symbMap = SymbMap();
 
 	// Iterate over the operations set
-	for (GenOprs::iterator oit = oprs->begin(), oend = oprs->end(); oit != oend;
+	for (GenOprs::iterator oit = oprs.begin(), oend = oprs.end(); oit != oend;
 			++oit) {
 		BasicOp *op = *oit;
 
@@ -2645,9 +2639,9 @@ void ConstraintGraph::buildSymbolicIntersectMap() {
 			SymbInterval* symbi = cast<SymbInterval>(uop->getIntersect());
 
 			const Value *V = symbi->getBound();
-			SymbMap::iterator p = symbMap->find(V);
+			SymbMap::iterator p = symbMap.find(V);
 
-			if (p != symbMap->end()) {
+			if (p != symbMap.end()) {
 				p->second.insert(uop);
 			} else {
 				SmallPtrSet<BasicOp*, 8> l;
@@ -2657,7 +2651,7 @@ void ConstraintGraph::buildSymbolicIntersectMap() {
 				}
 
 				l.insert(uop);
-				symbMap->insert(std::make_pair(V, l));
+				symbMap.insert(std::make_pair(V, l));
 			}
 		}
 
@@ -2676,7 +2670,7 @@ void ConstraintGraph::propagateToNextSCC(
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
 
-		UseMap::iterator p = this->useMap->find(V);
+		UseMap::iterator p = this->useMap.find(V);
 
 		for (SmallPtrSetIterator<BasicOp*> sit = p->second.begin(), send =
 				p->second.end(); sit != send; ++sit) {
@@ -2709,8 +2703,8 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap,
 			VarNodes::iterator source_value = vars->find(sit->first);
 			VarNode* source = source_value->second;
 
-//			if (source_value != vars->end()) {
-//				source = vars->find(sit->first)->second;
+//			if (source_value != vars.end()) {
+//				source = vars.find(sit->first)->second;
 //			}
 
 //			if (source == NULL) {

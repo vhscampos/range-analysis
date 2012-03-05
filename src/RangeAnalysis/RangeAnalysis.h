@@ -60,6 +60,14 @@
 //TODO: comment the line below to disable the dot printing of Constraint Graphs
 #define PRINT_DEBUG
 
+//Used to enable the stats computing. Comment the below line to disable it
+#define STATS
+
+//Used to limit the number of iterations of fixed meet operator.
+// This update runs before widening and is necessary to improve the result of
+// some particular cases
+#define NUMBER_FIXED_ITERATIONS 20
+
 #define PRINTCOMPONENT(component) \
 errs() << "\n--------------\n"; \
 		for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) { \
@@ -87,11 +95,8 @@ errs() << "\n--------------\n"; \
 #define ASSERT(cond,msg)
 #endif
 
-#define NUMBER_FIXED_ITERATIONS 20
-
 using namespace llvm;
 
-namespace {
 
 /// In our range analysis pass we have to perform operations on ranges all the
 /// time. LLVM has a class to perform operations on ranges: the class
@@ -682,24 +687,24 @@ typedef DenseMap<const Value*, ValueSwitchMap> ValuesSwitchMap;
 class ConstraintGraph {
 protected:
 	// The variables of the source program and the nodes which represent them.
-	VarNodes* vars;
+	VarNodes vars;
 	// The operations of the source program and the nodes which represent them.
-	GenOprs* oprs;
+	GenOprs oprs;
 
 private:
     // Save the last Function analyzed
     const Function *func;
 	// A map from variables to the operations that define them
-	DefMap* defMap;
+	DefMap defMap;
 	// A map from variables to the operations where these variables are used.
-	UseMap* useMap;
+	UseMap useMap;
 	// A map from variables to the operations where these
 	// variables are present as bounds
-	SymbMap* symbMap;
+	SymbMap symbMap;
 	// This data structure is used to store intervals, basic blocks and intervals
 	// obtained in the branches.
-	ValuesBranchMap* valuesBranchMap;
-	ValuesSwitchMap* valuesSwitchMap;
+	ValuesBranchMap valuesBranchMap;
+	ValuesSwitchMap valuesSwitchMap;
 	/// Adds a BinaryOp in the graph.
 	void addBinaryOp(const Instruction* I);
 	/// Adds a PhiOp in the graph.
@@ -729,15 +734,14 @@ public:
 	/// I'm doing this because I want to use this analysis in an
 	/// inter-procedural pass. So, I have to receive these data structures as
 	// parameters.
-	ConstraintGraph(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
-		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap);
+	ConstraintGraph();
 	virtual ~ConstraintGraph();
 	/// Adds a VarNode in the graph.
 	VarNode* addVarNode(const Value* V);
 	
-	GenOprs* getOprs() {return oprs;}
-	DefMap* getDefMap() {return defMap;}
-	UseMap* getUseMap() {return useMap;}
+	GenOprs* getOprs() {return &oprs;}
+	DefMap* getDefMap() {return &defMap;}
+	UseMap* getUseMap() {return &useMap;}
 	/// Adds an UnaryOp to the graph.
 	void addUnaryOp(const Instruction* I);
 	/// Iterates through all instructions in the function and builds the graph.
@@ -763,6 +767,7 @@ public:
 	void dump(const Function& F) const {print(F, dbgs()); dbgs() << '\n'; };
 	void printResultIntervals();
 	void computeStats();
+	Range getRange(const Value *v);
 };
 
 class Cousot: public ConstraintGraph {
@@ -773,9 +778,7 @@ private:
 		const SmallPtrSet<VarNode*, 32> *component);
 
 public:
-	Cousot(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
-		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap): ConstraintGraph(varNodes, genOprs,
-		defmap, usemap, valuesBranchMap, valuesSwitchMap) {}
+	Cousot(): ConstraintGraph() {}
 };
 
 class CropDFS: public ConstraintGraph{
@@ -788,9 +791,7 @@ private:
 	void crop(const UseMap &compUseMap, BasicOp *op);
 
 public:
-	CropDFS(VarNodes *varNodes, GenOprs *genOprs, DefMap *defmap, UseMap *usemap,
-		ValuesBranchMap *valuesBranchMap, ValuesSwitchMap *valuesSwitchMap): ConstraintGraph(varNodes, genOprs,
-		defmap, usemap, valuesBranchMap, valuesSwitchMap) {}
+	CropDFS(): ConstraintGraph() {}
 };
 
 class Nuutila {
@@ -828,6 +829,8 @@ public:
 };
 
 class RangeAnalysis{
+protected:
+	ConstraintGraph *CG;
 public:
 	/** Gets the maximum bit width of the operands in the instructions of the
 	 * function. This function is necessary because the class APInt only
@@ -838,16 +841,19 @@ public:
 	 */
 	static unsigned getMaxBitWidth(const Function& F);
 	static void updateMinMax(unsigned maxBitWidth);
+	virtual Range getRange(const Value *v) = 0;
+	virtual ~RangeAnalysis() { errs() << "\nRangeAnalysis"; }
 };
 
 template <class CGT>
 class InterProceduralRA: public ModulePass, RangeAnalysis{
 public:
 	static char ID; // Pass identification, replacement for typeid
-	InterProceduralRA() : ModulePass(ID) { }
+	InterProceduralRA() : ModulePass(ID) { CG = NULL; }
 	~InterProceduralRA();
 	bool runOnModule(Module &M);
 	static unsigned getMaxBitWidth(Module &M);
+	virtual Range getRange(const Value *v);
 private:
 	void MatchParametersAndReturnValues(Function &F, ConstraintGraph &G);
 };
@@ -856,10 +862,11 @@ template <class CGT>
 class IntraProceduralRA: public FunctionPass, RangeAnalysis{
 public:
 	static char ID; // Pass identification, replacement for typeid
-	IntraProceduralRA() : FunctionPass(ID) {}
+	IntraProceduralRA() : FunctionPass(ID) { CG = NULL; errs() << "\nIntraProceduralRA ctor"; }
 	~IntraProceduralRA();
 	void getAnalysisUsage(AnalysisUsage &AU) const;
 	bool runOnFunction(Function &F);
+	virtual Range getRange(const Value *v);
 }; // end of class RangeAnalysis
 
 class RangeUnitTest: public ModulePass{
@@ -872,7 +879,6 @@ public:
 	bool runOnModule(Module & M);
 };
 
-} // end namespace
 
 #endif /* LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_ */
 
