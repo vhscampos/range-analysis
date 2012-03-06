@@ -845,7 +845,7 @@ public:
 	static unsigned getMaxBitWidth(const Function& F);
 	static void updateMinMax(unsigned maxBitWidth);
 	virtual Range getRange(const Value *v) = 0;
-	virtual ~RangeAnalysis() { errs() << "\nRangeAnalysis"; }
+	virtual ~RangeAnalysis() { /*errs() << "\nRangeAnalysis";*/ }
 };
 
 template <class CGT>
@@ -865,7 +865,7 @@ template <class CGT>
 class IntraProceduralRA: public FunctionPass, RangeAnalysis{
 public:
 	static char ID; // Pass identification, replacement for typeid
-	IntraProceduralRA() : FunctionPass(ID) { CG = NULL; errs() << "\nIntraProceduralRA ctor"; }
+	IntraProceduralRA() : FunctionPass(ID) { CG = NULL; /*errs() << "\nIntraProceduralRA ctor";*/ }
 	~IntraProceduralRA();
 	void getAnalysisUsage(AnalysisUsage &AU) const;
 	bool runOnFunction(Function &F);

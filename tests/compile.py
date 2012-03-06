@@ -3,7 +3,7 @@
 import sys
 import os
 
-passPath = "~/workspace/ra/llvm-3.0/Debug/lib/"
+passPath = "/work/victorsc/llvm-3.0/Debug+Asserts/lib/"
 
 def checkArgs(args):
     if len(args) != 3:

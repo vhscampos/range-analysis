@@ -153,7 +153,6 @@ Range IntraProceduralRA<CGT>::getRange(const Value *v){
 
 template<class CGT>
 bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
-	errs() << "\nIntraProceduralRA<CGT>::runOnFunction of " << F.getName() << ":\n";
 //	if(CG) delete CG;
 	CG = new CGT();
 
@@ -1355,6 +1354,11 @@ Range BinaryOp::eval() const {
 		default:
 			break;
 		}
+		
+		// If resulting interval has become inconsistent, set it to max range for safety
+		if (result.getLower().sgt(result.getUpper())) {
+			result = Range(Min, Max);
+		}
 
 		//FIXME: check if this intersection happens
 		bool test = this->getIntersect()->getRange().isMaxRange();
@@ -1518,7 +1522,7 @@ ConstraintGraph::ConstraintGraph() {
 
 /// The dtor.
 ConstraintGraph::~ConstraintGraph() {
-	errs() << "\nConstraintGraph::~ConstraintGraph : "<< this->vars.size();
+//	errs() << "\nConstraintGraph::~ConstraintGraph : "<< this->vars.size();
 	//delete symbMap;
 
 	for (VarNodes::iterator vit = vars.begin(), vend = vars.end();
@@ -1543,7 +1547,7 @@ ConstraintGraph::~ConstraintGraph() {
 }
 
 Range ConstraintGraph::getRange(const Value *v) {
-	errs() << "\nInconsistency " << this->vars.size();
+//	errs() << "\nInconsistency " << this->vars.size();
 //	VarNodes::iterator vit = this->vars.find(v);
 //	if (vit == this->vars.end())
 		return Range(Min, Max, Unknown);
@@ -2006,8 +2010,9 @@ void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component) {
 bool Meet::fixed(BasicOp* op){
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
-
+	
 	op->getSink()->setRange(newInterval);
+	
 	return oldInterval != newInterval;
 }
 
@@ -2076,10 +2081,13 @@ bool Meet::growth(BasicOp* op) {
 bool Meet::narrow(BasicOp* op) {
 	APInt oLower = op->getSink()->getRange().getLower();
 	APInt oUpper = op->getSink()->getRange().getUpper();
+	//errs() << "old> " << op->getSink()->getValue()->getName() << " [" << oLower << ", " << oUpper << "]\n";
 	Range newInterval = op->eval();
 
 	APInt nLower = newInterval.getLower();
 	APInt nUpper = newInterval.getUpper();
+	
+	//errs() << "new> " << op->getSink()->getValue()->getName() << " [" << oLower << ", " << oUpper << "]\n";
 	
 	bool hasChanged = false;
 
@@ -2104,6 +2112,8 @@ bool Meet::narrow(BasicOp* op) {
 			hasChanged = true;
 		}
 	}
+	
+	//errs() << "final> " << op->getSink()->getValue()->getName() << " [" << op->getSink()->getRange().getLower() << ", " << op->getSink()->getRange().getUpper() << "]\n";
 
 	return hasChanged;
 }
@@ -2201,6 +2211,8 @@ void ConstraintGraph::update(const UseMap &compUseMap,
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
+		
+		//errs() << "Update: " << V->getName() << "\n";
 		// The use list.
 		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
@@ -2267,7 +2279,6 @@ void ConstraintGraph::findIntervals() {
 			
 			VarNode *var = *component.begin();
 			if (var->getRange().isUnknown()) {
-				//errs() << "Variable is unknown after widen\n";
 				var->setRange(Range(Min, Max));
 			}
 		}else{
@@ -2290,6 +2301,7 @@ void ConstraintGraph::findIntervals() {
 			if (func)
 				printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
 #endif
+			
 			// Primeiro iterate till fix point
 			generateEntryPoints(component, entryPoints);
 			// Primeiro iterate till fix point
@@ -2301,7 +2313,6 @@ void ConstraintGraph::findIntervals() {
 				VarNode* var = *cit;
 				
 				if (var->getRange().isUnknown()) {
-					//errs() << "Variable is unknown after widen\n";
 					var->setRange(Range(Min, Max));
 				}
 			}
@@ -3051,6 +3062,7 @@ bool RangeUnitTest::runOnModule(Module & M) {
 	ASSERT_TRUE("ADD", add, pos, infy, infy);
 	ASSERT_TRUE("ADD", add, pos, neg, infy);
 	ASSERT_TRUE("ADD", add, pos, pos, pos);
+	ASSERT_TRUE("ADD", add, Range(Zero, Min-50), Range(Zero, Min-50), unknown);
 
 	// -------------------------------- SUB --------------------------------//
 	// [a, b] - [c, d] = [a - d, b - c]
