@@ -595,6 +595,11 @@ Range Range::sdiv(const Range& other) {
 }
 
 Range Range::urem(const Range& other) {
+	// Deal with mod 0 exception
+	if (other.getLower().eq(Zero) || other.getUpper().eq(Zero)) {
+		return Range(Min, Max);
+	}
+	
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
 		ll = this->getLower().urem(other.getLower()); // lower lower
@@ -619,6 +624,11 @@ Range Range::urem(const Range& other) {
 }
 
 Range Range::srem(const Range& other) {
+	// Deal with mod 0 exception
+	if (other.getLower().eq(Zero) || other.getUpper().eq(Zero)) {
+		return Range(Min, Max);
+	}
+	
 	APInt ll = Min, lu = Min, ul = Max, uu = Max;
 
 	if(other == Range(Zero,Zero) || other == Range(Min, Max, Empty))
@@ -2070,6 +2080,7 @@ bool Meet::narrow(BasicOp* op) {
 
 	APInt nLower = newInterval.getLower();
 	APInt nUpper = newInterval.getUpper();
+	
 	bool hasChanged = false;
 
 	if (oLower.eq(Min) && nLower.ne(Min)) {
@@ -2084,12 +2095,12 @@ bool Meet::narrow(BasicOp* op) {
 	}
 
 	if (oUpper.eq(Max) && nUpper.ne(Max)) {
-		op->getSink()->setRange(Range(oLower, nUpper));
+		op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), nUpper));
 		hasChanged = true;
 	} else {
 		APInt smax = APIntOps::smax(oUpper, nUpper);
 		if (oUpper.ne(smax)) {
-			op->getSink()->setRange(Range(oLower, smax));
+			op->getSink()->setRange(Range(op->getSink()->getRange().getLower(), smax));
 			hasChanged = true;
 		}
 	}
@@ -2253,20 +2264,18 @@ void ConstraintGraph::findIntervals() {
 		if (component.size() == 1) {
 			++numAloneSCCs;
 			fixIntersects(component);
+			
+			VarNode *var = *component.begin();
+			if (var->getRange().isUnknown()) {
+				//errs() << "Variable is unknown after widen\n";
+				var->setRange(Range(Min, Max));
+			}
 		}else{
 			if (component.size() > sizeMaxSCC) {
 				sizeMaxSCC = component.size();
 			}
 
-			PRINTCOMPONENT(component)
-			
-			for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
-				VarNode *var = *cit;
-				if (var->getValue()->getName() == "vSSA_sigma.i420.i" || var->getValue()->getName() == "shr.i1110.i") {
-					errs() << "";
-					break;
-				}
-			}
+			//PRINTCOMPONENT(component)
 
 			UseMap compUseMap = buildUseMap(component);
 
@@ -2286,6 +2295,16 @@ void ConstraintGraph::findIntervals() {
 			// Primeiro iterate till fix point
 			preUpdate(compUseMap, entryPoints);
 			fixIntersects(component);
+			
+			// FIXME: Ensure that this code is not needed
+			for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+				VarNode* var = *cit;
+				
+				if (var->getRange().isUnknown()) {
+					//errs() << "Variable is unknown after widen\n";
+					var->setRange(Range(Min, Max));
+				}
+			}
 
 			//printResultIntervals();
 #ifdef PRINT_DEBUG
@@ -2299,8 +2318,6 @@ void ConstraintGraph::findIntervals() {
 			posUpdate(compUseMap, activeVars, &component);
 		}
 		propagateToNextSCC(component);
-
-		//printResultIntervals();
 	}
 	
 	elapsed = prof.timenow() - before;
@@ -2553,8 +2570,8 @@ void ConstraintGraph::computeStats() {
 	percentReduction = (unsigned int) reduction;
 
 
-	numVars = this->vars.size();
-	numOps = this->oprs.size();
+	numVars += this->vars.size();
+	numOps += this->oprs.size();
 }
 
 /*
@@ -2851,7 +2868,9 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap,
 			components[V] = SCC;
 		}
 
-		this->worklist.push_back(const_cast<Value*>(varNodes->begin()->first));
+		if (!varNodes->empty()) {
+			this->worklist.push_back(const_cast<Value*>(varNodes->begin()->first));
+		}
 	} else {
 		// Copy structures
 		this->variables = varNodes;

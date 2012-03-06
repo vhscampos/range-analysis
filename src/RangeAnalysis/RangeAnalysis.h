@@ -58,7 +58,7 @@
 //#define SCC_DEBUG
 
 //TODO: comment the line below to disable the dot printing of Constraint Graphs
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 
 //Used to enable the stats computing. Comment the below line to disable it
 #define STATS
@@ -95,8 +95,11 @@ errs() << "\n--------------\n"; \
 #define ASSERT(cond,msg)
 #endif
 
+#define NUMBER_FIXED_ITERATIONS 20
+
 using namespace llvm;
 
+namespace {
 
 /// In our range analysis pass we have to perform operations on ranges all the
 /// time. LLVM has a class to perform operations on ranges: the class
@@ -879,6 +882,7 @@ public:
 	bool runOnModule(Module & M);
 };
 
+} // end namespace
 
 #endif /* LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_ */
 
