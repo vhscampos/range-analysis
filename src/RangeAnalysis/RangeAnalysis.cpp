@@ -57,8 +57,10 @@ const std::string sigmaString = "vSSA_sigma";
 std::string pestring;
 raw_string_ostream pseudoEdgesString(pestring);
 
+#ifdef STATS
 // Used to profile
 Profile prof;
+#endif
 
 // Print name of variable according to its type
 static void printVarName(const Value *V, raw_ostream& OS) {
@@ -160,11 +162,15 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 	updateMinMax(MAX_BIT_INT);
 
 	// Build the graph and find the intervals of the variables.
+#ifdef STATS
 	Profile::TimeValue before = prof.timenow();
+#endif
 	CG->buildGraph(F);
 	CG->buildVarNodes();
+#ifdef STATS
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
+#endif
 #ifdef PRINT_DEBUG
 	CG->printToFile(F, "/tmp/" + F.getName() + "cgpre.dot");
 	errs() << "Analyzing function " << F.getName() << ":\n";
@@ -184,6 +190,7 @@ void IntraProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
 
 template <class CGT>
 IntraProceduralRA<CGT>::~IntraProceduralRA(){
+#ifdef STATS
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
@@ -192,7 +199,7 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
-
+#endif
 //	delete CG;
 }
 
@@ -229,8 +236,9 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	updateMinMax(MAX_BIT_INT);
 
 	// Build the Constraint Graph by running on each function
+#ifdef STATS
 	Profile::TimeValue before = prof.timenow();
-	
+#endif
 	for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
 		// If the function is only a declaration, or if it has variable number of arguments, do not match
 		if (I->isDeclaration() || I->isVarArg())
@@ -240,10 +248,10 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 		MatchParametersAndReturnValues(*I, *CG);
 	}
 	CG->buildVarNodes();
-	
+#ifdef STATS
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
-
+#endif STATS
 #ifdef PRINT_DEBUG
 	CG->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpre.dot");
 #endif
@@ -402,6 +410,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F,
 
 template <class CGT>
 InterProceduralRA<CGT>::~InterProceduralRA(){
+#ifdef STATS
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
@@ -410,6 +419,7 @@ InterProceduralRA<CGT>::~InterProceduralRA(){
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
+#endif
 }
 
 template<class CGT>
@@ -1547,11 +1557,10 @@ ConstraintGraph::~ConstraintGraph() {
 }
 
 Range ConstraintGraph::getRange(const Value *v) {
-//	errs() << "\nInconsistency " << this->vars.size();
-//	VarNodes::iterator vit = this->vars.find(v);
-//	if (vit == this->vars.end())
+	VarNodes::iterator vit = this->vars.find(v);
+	if (vit == this->vars.end())
 		return Range(Min, Max, Unknown);
-//	return vit->second->getRange();
+	return vit->second->getRange();
 }
 
 /// Adds a VarNode to the graph.
@@ -2248,15 +2257,18 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
 	// Builds symbMap
+#ifdef STATS
 	Profile::TimeValue before = prof.timenow();
+#endif
 	buildSymbolicIntersectMap();
 
 	// List of SCCs
 	Nuutila sccList(&vars, &useMap, &symbMap);
+#ifdef STATS
 	Profile::TimeValue after = prof.timenow();
 	Profile::TimeValue elapsed = after - before;
 	prof.updateTime("Nuutila", elapsed);
-
+#endif
 	// STATS
 	numSCCs += sccList.worklist.size();
 #ifdef SCC_DEBUG
@@ -2264,7 +2276,9 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 	// For each SCC in graph, do the following
+#ifdef STATS
 	before = prof.timenow();
+#endif
 	
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
 			nit != nend; ++nit) {
@@ -2330,10 +2344,12 @@ void ConstraintGraph::findIntervals() {
 		}
 		propagateToNextSCC(component);
 	}
-	
+
+#ifdef STATS
 	elapsed = prof.timenow() - before;
 	prof.updateTime("SCCs resolution", elapsed);
-	
+#endif
+
 #ifdef SCC_DEBUG
 	ASSERT(numberOfSCCs==0, "Not all SCCs have been visited")
 #endif
@@ -3032,12 +3048,19 @@ void RangeUnitTest::printStats() {
 	errs() << "\n//********************** STATS *******************************//\n";
 	errs() << "\tFailed: " << failed << " (" << failed / total;
 	if (failed > 0)
-		errs() << "." << 100 / (total / failed);
+		errs() << "." << int(100 * ((double)failed/total));
 	errs() << "%)\n";
 	errs() << "\tTotal: " << total << "\n";
 	errs()
 			<< "//************************************************************//\n";
 }
+
+#define NEW_APINT(n) APInt(MAX_BIT_INT,n,true)
+
+#define NEW_RANGE(l,u) Range(l, u, Regular)
+#define NEW_RANGE_N(l,u) NEW_RANGE(NEW_APINT(l),NEW_APINT(u))
+#define NEW_RANGE_MAX(l) NEW_RANGE(NEW_APINT(l), Max)
+#define NEW_RANGE_MIN(u) NEW_RANGE(Min, NEW_APINT(u))
 
 bool RangeUnitTest::runOnModule(Module & M) {
 	MAX_BIT_INT = InterProceduralRA<Cousot>::getMaxBitWidth(M);
@@ -3050,51 +3073,122 @@ bool RangeUnitTest::runOnModule(Module & M) {
 	Range infy(Min, Max);
 	Range pos(Zero, Max);
 	Range neg(Min, Zero);
+	Range smallNeg(NEW_APINT(-17), Zero);
+	Range smallPos(Zero, NEW_APINT(35));
+	Range avgNeg(NEW_APINT(-27817), Zero);
+	Range avgPos(Zero, NEW_APINT(182935));
+	Range bigNeg(NEW_APINT(-281239847), Zero);
+	Range bigPos(Zero, NEW_APINT(211821935));
+
 	// -------------------------------- ADD --------------------------------//
 	// [a, b] - [c, d] = [a + c, b + d]
-	ASSERT_TRUE("ADD", add, infy, infy, infy);
-	ASSERT_TRUE("ADD", add, zero, infy, infy);
-	ASSERT_TRUE("ADD", add, zero, zero, zero);
-	ASSERT_TRUE("ADD", add, neg, zero, neg);
-	ASSERT_TRUE("ADD", add, neg, infy, infy);
-	ASSERT_TRUE("ADD", add, neg, neg, neg);
-	ASSERT_TRUE("ADD", add, pos, zero, pos);
-	ASSERT_TRUE("ADD", add, pos, infy, infy);
-	ASSERT_TRUE("ADD", add, pos, neg, infy);
-	ASSERT_TRUE("ADD", add, pos, pos, pos);
-	ASSERT_TRUE("ADD", add, Range(Zero, Min-50), Range(Zero, Min-50), unknown);
+	ASSERT_TRUE("ADD1", add, infy, infy, infy);
+	ASSERT_TRUE("ADD2", add, zero, infy, infy);
+	ASSERT_TRUE("ADD3", add, zero, zero, zero);
+	ASSERT_TRUE("ADD4", add, neg, zero, neg);
+	ASSERT_TRUE("ADD5", add, neg, infy, infy);
+	ASSERT_TRUE("ADD6", add, neg, neg, neg);
+	ASSERT_TRUE("ADD7", add, pos, zero, pos);
+	ASSERT_TRUE("ADD8", add, pos, infy, infy);
+	ASSERT_TRUE("ADD9", add, pos, neg, infy);
+	ASSERT_TRUE("ADD10", add, pos, pos, pos);
+	ASSERT_TRUE("ADD11", add, smallNeg, infy, infy);
+	ASSERT_TRUE("ADD12", add, smallNeg, zero, smallNeg);
+	ASSERT_TRUE("ADD13", add, smallNeg, pos, NEW_RANGE_MAX(-17));
+	ASSERT_TRUE("ADD14", add, smallNeg, neg, neg);
+	ASSERT_TRUE("ADD15", add, smallNeg, smallNeg, NEW_RANGE_N(-34,0));
+	ASSERT_TRUE("ADD16", add, smallNeg, smallPos, NEW_RANGE_N(-17,35));
+	ASSERT_TRUE("ADD17", add, smallNeg, avgNeg, NEW_RANGE_N(-27834,0));
+	ASSERT_TRUE("ADD18", add, smallNeg, avgPos, NEW_RANGE_N(-17,182935));
+	ASSERT_TRUE("ADD19", add, smallNeg, bigNeg, NEW_RANGE_N(-281239864,0));
+	ASSERT_TRUE("ADD20", add, smallNeg, bigPos, NEW_RANGE_N(-17, 211821935));
+	ASSERT_TRUE("ADD21", add, smallPos, infy, infy);
+	ASSERT_TRUE("ADD22", add, smallPos, zero, smallPos);
+	ASSERT_TRUE("ADD23", add, smallPos, pos, pos);
+	ASSERT_TRUE("ADD24", add, smallPos, neg, NEW_RANGE_MIN(35));
+	ASSERT_TRUE("ADD25", add, smallPos, smallPos, NEW_RANGE_N(0,70));
+	ASSERT_TRUE("ADD26", add, smallPos, avgNeg, NEW_RANGE_N(-27817, 35));
+	ASSERT_TRUE("ADD27", add, smallPos, avgPos, NEW_RANGE_N(0, 182970));
+	ASSERT_TRUE("ADD28", add, smallPos, bigNeg, NEW_RANGE_N(-281239847, 35));
+	ASSERT_TRUE("ADD29", add, smallPos, bigPos, NEW_RANGE_N(0, 211821970));
+	ASSERT_TRUE("ADD30", add, avgNeg, infy, infy);
+	ASSERT_TRUE("ADD31", add, avgNeg, zero, avgNeg);
+	ASSERT_TRUE("ADD32", add, avgNeg, pos, NEW_RANGE_MAX(-27817));
+	ASSERT_TRUE("ADD33", add, avgNeg, neg, neg);
+	ASSERT_TRUE("ADD34", add, avgNeg, avgNeg, NEW_RANGE_N(-55634, 0));
+	ASSERT_TRUE("ADD35", add, avgNeg, avgPos, NEW_RANGE_N(-27817, 182935));
+	ASSERT_TRUE("ADD36", add, avgNeg, bigNeg, NEW_RANGE_N(-281267664, 0));
+	ASSERT_TRUE("ADD37", add, avgNeg, bigPos, NEW_RANGE_N(-27817, 211821935));
+	ASSERT_TRUE("ADD38", add, avgPos, infy, infy);
+	ASSERT_TRUE("ADD39", add, avgPos, zero, avgPos);
+	ASSERT_TRUE("ADD40", add, avgPos, pos, pos);
+	ASSERT_TRUE("ADD41", add, avgPos, neg, NEW_RANGE_MIN(182935));
+	ASSERT_TRUE("ADD42", add, avgPos, avgPos, NEW_RANGE_N(0, 365870));
+	ASSERT_TRUE("ADD43", add, avgPos, bigNeg, NEW_RANGE_N(-281239847, 182935));
+	ASSERT_TRUE("ADD44", add, avgPos, bigPos, NEW_RANGE_N(0, 212004870));
+	ASSERT_TRUE("ADD45", add, bigNeg, infy, infy);
+	ASSERT_TRUE("ADD46", add, bigNeg, zero, bigNeg);
+	ASSERT_TRUE("ADD47", add, bigNeg, pos, NEW_RANGE_MAX(-281239847));
+	ASSERT_TRUE("ADD48", add, bigNeg, neg, neg);
+	ASSERT_TRUE("ADD49", add, bigNeg, bigNeg, NEW_RANGE_N(-562479694, 0));
+	ASSERT_TRUE("ADD50", add, bigNeg, bigPos, NEW_RANGE_N(-281239847, 211821935));
+	ASSERT_TRUE("ADD51", add, bigPos, infy, infy);
+	ASSERT_TRUE("ADD52", add, bigPos, zero, bigPos);
+	ASSERT_TRUE("ADD53", add, bigPos, pos, pos);
+	ASSERT_TRUE("ADD54", add, bigPos, neg, NEW_RANGE_MIN(211821935));
+	ASSERT_TRUE("ADD55", add, bigPos, bigPos, NEW_RANGE_N(0,423643870));
+	ASSERT_TRUE("ADD56", add, Range(Zero, Min-50), Range(Zero, Min-50), unknown);
 
 	// -------------------------------- SUB --------------------------------//
 	// [a, b] - [c, d] = [a - d, b - c]
-	ASSERT_TRUE("SUB", sub, infy, infy, infy);
-	ASSERT_TRUE("SUB", sub, infy, zero, infy);
-	ASSERT_TRUE("SUB", sub, infy, pos, infy);
-	ASSERT_TRUE("SUB", sub, infy, neg, infy);
-	ASSERT_TRUE("SUB", sub, zero, zero, zero);
-	ASSERT_TRUE("SUB", sub, zero, infy, infy);
-	ASSERT_TRUE("SUB", sub, zero, pos, neg);
-	ASSERT_TRUE("SUB", sub, zero, neg, pos);
-	ASSERT_TRUE("SUB", sub, pos, zero, pos);
-	ASSERT_TRUE("SUB", sub, pos, infy, infy);
-	ASSERT_TRUE("SUB", sub, pos, neg, pos);
-	ASSERT_TRUE("SUB", sub, pos, pos, infy);
-	ASSERT_TRUE("SUB", sub, neg, zero, neg);
-	ASSERT_TRUE("SUB", sub, neg, infy, infy);
-	ASSERT_TRUE("SUB", sub, neg, neg, infy);
-	ASSERT_TRUE("SUB", sub, neg, pos, neg);
+	ASSERT_TRUE("SUB1", sub, infy, infy, infy);
+	ASSERT_TRUE("SUB2", sub, infy, zero, infy);
+	ASSERT_TRUE("SUB3", sub, infy, pos, infy);
+	ASSERT_TRUE("SUB4", sub, infy, neg, infy);
+	ASSERT_TRUE("SUB5", sub, zero, zero, zero);
+	ASSERT_TRUE("SUB6", sub, zero, infy, infy);
+	ASSERT_TRUE("SUB7", sub, zero, pos, neg);
+	ASSERT_TRUE("SUB8", sub, zero, neg, pos);
+	ASSERT_TRUE("SUB9", sub, pos, zero, pos);
+	ASSERT_TRUE("SUB10", sub, pos, infy, infy);
+	ASSERT_TRUE("SUB11", sub, pos, neg, pos);
+	ASSERT_TRUE("SUB12", sub, pos, pos, infy);
+	ASSERT_TRUE("SUB13", sub, neg, zero, neg);
+	ASSERT_TRUE("SUB14", sub, neg, infy, infy);
+	ASSERT_TRUE("SUB15", sub, neg, neg, infy);
+	ASSERT_TRUE("SUB16", sub, neg, pos, neg);
 
 	// -------------------------------- MUL --------------------------------//
 	//  [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
-	ASSERT_TRUE("MUL", mul, infy, infy, infy);
-	ASSERT_TRUE("MUL", mul, zero, infy, infy);
-	ASSERT_TRUE("MUL", mul, zero, zero, zero);
-	ASSERT_TRUE("MUL", mul, neg, zero, zero);
-	ASSERT_TRUE("MUL", mul, neg, infy, infy);
-	ASSERT_TRUE("MUL", mul, neg, neg, pos);
-	ASSERT_TRUE("MUL", mul, pos, zero, zero);
-	ASSERT_TRUE("MUL", mul, pos, infy, infy);
-	ASSERT_TRUE("MUL", mul, pos, neg, neg);
-	ASSERT_TRUE("MUL", mul, pos, pos, pos);
+	ASSERT_TRUE("MUL1", mul, infy, infy, infy);
+	ASSERT_TRUE("MUL2", mul, zero, infy, infy);
+	ASSERT_TRUE("MUL3", mul, zero, zero, zero);
+	ASSERT_TRUE("MUL4", mul, neg, zero, zero);
+	ASSERT_TRUE("MUL5", mul, neg, infy, infy);
+	ASSERT_TRUE("MUL6", mul, neg, neg, pos);
+	ASSERT_TRUE("MUL7", mul, pos, zero, zero);
+	ASSERT_TRUE("MUL8", mul, pos, infy, infy);
+	ASSERT_TRUE("MUL9", mul, pos, neg, neg);
+	ASSERT_TRUE("MUL10", mul, pos, pos, pos);
+
+	// -------------------------------- DIV --------------------------------//
+	// [a, b] / [c, d] = [Min(a/c, a/d, b/c, b/d), Max(a/c, a/d, b/c, b/d)]
+	ASSERT_TRUE("UDIV1", udiv, infy, infy, infy);
+	ASSERT_TRUE("UDIV2", udiv, infy, zero, infy);
+	ASSERT_TRUE("UDIV3", udiv, infy, pos, infy);
+	ASSERT_TRUE("UDIV4", udiv, infy, neg, infy);
+	ASSERT_TRUE("UDIV5", udiv, zero, zero, infy);
+	ASSERT_TRUE("UDIV6", udiv, zero, infy, zero);
+	ASSERT_TRUE("UDIV7", udiv, zero, pos, infy);
+	ASSERT_TRUE("UDIV8", udiv, zero, neg, infy);
+	ASSERT_TRUE("UDIV9", udiv, pos, zero, infy);
+	ASSERT_TRUE("UDIV10", udiv, pos, infy, infy);
+	ASSERT_TRUE("UDIV11", udiv, pos, neg, infy);
+	ASSERT_TRUE("UDIV12", udiv, pos, pos, infy);
+	ASSERT_TRUE("UDIV13", udiv, neg, zero, infy);
+	ASSERT_TRUE("UDIV14", udiv, neg, infy, infy);
+	ASSERT_TRUE("UDIV15", udiv, neg, neg, infy);
+	ASSERT_TRUE("UDIV16", udiv, neg, pos, infy);
 
 	printStats();
 	return true;
