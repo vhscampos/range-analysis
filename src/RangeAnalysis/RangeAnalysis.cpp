@@ -251,7 +251,7 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 #ifdef STATS
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
-#endif STATS
+#endif
 #ifdef PRINT_DEBUG
 	CG->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpre.dot");
 #endif
