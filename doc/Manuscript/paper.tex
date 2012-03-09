@@ -42,7 +42,7 @@ Assignment form as the intermediate representation.
 We show that by processing the strongly connected components that constitute
 the graph of dependences between variables in topological order we not only
 gain in time, but also in precision.
-We have implemented our technique in LLVM, an industrial strenght compiler,
+We have implemented our technique in LLVM, an industrial strength compiler,
 and have been able to process over 4 million assembly instructions in a
 few seconds.
 \end{abstract}
@@ -769,6 +769,29 @@ Cousot and Cousot's operators.
 %Furthermore, composite components tend to be small.
 %Therefore, range analysis admit very fast solution.
 
+
+\section{Final Considerations}
+\label{sec:con}
+
+In this presentation we chose to omit correctness proofs for our algorithms.
+For a proof that the widening and the narrowing operators give origin to
+approximating sequences, we recommend Cousot and Cousot's work~\cite{Cousot}.
+For a proof that the e-SSA form transformation is semantics preserving, we
+invite the reader to check a recent report of ours~\cite{XXXX}.
+In this work we also show that the results that we obtain via the
+sparse analysis are equivalent to the results provided by a dense analysis.
+In other words, if the dense analysis tells us that variable $v$ is
+associated with the interval range $[l, u]$ at program point $i$, and $v'$
+is the new name of $v$, alive at $i$ in the e-SSA form program, then $v'$ is
+associated with the interval $[l, u]$ along its entire live range.
+
+Our implementation of the range analysis algorithm described in this paper is
+publicly available at \texttt{http://google.code/range-analysis/}.
+This repository contains instructions about how to deploy and use our
+implementation.
+We provide a gallery of examples, including source codes,
+CFGs and constraint graphs that we produce for meaningful programs at
+\texttt{http://google.code/range-analysis/wiki/gallery}.
 
 \bibliographystyle{plain}
 \bibliography{references}
