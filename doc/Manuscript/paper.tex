@@ -713,6 +713,55 @@ Cousot and Cousot's operators.
 \section{Experiments}
 \label{sec:exp}
 
+% Absolute Time and complexity
+% =============================
+
+%Chart 1: shows complexity of the algorithm, plotting program size and time
+% to run the analysis.
+
+%Chart 2: time distribution for SPEC only
+
+% Intra/Inter/Inline comparison
+% =============================
+
+% Chart 3: Time comparison between intra, inter and inlining:
+% Each bar is inter/intra, or inline/intra
+% We want to show that the whole program analysis is fast.
+
+% (I) Chart 4: Precision comparison between intra/inter/inline
+% *not for spec*: take five largest of bitwise, stanford and SPEC CINT.
+% Add the three geomeans to the chart.
+
+% (I) Chart 5: Same as (4), but this time precision in terms of [c, c], [-, c],
+% [+, c], [-, +]. Perhaps take off [-, +]
+
+% Impact of e-SSA form:
+% =====================
+
+% Chart 6: time overhead e-SSA. So, for each SPEC 2006, do time e-ssa/time ssa.
+
+% (I) Chart 7: precision with e-SSA form.
+% Percentage reduction (bitwidth only) for five largest of bitwise, stanford
+% and SPEC CINT.
+
+% Size overhead of different representations
+% ==========================================
+
+% Chart 8: Size overhead e-SSA/SSA. SPEC 2006 only.
+
+% Chart 9: Size overhead inline/non-inline. SPEC 2006 only.
+
+% Precision with different number of fixed iterations
+% ===================================================
+
+% Chart 10: Run inter + e-SSA with N*|SCC| in fixed update for five largest of
+% bitwise, stanford and SPEC CINT.
+
+% Table 1: Structural Properties for SPEC CPU 2006.
+% Remember to add %SCC's with just one component.
+
+% Impact of strongly connected components
+% =======================================
 
 %In our experiments we have observed that the vast majority of strongly
 %connected components that constitute typical dependence graphs contain only
