@@ -438,11 +438,11 @@ static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop",
 // ========================================================================== //
 // Range
 // ========================================================================== //
-Range::Range() :
-		l(Min), u(Max), type(Regular) {
+Range::Range() {
+	Range(Min, Max);
 }
 
-Range::Range(APInt lb, APInt ub, RangeType rType = Regular) :
+Range::Range(APInt lb, APInt ub, RangeType rType) :
 		l(lb), u(ub), type(rType) {
 }
 
@@ -539,290 +539,435 @@ Range Range::mul(const Range& other) {
 	return Range(*min, *max);
 }
 
+#define DIV_HELPER(OP,x,y) 	x.eq(Max) ? \
+						(y.slt(Zero) ? Min : (y.eq(Zero) ? Zero : Max)) \
+						: (y.eq(Max) ? \
+							(x.slt(Zero) ? Min :(x.eq(Zero) ? Zero : Max)) \
+							:(x.eq(Min) ? \
+								(y.slt(Zero) ? Max : (y.eq(Zero) ? Zero : Min)) \
+								: (y.eq(Min) ? \
+									(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
+									:(x.OP(y)))))
+
+// [a, b] / [c, d] = [Min(a/c, a/d, b/c, b/d), Max(a/c, a/d, b/c, b/d)]
 Range Range::udiv(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		if (other.getLower().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			ll = this->getLower().udiv(other.getLower()); // lower lower
-		}
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	// Deal with division by 0 exception
+	if ((c.eq(Zero) || d.eq(Zero))) {
+		return Range(Min, Max);
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		if (other.getUpper().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			lu = this->getLower().udiv(other.getUpper()); // lower upper
-		}
+	APInt candidates[4];
+	candidates[0] = DIV_HELPER(udiv, a, c);
+	candidates[1] = DIV_HELPER(udiv, a, d);
+	candidates[2] = DIV_HELPER(udiv, b, c);
+	candidates[3] = DIV_HELPER(udiv, b, d);
+
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
+
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		if (other.getLower().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			ul = this->getUpper().udiv(other.getLower()); // upper lower
-		}
-	}
-
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		if (other.getUpper().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			uu = this->getUpper().udiv(other.getUpper()); // upper upper
-		}
-	}
-
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
-
-	return Range(l, u);
+	return Range(*min, *max);
 }
 
+// [a, b] / [c, d] = [Min(a/c, a/d), Max(b/c, b/d)]
 Range Range::sdiv(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		if (other.getLower().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			ll = this->getLower().sdiv(other.getLower()); // lower lower
-		}
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	// Deal with division by 0 exception
+	if ((c.eq(Zero) || d.eq(Zero))) {
+		return Range(Min, Max);
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		if (other.getUpper().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			lu = this->getLower().sdiv(other.getUpper()); // lower upper
-		}
+	APInt candidates[4];
+	candidates[0] = DIV_HELPER(sdiv, a, c);
+	candidates[1] = DIV_HELPER(sdiv, a, d);
+	candidates[2] = DIV_HELPER(sdiv, b, c);
+	candidates[3] = DIV_HELPER(sdiv, b, d);
+
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
+
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		if (other.getLower().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			ul = this->getUpper().sdiv(other.getLower()); // upper lower
-		}
-	}
-
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		if (other.getUpper().ne(APInt::getNullValue(MAX_BIT_INT))) {
-			uu = this->getUpper().sdiv(other.getUpper()); // upper upper
-		}
-	}
-
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
-
-	return Range(l, u);
+	return Range(*min, *max);
 }
 
 Range Range::urem(const Range& other) {
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
 	// Deal with mod 0 exception
-	if (other.getLower().eq(Zero) || other.getUpper().eq(Zero)) {
+	if (c.eq(Zero) || d.eq(Zero)) {
 		return Range(Min, Max);
 	}
 	
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().urem(other.getLower()); // lower lower
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.urem(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().urem(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.urem(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().urem(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.urem(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().urem(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.urem(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::srem(const Range& other) {
-	// Deal with mod 0 exception
-	if (other.getLower().eq(Zero) || other.getUpper().eq(Zero)) {
-		return Range(Min, Max);
-	}
-	
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-
 	if(other == Range(Zero,Zero) || other == Range(Min, Max, Empty))
 		return Range(Min, Max, Empty);
 
-	if((other.getLower().slt(Zero) && other.getUpper().sgt(Zero))
-		|| other.getLower().eq(Zero)
-		|| other.getUpper().eq(Zero))
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	// Deal with mod 0 exception
+	if((c.slt(Zero) && d.sgt(Zero)) || c.eq(Zero) || d.eq(Zero))
 		return Range(Min, Max);
 
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().srem(other.getLower()); // lower lower
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.srem(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().srem(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.srem(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().srem(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.srem(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().srem(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.srem(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::shl(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().shl(other.getLower()); // lower lower
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.shl(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().shl(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.shl(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().shl(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.shl(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().shl(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.shl(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::lshr(const Range& other) {
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
 	
 	// If any of the bounds is negative, result is [0, +inf] automatically
-	if (this->getLower().isNegative() || this->getUpper().isNegative()) {
+	if (a.isNegative() || b.isNegative()) {
 		return Range(Zero, Max);
 	}
 	
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;	
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
 	
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().lshr(other.getLower()); // lower lower
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.lshr(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().lshr(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.lshr(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().lshr(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.lshr(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().lshr(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.lshr(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::ashr(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().ashr(other.getLower()); // lower lower
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.ashr(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().ashr(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.ashr(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().ashr(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.ashr(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().ashr(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.ashr(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::And(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().And(other.getLower()); // lower lower
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.And(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().And(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.And(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().And(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.And(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().And(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.And(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::Or(const Range& other) {
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
 	if (this->isUnknown() || other.isUnknown()) {
 		return Range(Min, Max, Unknown);
 	}
 
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().Or(other.getLower()); // lower lower
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.Or(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().Or(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.Or(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().Or(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.Or(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().Or(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.Or(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 Range Range::Xor(const Range& other) {
-	APInt ll = Min, lu = Min, ul = Max, uu = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		ll = this->getLower().Xor(other.getLower()); // lower lower
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	APInt candidates[4];
+	candidates[0] = Min;
+	candidates[1] = Min;
+	candidates[2] = Max;
+	candidates[3] = Max;
+
+	if (a.ne(Min) && c.ne(Min)) {
+		candidates[0] = a.Xor(c); // lower lower
 	}
 
-	if (this->getLower().ne(Min) && other.getUpper().ne(Max)) {
-		lu = this->getLower().Xor(other.getUpper()); // lower upper
+	if (a.ne(Min) && d.ne(Max)) {
+		candidates[1] = a.Xor(d); // lower upper
 	}
 
-	if (this->getUpper().ne(Max) && other.getLower().ne(Min)) {
-		ul = this->getUpper().Xor(other.getLower()); // upper lower
+	if (b.ne(Max) && c.ne(Min)) {
+		candidates[2] = b.Xor(c); // upper lower
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		uu = this->getUpper().Xor(other.getUpper()); // upper upper
+	if (b.ne(Max) && d.ne(Max)) {
+		candidates[3] = b.Xor(d); // upper upper
 	}
 
-	APInt l = ll.slt(lu) ? ll : lu;
-	APInt u = uu.sgt(ul) ? uu : ul;
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
 
-	return Range(l, u);
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
 // Truncate
@@ -3031,169 +3176,3 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap) {
 	return isConsistent;
 }
 #endif
-
-#define ASSERT_TRUE(print_op,op,op1,op2,res) total++; if(op1.op(op2) != res){ \
-			failed++; \
-			errs() << "\t[" << total << "] " << print_op << ": "; \
-			op1.print(errs()); \
-			errs() << " "; \
-			op2.print(errs()); \
-			errs() << " RESULT: "; \
-			(op1.op(op2)).print(errs()); \
-			errs() << " EXPECTED: "; \
-			res.print(errs()); \
-			errs() << "\n";}
-
-void RangeUnitTest::printStats() {
-	errs() << "\n//********************** STATS *******************************//\n";
-	errs() << "\tFailed: " << failed << " (" << failed / total;
-	if (failed > 0)
-		errs() << "." << int(100 * ((double)failed/total));
-	errs() << "%)\n";
-	errs() << "\tTotal: " << total << "\n";
-	errs()
-			<< "//************************************************************//\n";
-}
-
-#define NEW_APINT(n) APInt(MAX_BIT_INT,n,true)
-
-#define NEW_RANGE(l,u) Range(l, u, Regular)
-#define NEW_RANGE_N(l,u) NEW_RANGE(NEW_APINT(l),NEW_APINT(u))
-#define NEW_RANGE_MAX(l) NEW_RANGE(NEW_APINT(l), Max)
-#define NEW_RANGE_MIN(u) NEW_RANGE(Min, NEW_APINT(u))
-
-bool RangeUnitTest::runOnModule(Module & M) {
-	MAX_BIT_INT = InterProceduralRA<Cousot>::getMaxBitWidth(M);
-	RangeAnalysis::updateMinMax(MAX_BIT_INT);
-	errs() << "Running unit tests for Range class!\n";
-	// --------------------------- Shared Objects -------------------------//
-	Range unknown(Min, Max, Unknown);
-	Range empty(Min, Max, Empty);
-	Range zero(Zero, Zero);
-	Range infy(Min, Max);
-	Range pos(Zero, Max);
-	Range neg(Min, Zero);
-	Range smallNeg(NEW_APINT(-17), Zero);
-	Range smallPos(Zero, NEW_APINT(35));
-	Range avgNeg(NEW_APINT(-27817), Zero);
-	Range avgPos(Zero, NEW_APINT(182935));
-	Range bigNeg(NEW_APINT(-281239847), Zero);
-	Range bigPos(Zero, NEW_APINT(211821935));
-
-	// -------------------------------- ADD --------------------------------//
-	// [a, b] - [c, d] = [a + c, b + d]
-	ASSERT_TRUE("ADD1", add, infy, infy, infy);
-	ASSERT_TRUE("ADD2", add, zero, infy, infy);
-	ASSERT_TRUE("ADD3", add, zero, zero, zero);
-	ASSERT_TRUE("ADD4", add, neg, zero, neg);
-	ASSERT_TRUE("ADD5", add, neg, infy, infy);
-	ASSERT_TRUE("ADD6", add, neg, neg, neg);
-	ASSERT_TRUE("ADD7", add, pos, zero, pos);
-	ASSERT_TRUE("ADD8", add, pos, infy, infy);
-	ASSERT_TRUE("ADD9", add, pos, neg, infy);
-	ASSERT_TRUE("ADD10", add, pos, pos, pos);
-	ASSERT_TRUE("ADD11", add, smallNeg, infy, infy);
-	ASSERT_TRUE("ADD12", add, smallNeg, zero, smallNeg);
-	ASSERT_TRUE("ADD13", add, smallNeg, pos, NEW_RANGE_MAX(-17));
-	ASSERT_TRUE("ADD14", add, smallNeg, neg, neg);
-	ASSERT_TRUE("ADD15", add, smallNeg, smallNeg, NEW_RANGE_N(-34,0));
-	ASSERT_TRUE("ADD16", add, smallNeg, smallPos, NEW_RANGE_N(-17,35));
-	ASSERT_TRUE("ADD17", add, smallNeg, avgNeg, NEW_RANGE_N(-27834,0));
-	ASSERT_TRUE("ADD18", add, smallNeg, avgPos, NEW_RANGE_N(-17,182935));
-	ASSERT_TRUE("ADD19", add, smallNeg, bigNeg, NEW_RANGE_N(-281239864,0));
-	ASSERT_TRUE("ADD20", add, smallNeg, bigPos, NEW_RANGE_N(-17, 211821935));
-	ASSERT_TRUE("ADD21", add, smallPos, infy, infy);
-	ASSERT_TRUE("ADD22", add, smallPos, zero, smallPos);
-	ASSERT_TRUE("ADD23", add, smallPos, pos, pos);
-	ASSERT_TRUE("ADD24", add, smallPos, neg, NEW_RANGE_MIN(35));
-	ASSERT_TRUE("ADD25", add, smallPos, smallPos, NEW_RANGE_N(0,70));
-	ASSERT_TRUE("ADD26", add, smallPos, avgNeg, NEW_RANGE_N(-27817, 35));
-	ASSERT_TRUE("ADD27", add, smallPos, avgPos, NEW_RANGE_N(0, 182970));
-	ASSERT_TRUE("ADD28", add, smallPos, bigNeg, NEW_RANGE_N(-281239847, 35));
-	ASSERT_TRUE("ADD29", add, smallPos, bigPos, NEW_RANGE_N(0, 211821970));
-	ASSERT_TRUE("ADD30", add, avgNeg, infy, infy);
-	ASSERT_TRUE("ADD31", add, avgNeg, zero, avgNeg);
-	ASSERT_TRUE("ADD32", add, avgNeg, pos, NEW_RANGE_MAX(-27817));
-	ASSERT_TRUE("ADD33", add, avgNeg, neg, neg);
-	ASSERT_TRUE("ADD34", add, avgNeg, avgNeg, NEW_RANGE_N(-55634, 0));
-	ASSERT_TRUE("ADD35", add, avgNeg, avgPos, NEW_RANGE_N(-27817, 182935));
-	ASSERT_TRUE("ADD36", add, avgNeg, bigNeg, NEW_RANGE_N(-281267664, 0));
-	ASSERT_TRUE("ADD37", add, avgNeg, bigPos, NEW_RANGE_N(-27817, 211821935));
-	ASSERT_TRUE("ADD38", add, avgPos, infy, infy);
-	ASSERT_TRUE("ADD39", add, avgPos, zero, avgPos);
-	ASSERT_TRUE("ADD40", add, avgPos, pos, pos);
-	ASSERT_TRUE("ADD41", add, avgPos, neg, NEW_RANGE_MIN(182935));
-	ASSERT_TRUE("ADD42", add, avgPos, avgPos, NEW_RANGE_N(0, 365870));
-	ASSERT_TRUE("ADD43", add, avgPos, bigNeg, NEW_RANGE_N(-281239847, 182935));
-	ASSERT_TRUE("ADD44", add, avgPos, bigPos, NEW_RANGE_N(0, 212004870));
-	ASSERT_TRUE("ADD45", add, bigNeg, infy, infy);
-	ASSERT_TRUE("ADD46", add, bigNeg, zero, bigNeg);
-	ASSERT_TRUE("ADD47", add, bigNeg, pos, NEW_RANGE_MAX(-281239847));
-	ASSERT_TRUE("ADD48", add, bigNeg, neg, neg);
-	ASSERT_TRUE("ADD49", add, bigNeg, bigNeg, NEW_RANGE_N(-562479694, 0));
-	ASSERT_TRUE("ADD50", add, bigNeg, bigPos, NEW_RANGE_N(-281239847, 211821935));
-	ASSERT_TRUE("ADD51", add, bigPos, infy, infy);
-	ASSERT_TRUE("ADD52", add, bigPos, zero, bigPos);
-	ASSERT_TRUE("ADD53", add, bigPos, pos, pos);
-	ASSERT_TRUE("ADD54", add, bigPos, neg, NEW_RANGE_MIN(211821935));
-	ASSERT_TRUE("ADD55", add, bigPos, bigPos, NEW_RANGE_N(0,423643870));
-	ASSERT_TRUE("ADD56", add, Range(Zero, Min-50), Range(Zero, Min-50), unknown);
-
-	// -------------------------------- SUB --------------------------------//
-	// [a, b] - [c, d] = [a - d, b - c]
-	ASSERT_TRUE("SUB1", sub, infy, infy, infy);
-	ASSERT_TRUE("SUB2", sub, infy, zero, infy);
-	ASSERT_TRUE("SUB3", sub, infy, pos, infy);
-	ASSERT_TRUE("SUB4", sub, infy, neg, infy);
-	ASSERT_TRUE("SUB5", sub, zero, zero, zero);
-	ASSERT_TRUE("SUB6", sub, zero, infy, infy);
-	ASSERT_TRUE("SUB7", sub, zero, pos, neg);
-	ASSERT_TRUE("SUB8", sub, zero, neg, pos);
-	ASSERT_TRUE("SUB9", sub, pos, zero, pos);
-	ASSERT_TRUE("SUB10", sub, pos, infy, infy);
-	ASSERT_TRUE("SUB11", sub, pos, neg, pos);
-	ASSERT_TRUE("SUB12", sub, pos, pos, infy);
-	ASSERT_TRUE("SUB13", sub, neg, zero, neg);
-	ASSERT_TRUE("SUB14", sub, neg, infy, infy);
-	ASSERT_TRUE("SUB15", sub, neg, neg, infy);
-	ASSERT_TRUE("SUB16", sub, neg, pos, neg);
-
-	// -------------------------------- MUL --------------------------------//
-	//  [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
-	ASSERT_TRUE("MUL1", mul, infy, infy, infy);
-	ASSERT_TRUE("MUL2", mul, zero, infy, infy);
-	ASSERT_TRUE("MUL3", mul, zero, zero, zero);
-	ASSERT_TRUE("MUL4", mul, neg, zero, zero);
-	ASSERT_TRUE("MUL5", mul, neg, infy, infy);
-	ASSERT_TRUE("MUL6", mul, neg, neg, pos);
-	ASSERT_TRUE("MUL7", mul, pos, zero, zero);
-	ASSERT_TRUE("MUL8", mul, pos, infy, infy);
-	ASSERT_TRUE("MUL9", mul, pos, neg, neg);
-	ASSERT_TRUE("MUL10", mul, pos, pos, pos);
-
-	// -------------------------------- DIV --------------------------------//
-	// [a, b] / [c, d] = [Min(a/c, a/d, b/c, b/d), Max(a/c, a/d, b/c, b/d)]
-	ASSERT_TRUE("UDIV1", udiv, infy, infy, infy);
-	ASSERT_TRUE("UDIV2", udiv, infy, zero, infy);
-	ASSERT_TRUE("UDIV3", udiv, infy, pos, infy);
-	ASSERT_TRUE("UDIV4", udiv, infy, neg, infy);
-	ASSERT_TRUE("UDIV5", udiv, zero, zero, infy);
-	ASSERT_TRUE("UDIV6", udiv, zero, infy, zero);
-	ASSERT_TRUE("UDIV7", udiv, zero, pos, infy);
-	ASSERT_TRUE("UDIV8", udiv, zero, neg, infy);
-	ASSERT_TRUE("UDIV9", udiv, pos, zero, infy);
-	ASSERT_TRUE("UDIV10", udiv, pos, infy, infy);
-	ASSERT_TRUE("UDIV11", udiv, pos, neg, infy);
-	ASSERT_TRUE("UDIV12", udiv, pos, pos, infy);
-	ASSERT_TRUE("UDIV13", udiv, neg, zero, infy);
-	ASSERT_TRUE("UDIV14", udiv, neg, infy, infy);
-	ASSERT_TRUE("UDIV15", udiv, neg, neg, infy);
-	ASSERT_TRUE("UDIV16", udiv, neg, pos, infy);
-
-	printStats();
-	return true;
-}
-
-char RangeUnitTest::ID = 3;
-static RegisterPass<RangeUnitTest> T("ra-test-range",
-		"Run unit test for class Range");
