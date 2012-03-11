@@ -33,11 +33,12 @@ STATISTIC(numConstants, "Number of constants.");
 STATISTIC(numZeroUses, "Number of variables without any use.");
 STATISTIC(numNotInt, "Number of variables that are not Integer.");
 STATISTIC(numOps, "Number of operations");
+STATISTIC(maxVisit, "Max number of times a value has been visited.");
 
 // The number of bits needed to store the largest variable of the function (APInt).
 unsigned MAX_BIT_INT = 1;
 
-// This map is used to store the number of times that the widen_meet 
+// This map is used to store the number of times that the narrow_meet 
 // operator is called on a variable. It was a Fernando's suggestion.
 DenseMap<const Value*, unsigned> FerMap;
 
@@ -199,6 +200,16 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
+	
+	// max visit computation
+	unsigned maxtimes = 0;
+	for (DenseMap<const Value*, unsigned>::iterator fmit = FerMap.begin(), fmend = FerMap.end(); fmit != fmend; ++fmit) {
+		unsigned times = fmit->second;
+		if (times > maxtimes) {
+			maxtimes = times;
+		}
+	}
+	maxVisit = maxtimes;
 #endif
 //	delete CG;
 }
@@ -419,6 +430,16 @@ InterProceduralRA<CGT>::~InterProceduralRA(){
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
+	
+	// max visit computation
+	unsigned maxtimes = 0;
+	for (DenseMap<const Value*, unsigned>::iterator fmit = FerMap.begin(), fmend = FerMap.end(); fmit != fmend; ++fmit) {
+		unsigned times = fmit->second;
+		if (times > maxtimes) {
+			maxtimes = times;
+		}
+	}
+	maxVisit = maxtimes;
 #endif
 }
 
@@ -2233,6 +2254,11 @@ bool Meet::growth(BasicOp* op) {
 /// in the constraint graph, the cropping analysis shyrinks these bounds back
 /// to ranges that respect the intersections.
 bool Meet::narrow(BasicOp* op) {
+	// Updates Fermap
+	const Value *V = op->getSink()->getValue();
+	FerMap[V]++;
+	
+	
 	APInt oLower = op->getSink()->getRange().getLower();
 	APInt oUpper = op->getSink()->getRange().getUpper();
 	//errs() << "old> " << op->getSink()->getValue()->getName() << " [" << oLower << ", " << oUpper << "]\n";
@@ -3176,3 +3202,90 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap) {
 	return isConsistent;
 }
 #endif
+
+#define ASSERT_TRUE(print_op,op,op1,op2,res) total++; if(op1.op(op2) != res){ \
+			failed++; \
+			errs() << "\t[" << total << "] " << print_op << ": "; \
+			op1.print(errs()); \
+			errs() << " "; \
+			op2.print(errs()); \
+			errs() << " RESULT: "; \
+			(op1.op(op2)).print(errs()); \
+			errs() << " EXPECTED: "; \
+			res.print(errs()); \
+			errs() << "\n";}
+
+void RangeUnitTest::printStats() {
+	errs() << "\n//********************** STATS *******************************//\n";
+	errs() << "\tFailed: " << failed << " (" << failed / total;
+	if (failed > 0)
+		errs() << "." << 100 / (total / failed);
+	errs() << "%)\n";
+	errs() << "\tTotal: " << total << "\n";
+	errs()
+			<< "//************************************************************//\n";
+}
+
+bool RangeUnitTest::runOnModule(Module & M) {
+	MAX_BIT_INT = InterProceduralRA<Cousot>::getMaxBitWidth(M);
+	RangeAnalysis::updateMinMax(MAX_BIT_INT);
+	errs() << "Running unit tests for Range class!\n";
+	// --------------------------- Shared Objects -------------------------//
+	Range unknown(Min, Max, Unknown);
+	Range empty(Min, Max, Empty);
+	Range zero(Zero, Zero);
+	Range infy(Min, Max);
+	Range pos(Zero, Max);
+	Range neg(Min, Zero);
+	// -------------------------------- ADD --------------------------------//
+	// [a, b] - [c, d] = [a + c, b + d]
+	ASSERT_TRUE("ADD", add, infy, infy, infy);
+	ASSERT_TRUE("ADD", add, zero, infy, infy);
+	ASSERT_TRUE("ADD", add, zero, zero, zero);
+	ASSERT_TRUE("ADD", add, neg, zero, neg);
+	ASSERT_TRUE("ADD", add, neg, infy, infy);
+	ASSERT_TRUE("ADD", add, neg, neg, neg);
+	ASSERT_TRUE("ADD", add, pos, zero, pos);
+	ASSERT_TRUE("ADD", add, pos, infy, infy);
+	ASSERT_TRUE("ADD", add, pos, neg, infy);
+	ASSERT_TRUE("ADD", add, pos, pos, pos);
+
+	// -------------------------------- SUB --------------------------------//
+	// [a, b] - [c, d] = [a - d, b - c]
+	ASSERT_TRUE("SUB", sub, infy, infy, infy);
+	ASSERT_TRUE("SUB", sub, infy, zero, infy);
+	ASSERT_TRUE("SUB", sub, infy, pos, infy);
+	ASSERT_TRUE("SUB", sub, infy, neg, infy);
+	ASSERT_TRUE("SUB", sub, zero, zero, zero);
+	ASSERT_TRUE("SUB", sub, zero, infy, infy);
+	ASSERT_TRUE("SUB", sub, zero, pos, neg);
+	ASSERT_TRUE("SUB", sub, zero, neg, pos);
+	ASSERT_TRUE("SUB", sub, pos, zero, pos);
+	ASSERT_TRUE("SUB", sub, pos, infy, infy);
+	ASSERT_TRUE("SUB", sub, pos, neg, pos);
+	ASSERT_TRUE("SUB", sub, pos, pos, infy);
+	ASSERT_TRUE("SUB", sub, neg, zero, neg);
+	ASSERT_TRUE("SUB", sub, neg, infy, infy);
+	ASSERT_TRUE("SUB", sub, neg, neg, infy);
+	ASSERT_TRUE("SUB", sub, neg, pos, neg);
+
+	// -------------------------------- MUL --------------------------------//
+	//  [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
+	ASSERT_TRUE("MUL", mul, infy, infy, infy);
+	ASSERT_TRUE("MUL", mul, zero, infy, infy);
+	ASSERT_TRUE("MUL", mul, zero, zero, zero);
+	ASSERT_TRUE("MUL", mul, neg, zero, zero);
+	ASSERT_TRUE("MUL", mul, neg, infy, infy);
+	ASSERT_TRUE("MUL", mul, neg, neg, pos);
+	ASSERT_TRUE("MUL", mul, pos, zero, zero);
+	ASSERT_TRUE("MUL", mul, pos, infy, infy);
+	ASSERT_TRUE("MUL", mul, pos, neg, neg);
+	ASSERT_TRUE("MUL", mul, pos, pos, pos);
+
+	printStats();
+	return true;
+}
+
+char RangeUnitTest::ID = 3;
+static RegisterPass<RangeUnitTest> T("ra-test-range",
+		"Run unit test for class Range");
