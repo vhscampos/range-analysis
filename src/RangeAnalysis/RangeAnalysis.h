@@ -99,8 +99,6 @@ errs() << "\n--------------\n"; \
 
 using namespace llvm;
 
-namespace {
-
 /// In our range analysis pass we have to perform operations on ranges all the
 /// time. LLVM has a class to perform operations on ranges: the class
 /// Range. However, the class Range doesn't serve very well
@@ -871,18 +869,6 @@ public:
 	bool runOnFunction(Function &F);
 	virtual Range getRange(const Value *v);
 }; // end of class RangeAnalysis
-
-class RangeUnitTest: public ModulePass{
-	unsigned total;
-	unsigned failed;
-	void printStats();
-public:
-	static char ID; // Pass identification, replacement for typeid
-	RangeUnitTest() : ModulePass(ID), total(0), failed(0) {}
-	bool runOnModule(Module & M);
-};
-
-} // end namespace
 
 #endif /* LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_ */
 
