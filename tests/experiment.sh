@@ -16,9 +16,8 @@ if [ $# -eq 2 ]; then
 	# Do not forget to put the ending / in every path below
 	llvmpath=/home/igor/workspace/ra/llvm-3.0/
 	testpath=${llvmpath}projects/test-suite/$1 #External/SPEC/CINT2006/
-	outputpath=$2#/home/igor/workspace/ra/experiments/
+	outputpath=$2 #/home/igor/workspace/ra/experiments/
 	build=Debug/
-
 	mkdir -p $outputpath
 
 	# Experiment 1
