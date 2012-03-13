@@ -95,8 +95,6 @@ errs() << "\n--------------\n"; \
 #define ASSERT(cond,msg)
 #endif
 
-#define NUMBER_FIXED_ITERATIONS 20
-
 using namespace llvm;
 
 /// In our range analysis pass we have to perform operations on ranges all the
@@ -802,7 +800,7 @@ public:
 	DenseMap<Value*, int> dfs;
 	DenseMap<Value*, Value*> root;
 	SmallPtrSet<Value*, 32> inComponent;
-	DenseMap<Value*, SmallPtrSet<VarNode*, 32> > components;
+	DenseMap<Value*, SmallPtrSet<VarNode*, 32>* > components;
 	std::deque<Value*> worklist;
 #ifdef SCC_DEBUG
     bool checkWorklist();

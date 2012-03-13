@@ -2254,10 +2254,6 @@ bool Meet::growth(BasicOp* op) {
 /// in the constraint graph, the cropping analysis shyrinks these bounds back
 /// to ranges that respect the intersections.
 bool Meet::narrow(BasicOp* op) {
-	// Updates Fermap
-	const Value *V = op->getSink()->getValue();
-	FerMap[V]++;
-	
 	
 	APInt oLower = op->getSink()->getRange().getLower();
 	APInt oUpper = op->getSink()->getRange().getUpper();
@@ -2392,6 +2388,13 @@ void ConstraintGraph::update(const UseMap &compUseMap,
 		const Value* V = *actv.begin();
 		actv.erase(V);
 		
+#ifdef STATS
+		// Updates Fermap
+		if (meet == Meet::narrow) {
+			FerMap[V]++;
+		}
+#endif
+
 		//errs() << "Update: " << V->getName() << "\n";
 		// The use list.
 		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
@@ -2453,11 +2456,12 @@ void ConstraintGraph::findIntervals() {
 	
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
 			nit != nend; ++nit) {
-		SmallPtrSet<VarNode*, 32> &component = sccList.components[*nit];
+		SmallPtrSet<VarNode*, 32> &component = *sccList.components[*nit];
 #ifdef SCC_DEBUG
 		--numberOfSCCs;
 #endif
-		// STATS
+		//PRINTCOMPONENT(component)
+
 		if (component.size() == 1) {
 			++numAloneSCCs;
 			fixIntersects(component);
@@ -2470,8 +2474,6 @@ void ConstraintGraph::findIntervals() {
 			if (component.size() > sizeMaxSCC) {
 				sizeMaxSCC = component.size();
 			}
-
-			//PRINTCOMPONENT(component)
 
 			UseMap compUseMap = buildUseMap(component);
 
@@ -3019,13 +3021,13 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap) {
 		// list once more.
 		worklist.push_back(V);
 
-		SmallPtrSet<VarNode*, 32> SCC;
+		SmallPtrSet<VarNode*, 32> *SCC = new SmallPtrSet<VarNode*, 32>;
 
-		if (!SCC.empty()) {
+		if (!SCC->empty()) {
 			errs() << "Erro na lista\n";
 		}
 
-		SCC.insert((*variables)[V]);
+		SCC->insert((*variables)[V]);
 
 		inComponent.insert(V);
 
@@ -3035,7 +3037,7 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap) {
 
 			inComponent.insert(node);
 
-			SCC.insert((*variables)[node]);
+			SCC->insert((*variables)[node]);
 		}
 
 		components[V] = SCC;
@@ -3054,10 +3056,10 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap,
 		bool single) {
 	if (single) {
 		/* FERNANDO */
-		SmallPtrSet<VarNode*, 32> SCC;
+		SmallPtrSet<VarNode*, 32> *SCC = new SmallPtrSet<VarNode*, 32>;
 		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end();
 				vit != vend; ++vit) {
-			SCC.insert(vit->second);
+			SCC->insert(vit->second);
 		}
 
 		for (VarNodes::iterator vit = varNodes->begin(), vend = varNodes->end();
