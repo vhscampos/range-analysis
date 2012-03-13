@@ -713,8 +713,92 @@ Cousot and Cousot's operators.
 \section{Experiments}
 \label{sec:exp}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+We have implemented our range analysis algorithm in LLVM 3.0, and have run
+experiments on a Intel quad core CPU with a 2.40GHz clock, and 3.6GB of RAM.
+Each core has a 4,096KB L1 cache.
+The operation system is Linux Ubuntu 10.04.4.
+Our implementation of range analysis has 3,958 lines of
+commented C++ code, and our e-SSA conversion module has 672 lines.
+We have tested it on 428 C programs that constitute the LLVM test suite, plus
+the C programs from SPEC CPU 2006.
+These programs together gave us approximately 4.76 million assembly
+instructions to analyze.
+
+\noindent
+\textbf{Structural Properties.}
+Table~\ref{tab:struct} shows structural properties of the programs in
+the SPEC 2006 benchmark suite.
+Most of the strongly connected components that constitute
+the constraint graphs are singletons.
+For instance, 99.11\% of the SSCs found in gcc (\texttt{403.gcc}) have only
+one node.
+Therefore the most complex phases of our algorithm are
+confined to a few parts of the constraint graphs that we have to handle.
+Furthermore, the strongly connected components are not large -- our largest
+component, found in \texttt{403.gcc} has 2,131 nodes, and exists due to a long
+chain of mutually recursive function calls.
+These two observations imply that our runtime is likely to be linear in
+practice, as we show in Figure~\ref{fig:TimeCorr}.
+
+\begin{table}[htdp]
+\begin{center}
+\begin{scriptsize}
+\renewcommand{\tabcolsep}{0.1cm}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|} \hline
+Name	    & 464 &	473 & 483 & 458 & 429 & 471 & 403 & 445 & 462 & 401 & 456 \\ \hline
+\#I  & 139626 & 8900 & 593765 & 26947 & 2738 & 94036 & 887191 & 141330 &  6237 & 17663 & 61736 \\ \hline
+\#$N_v$ & 97494 & 5490 & 352423 & 14407 & 1853	 & 50095 & 449442 & 84846 & 3293 & 12517 & 38409 \\ \hline
+\#S  & 91731 & 5108 & 346451 & 13309 & 1751 & 48784 & 435372 & 79909 & 3003 & 11539 & 35619 \\ \hline
+L    & 38 & 49 & 120 & 116 & 16 & 258 & 2131 & 311 & 9 & 18 & 41  \\ \hline
+\#U  & 89461 & 4983 & 344132 & 12919 & 1726 & 48400 & 431703 & 78407 & 2885 & 11267 & 34631 \\ \hline
+\end{tabular}
+\end{scriptsize}
+\end{center}
+\caption{\label{tab:struct}Structural Properties of the programs in the SPEC CPU
+2006 benchmark suite.
+\#I: number of assembly instructions in the original program.
+\#$N_v$: number of variable nodes in the constraint graph.
+% TODO: add also number of constraint nodes.
+\#S: number of strongly connected components (SCC).
+L: size of the largest SCC.
+\#U: number of SCCs with only one node.}
+\end{table}%
+
+
 % Absolute Time and complexity
 % =============================
+
+\noindent
+\textbf{Runtime Behavior.}
+Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
+run our algorithm and the size of the input programs.
+We show data for the 100 largest benchmarks in our test suite, in number
+of variable nodes in the constraint graph.
+We perform function inlining before running our analysis, to increase program
+sizes.
+Each point in the X line corresponds to a benchmark.
+We analyze the smallest benchmark in this set, \texttt{Prolangs-C}, which has
+1,131 variable nodes in the constraint graph, in 20ms.
+We take 15,91secs to analyze our largest benchmark, \texttt{403.gcc}, which,
+after function inlining, has 1,266,273 assembly instructions, and a
+constraint graph with 679,652 variable nodes.
+For this data set, the coefficient of determination $(R^2)$ is 0.967, which
+provides very strong evidence about the linear asymptotic complexity of our
+implementation.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{images/TimeCorr}
+%\includegraphics[width=0.4\textwidth]{images/Complexity}
+\end{center}
+\caption{\label{fig:TimeCorr}
+Correlation between program size (measured in number of nodes in constraint
+graphs after inlining) and analysis runtime (ms).
+Coefficient of determination = 0.967.
+}
+\end{figure}
+
 
 %Chart 1: shows complexity of the algorithm, plotting program size and time
 % to run the analysis.
@@ -775,7 +859,7 @@ Cousot and Cousot's operators.
 
 In this presentation we chose to omit correctness proofs for our algorithms.
 For a proof that the widening and the narrowing operators give origin to
-approximating sequences, we recommend Cousot and Cousot's work~\cite{Cousot}.
+approximating sequences, we recommend Cousot and Cousot's work~\cite{Cousot77}.
 For a proof that the e-SSA form transformation is semantics preserving, we
 invite the reader to check a recent report of ours~\cite{XXXX}.
 In this work we also show that the results that we obtain via the
