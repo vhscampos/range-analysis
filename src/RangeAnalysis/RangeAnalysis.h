@@ -58,7 +58,7 @@
 //#define SCC_DEBUG
 
 //TODO: comment the line below to disable the dot printing of Constraint Graphs
-//#define PRINT_DEBUG
+#define PRINT_DEBUG
 
 //Used to enable the stats computing. Comment the below line to disable it
 #define STATS
@@ -94,7 +94,20 @@ errs() << "\n--------------\n"; \
 #else
 #define ASSERT(cond,msg)
 #endif
+//************************** Log Transactions ********************************//
+//#define LOG_TRANSACTIONS
 
+#ifdef LOG_TRANSACTIONS
+std::string _log_ErrorInfo;
+llvm::Twine _log_fileName = "/tmp/ratransactions";
+llvm::raw_fd_ostream _log_file(_log_fileName.str().c_str(), _log_ErrorInfo);
+#define LOG_TRANSACTION(str) _log_file << str << "\n";
+#define FINISH_LOG _log_file.close();
+#else
+#define LOG_TRANSACTION(str)
+#define FINISH_LOG
+#endif
+//****************************************************************************//
 using namespace llvm;
 
 /// In our range analysis pass we have to perform operations on ranges all the

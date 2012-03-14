@@ -42,6 +42,7 @@ unsigned MAX_BIT_INT = 1;
 // operator is called on a variable. It was a Fernando's suggestion.
 DenseMap<const Value*, unsigned> FerMap;
 
+
 // ========================================================================== //
 // Static global functions and definitions
 // ========================================================================== //
@@ -264,11 +265,13 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	prof.updateTime("BuildGraph", elapsed);
 #endif
 #ifdef PRINT_DEBUG
-	CG->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpre.dot");
+	std::string moduleIdentifier = M.getModuleIdentifier();
+	std::string mIdentifier = moduleIdentifier.substr(moduleIdentifier.rfind("/"));
+	CG->printToFile(*(M.begin()), "/tmp/" + mIdentifier + ".cgpre.dot");
 #endif
 	CG->findIntervals();
 #ifdef PRINT_DEBUG
-	CG->printToFile(*(M.begin()), "/tmp/" + M.getModuleIdentifier() + ".cgpos.dot");
+	CG->printToFile(*(M.begin()), "/tmp/" + mIdentifier + ".cgpos.dot");
 #endif
 	// FIXME: Não sei se tem que retornar true ou false
 	return true;
@@ -477,13 +480,21 @@ bool Range::isMaxRange() const {
 /// Add and Mul are commutatives. So, they are a little different 
 /// of the other operations.
 Range Range::add(const Range& other) {
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
 	APInt l = Min, u = Max;
-	if (this->getLower().ne(Min) && other.getLower().ne(Min)) {
-		l = getLower() + other.getLower();
+	if (a.ne(Min) && c.ne(Min)) {
+		l = a + c;
+		if(a.isNegative() == c.isNegative() && a.isNegative() != l.isNegative())
+			l = Min;
 	}
 
-	if (this->getUpper().ne(Max) && other.getUpper().ne(Max)) {
-		u = getUpper() + other.getUpper();
+	if (b.ne(Max) && d.ne(Max)) {
+		u = b + d;
+		if(b.isNegative() == d.isNegative() && b.isNegative() != u.isNegative())
+			u = Max;
 	}
 
 	return Range(l, u);
@@ -527,6 +538,10 @@ Range Range::sub(const Range& other) {
 										(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
 										:(x*y))))
 
+#define MUL_OV(x,y,xy) (x.isStrictlyPositive() == y.isStrictlyPositive() ? \
+							(xy.isNegative() ? Max : xy) \
+							: (xy.isStrictlyPositive() ? Min : xy))
+
 /// Add and Mul are commutatives. So, they are a little different 
 /// of the other operations.
 // [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
@@ -541,10 +556,10 @@ Range Range::mul(const Range& other) {
 	const APInt &d = other.getUpper();
 
 	APInt candidates[4];
-	candidates[0] = MUL_HELPER(a,c);
-	candidates[1] = MUL_HELPER(a,d);
-	candidates[2] = MUL_HELPER(b,c);
-	candidates[3] = MUL_HELPER(b,d);
+	candidates[0] = MUL_OV(a, c, MUL_HELPER(a,c));
+	candidates[1] = MUL_OV(a, d, MUL_HELPER(a,d));
+	candidates[2] = MUL_OV(b, c, MUL_HELPER(b,c));
+	candidates[3] = MUL_OV(b, d, MUL_HELPER(b,d));
 
 	//Lower bound is the min value from the vector, while upper bound is the max value
 	APInt *min = &candidates[0];
@@ -2187,7 +2202,7 @@ bool Meet::fixed(BasicOp* op){
 	Range newInterval = op->eval();
 	
 	op->getSink()->setRange(newInterval);
-	
+	LOG_TRANSACTION("WIDEN::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << newInterval)
 	return oldInterval != newInterval;
 }
 
@@ -2223,6 +2238,7 @@ bool Meet::widen(BasicOp* op) {
 	}
 
 	Range sinkInterval = op->getSink()->getRange();
+	LOG_TRANSACTION("WIDEN::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << sinkInterval)
 	return oldInterval != sinkInterval;
 }
 
@@ -2246,6 +2262,7 @@ bool Meet::growth(BasicOp* op) {
 			op->getSink()->setRange(Range(oldLower, Max));
 	}
 	Range sinkInterval = op->getSink()->getRange();
+	LOG_TRANSACTION("GROWTH::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << sinkInterval)
 	return oldInterval != sinkInterval;
 }
 
@@ -2290,7 +2307,7 @@ bool Meet::narrow(BasicOp* op) {
 	}
 	
 	//errs() << "final> " << op->getSink()->getValue()->getName() << " [" << op->getSink()->getRange().getLower() << ", " << op->getSink()->getRange().getUpper() << "]\n";
-
+	LOG_TRANSACTION("NARROW::" << op->getSink()->getValue()->getName() << ": " << Range(oLower,oUpper) << " -> " << op->getSink()->getRange())
 	return hasChanged;
 }
 
@@ -2316,6 +2333,7 @@ bool Meet::crop(BasicOp* op) {
 		hasChanged = true;
 	}
 
+	LOG_TRANSACTION("CROP::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << op->getSink()->getRange())
 	return hasChanged;
 }
 
@@ -2482,7 +2500,7 @@ void ConstraintGraph::findIntervals() {
 
 			generateEntryPoints(component, entryPoints);
 			//iterate a fixed number of time before widening
-			update(component.size()*2 | NUMBER_FIXED_ITERATIONS, compUseMap, entryPoints);
+			update(component.size()*16 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap, entryPoints);
 
 #ifdef PRINT_DEBUG
 			if (func)
@@ -2658,8 +2676,13 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 void ConstraintGraph::printToFile(const Function& F, Twine FileName) {
 	std::string ErrorInfo;
 	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo);
-	print(F, file);
-	file.close();
+	if(!file.has_error()){
+		print(F, file);
+		file.close();
+	}else{
+		errs() << "ERROR: file "<< FileName.str().c_str() << " can't be opened!\n";
+		abort();
+	}
 }
 
 void ConstraintGraph::printResultIntervals() {
