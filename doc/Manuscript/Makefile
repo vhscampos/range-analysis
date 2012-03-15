@@ -1,8 +1,8 @@
 all:
-	pdflatex doc.tex
-	bibtex doc
-	pdflatex doc.tex
-	pdflatex doc.tex
+	pdflatex paper.tex
+	bibtex paper
+	pdflatex paper.tex
+	pdflatex paper.tex
 
 clean:
-	doc.aux doc.bbl doc.blg
+	paper.aux paper.bbl paper.blg
