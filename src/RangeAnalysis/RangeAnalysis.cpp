@@ -876,6 +876,54 @@ Range Range::ashr(const Range& other) {
 	return Range(*min, *max);
 }
 
+int64_t minAND(int64_t a, int64_t b, int64_t c, int64_t d)
+{
+	int64_t m, temp;
+	
+	m = 0x80000000;
+	while (m != 0) {
+		if (~a & ~c & m) {
+			temp = (a | m) & -m;
+			if (temp <= b) {
+				a = temp;
+				break;
+			}
+			temp = (c | m) & -m;
+			if (temp <= d) {
+				c = temp;
+				break;
+			}
+		}
+		m = m >> 1;
+	}
+	return a & c;
+}
+
+int64_t maxAND(int64_t a, int64_t b, int64_t c, int64_t d)
+{
+	int64_t m, temp;
+	
+	m = 0x80000000;
+	while (m != 0) {
+		if (b & ~d & m) {
+			temp = (b & ~m) | (m - 1);
+			if (temp >= a) {
+				b = temp;
+				break;
+			}
+		}
+		else if (~b & d & m) {
+			temp = (d & ~m) | (m - 1);
+			if (temp >= c) {
+				d = temp;
+				break;
+			}
+		}
+		m = m >> 1;
+	}
+	return b & d;
+}
+
 Range Range::And(const Range& other) {
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
@@ -918,6 +966,55 @@ Range Range::And(const Range& other) {
 	return Range(*min, *max);
 }
 
+int64_t minOR(int64_t a, int64_t b, int64_t c, int64_t d)
+{
+	int64_t m, temp;
+	
+	m = 0x80000000;
+	while (m != 0) {
+		if (~a & c & m) {
+			temp = (a | m) & -m;
+			if (temp <= b) {
+				a = temp;
+				break;
+			}
+		}
+		else if (a & ~c & m) {
+			temp = (c | m) & -m;
+			if (temp <= d) {
+				c = temp;
+				break;
+			}
+		}
+		m = m >> 1;
+	}
+	return a | c;
+}
+
+int64_t maxOR(int64_t a, int64_t b, int64_t c, int64_t d)
+{
+	int64_t m, temp;
+	
+	m = 0x80000000;
+	while (m != 0) {
+		if (b & d & m) {
+			temp = (b - m) | (m - 1);
+			if (temp >= a) {
+				b = temp;
+				break;
+			}
+			temp = (d - m) | (m - 1);
+			if (temp >= c) {
+				d = temp;
+				break;
+			}
+		}
+		m = m >> 1;
+	}
+	return b | d;
+}
+
+
 Range Range::Or(const Range& other) {
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
@@ -927,41 +1024,68 @@ Range Range::Or(const Range& other) {
 	if (this->isUnknown() || other.isUnknown()) {
 		return Range(Min, Max, Unknown);
 	}
-
-	APInt candidates[4];
-	candidates[0] = Min;
-	candidates[1] = Min;
-	candidates[2] = Max;
-	candidates[3] = Max;
-
-	if (a.ne(Min) && c.ne(Min)) {
-		candidates[0] = a.Or(c); // lower lower
+	
+	unsigned char switchval = 0;
+	switchval += (a.isNonNegative() ? 1 : 0);
+	switchval <<= 1;
+	switchval += (b.isNonNegative() ? 1 : 0);
+	switchval <<= 1;
+	switchval += (c.isNonNegative() ? 1 : 0);
+	switchval <<= 1;
+	switchval += (d.isNonNegative() ? 1 : 0);
+	
+	APInt l = Min, u = Max;
+	
+	switch (switchval) {
+		case 0:
+			l = minOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			u = maxOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			break;
+		case 1:
+			l = a;
+			u = -1;
+			break;
+		case 3:
+			l = minOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			u = maxOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			break;
+		case 4:
+			l = c;
+			u = -1;
+			break;
+		case 5:
+			l = (a.slt(c) ? a : c);
+			u = maxOR(0, b.getSExtValue(), 0, d.getSExtValue());
+			break;
+		case 7:
+			l = minOR(a.getSExtValue(), 0xFFFFFFFF, c.getSExtValue(), d.getSExtValue());
+			u = minOR(0, b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			break;
+		case 12:
+			l = minOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			u = maxOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			break;
+		case 13:
+			l = minOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), 0xFFFFFFFF);
+			u = maxOR(a.getSExtValue(), b.getSExtValue(), 0, d.getSExtValue());
+			break;
+		case 15:
+			l = minOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			u = maxOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
+			break;
 	}
+	
+	return Range(l, u);
+}
 
-	if (a.ne(Min) && d.ne(Max)) {
-		candidates[1] = a.Or(d); // lower upper
-	}
+int64_t minXOR(int64_t a, int64_t b, int64_t c, int64_t d)
+{
+	return minAND(a, b, ~d, ~c) | minAND(~b, ~a, c, d);
+}
 
-	if (b.ne(Max) && c.ne(Min)) {
-		candidates[2] = b.Or(c); // upper lower
-	}
-
-	if (b.ne(Max) && d.ne(Max)) {
-		candidates[3] = b.Or(d); // upper upper
-	}
-
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
-
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+int64_t maxXOR(int64_t a, int64_t b, int64_t c, int64_t d)
+{
+	return maxOR(0, maxAND(a, b, ~d, ~c), 0, maxAND(~b, ~a, c, d));
 }
 
 Range Range::Xor(const Range& other) {
