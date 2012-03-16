@@ -190,21 +190,3 @@ void printHash()
     } 
     fclose(file);   
 }
-
-// int main(int argc, char** argv){
-//     int* i, j, k;
-//     
-//     i = malloc(sizeof(int));
-//     k = (int) i & 0xffff;
-//     j = malloc(sizeof(int));
-//     
-//     setCurrentMin(i,"i\0", 4);
-//     
-//     setCurrentMin(j,"j\0", 3);
-// 
-//     setCurrentMin(k,"k\0", 0);
-//     
-//     setCurrentMin(i,"i\0", 1);
-// 
-//     printHash();
-// }
