@@ -1,3 +1,4 @@
+% Explain that we get the topological ordering for free via nuutila's algorithm.
 \documentclass{llncs}
 
 \usepackage{proof}
@@ -39,12 +40,15 @@ Contrary to many previous techniques, we handle comparisons between variables
 without resorting to relational lattices or expensive algorithms.
 We achieve path sensitiveness by using Bodik's Extended Static Single
 Assignment form as the intermediate representation.
-We show that by processing the strongly connected components that constitute
-the graph of dependences between variables in topological order we not only
-gain in time, but also in precision.
-We have implemented our technique in LLVM, an industrial strength compiler,
-and have been able to process over 4 million assembly instructions in a
-few seconds.
+%We show that by processing the strongly connected components that constitute
+%the graph of dependences between variables in topological order we not only
+%gain in time, but also in precision.
+We claim to present in this paper the most extensive empirical evaluation of
+range analysis in an industrial strength compiler.
+We have implemented our technique in LLVM and have been able to process
+programs totaling almost 2 million lines of C in a few seconds.
+We do global program analysis, and achieve a simple form of context
+sensitiveness via function inlining.
 \end{abstract}
 
 \section{Introduction}
@@ -127,7 +131,7 @@ Wagner's constraint system, which can be solved exactly in polynomial
 time~\cite{Su04,Su05}.
 However, although we could use their formula to handle a subset of C-like
 constructs, their description of how to deal with loops was
-``not very explicit"~\cite[p.422]{Gawlitza09}.
+not very explicit.
 Thus, in order to solve loops we adopted Gawlitza
 {\em et al.}'s~\cite{Gawlitza09} approach.
 This technique uses the Bellman-Ford algorithm to detect increasing or
@@ -142,15 +146,15 @@ This quest reached a pinnacle in the present work.
 
 % Our experimental numbers.
 We have implemented our algorithm in the LLVM compiler~\cite{Lattner04}, and
-have used it to analyze a test suite with 1.4 million lines of C code.
+have used it to analyze a test suite with almost 2 million lines of C code.
 In Section~\ref{sec:exp} we provide empirical evidence showing that our
-implementation is fast: it analyzes the gcc source code in 4 seconds, for
-instance.
+implementation is fast: it globally analyzes the gcc source code in less than
+15 seconds, for instance.
 It is also precise: our results are similar to Stephenson
 {\em et al}'s~\cite{Stephenson00}, even though, contrary to them, we do not
 assume that the program is correct.
-Furthermore, we have been able to find tight bounds to many of the examples
-used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
+Furthermore, we have been able to find tight bounds to the majority of the
+examples used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
 {\em et al.}~\cite{Lakhdar11}, who rely on much more costly methods.
 
 % The rest of this paper.
@@ -186,10 +190,9 @@ $\ub{\iota} = u$.
 We let \varset{V} be a set of constraint variables, and
 $I: \varset{V} \mapsto \varset{Z}^2$ a
 mapping from these variables to intervals in $\varset{Z}^2$.
-Our objective is to solve a constraint system $C$, formed by instances of the
-six different types of constraints seen in Figure~\ref{fig:eval_function}
-(left).
-Figure~\ref{fig:eval_function} (right) defines a valuation function $e$ that
+Our objective is to solve a constraint system $C$, formed by constraints such
+as those seen in Figure~\ref{fig:eval_function}(left).
+Figure~\ref{fig:eval_function}(right) defines a valuation function $e$ that
 computes $Y = f(\ldots)$, given I.
 Armed with these concepts, we define the range analysis problem as follows:
 
@@ -258,17 +261,18 @@ Figure~\ref{fig:ex1}(d).
 The SSA form, so conspicuous in modern compilers, leads to a very conservative
 solution.
 As we will see shortly, we can improve this solution substantially by using
-a more sophisticated program representation -- the e-SSA form.
+a more sophisticated program representation -- the e-SSA form -- which
+gives us path-sensitiveness.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=0.7\textwidth]{images/ex1}
+\includegraphics[width=1\textwidth]{images/ex1}
 \end{center}
 \caption{\label{fig:ex1}
 (a) Example program.
-(b) Control Flow Graph (CFG) in SSA form.
+(b) Control Flow Graph in SSA form.
 (c) Constraints that we extract from the program.
-(d) A possible solution to the range analysis problem.}
+(d) Possible solution to the range analysis problem.}
 \end{figure}
 
 \section{Our Design of a Range Analysis Algorithm}
@@ -281,7 +285,7 @@ a more sophisticated program representation -- the e-SSA form.
 % Micro algorithm
 
 In this section we explain the algorithm that we use to solve the range
-analysis problem for an entire program.
+analysis problem.
 This algorithm involves a number of steps.
 First, we convert the program to a suitable intermediate representation that
 makes it easier to extract constraint.
@@ -296,19 +300,17 @@ running time.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=0.7\textwidth]{images/algorithm}
+\includegraphics[width=1\textwidth]{images/algorithm}
 \end{center}
 \caption{\label{fig:algorithm}
-Our algorithm to solve the range analysis problem.
+Our implementation of range analysis.
 Rounded boxes are optional steps.}
 \end{figure}
 
-\subsection{Choosing a Program Representation}
-\label{sub:rep}
-
+\paragraph{Choosing a Program Representation.}
 The solution that we found to the range analysis problem in Figure~\ref{fig:ex1}
 is imprecise because we did not take conditional tests into considerations.
-Branches gives us information about the ranges that some variables assume, but
+Branches give us information about the ranges that some variables assume, but
 only at {\em specific} program points.
 For instance, given a test such as $(k_1 < 100)?$ in  Figure~\ref{fig:ex1}(b),
 we know that $I[k_1] \sqsubseteq [-\infty, 99]$ whenever the condition is true.
@@ -318,14 +320,12 @@ path where the condition is true, and another where it is false.
 There is a program representation, introduced by Bodik
 {\em et al.}~\cite{Bodik00}, that performs this live range splitting:
 the {\em Extended Static Single Assignment} form, or e-SSA for short.
-In this paper, we have experimented with two different flavors of e-SSA form,
-which we call {\em standard} and {\em non-pruned}.
 
-We will show first how we convert a program into standard e-SSA form.
+We use a non-iterative algorithm to convert a program to e-SSA form.
 Let $(v < c)?$ be a conditional test, and let $l_t$ and $l_f$ be labels in
 the program, such that $l_t$ is the target of the test if the condition is true,
-and let $l_f$ is the target when the condition is false.
-If $l_t$ dominates any use of $v$, then we insert at $l_f$ a copy
+and $l_f$ is the target when the condition is false.
+If $l_f$ dominates any use of $v$, then we insert at $l_f$ a copy
 $v_f = v \sqcap [-\infty, c-1]$, where $v_f$ is a fresh name.
 We then rename every use of $v$ that is dominated by $l_f$ to $v_f$.
 Dually, if $l_t$ dominates any use of $v$, then we insert at $l_t$ a copy
@@ -349,6 +349,10 @@ Figure~\ref{fig:ex_standard_eSSA}(a) shows our running example changed into
 standard e-SSA form.
 The part (b) of this figure shows the solution that we get to this new
 program.
+The e-SSA form allows us to bind interval information directly to the live
+ranges of variables; thus, allowing us to solve range analysis sparsely.
+More traditional approaches, which we call {\em dense analyses}, bind
+interval information to pairs formed by variables and program points.
 
 \begin{figure}[t!]
 \begin{center}
@@ -389,39 +393,48 @@ e-SSA form.
 %\end{figure}
 
 \paragraph{Extracting Constraints.}
-The constraints in Figure~\ref{fig:eval_function} handles
-many different programming instructions.
-The $\phi$ assignments, such as $Y = \phi(X_1, X_2)$, represent
-the $\phi$-functions typically found in SSA form programs.
-As discussed in Section~\ref{sub:rep}, we use intersection
-constraints to bound the variables created due to live range splitting
-at conditionals.
+Our implementation handles 18 different assembly instructions.
+The constraints in Figure~\ref{fig:eval_function} show some meaningful
+examples.
+These instructions include, for instance, the multiplicative operators
+\texttt{mul}, \texttt{div} and \texttt{modulus},
+the bitwise operators \texttt{and}, \texttt{or}, \texttt{xor} and \texttt{neg},
+the different types of shifts, the additive operators \texttt{add} and
+\texttt{sub}, and the logical operators \texttt{andalso}, \texttt{orelse} and
+\texttt{not}.
+We also handle different types of type conversion, e.g., converting 8-bits
+characters to 32-bits integers and vice-versa.
+Our constraint system deals with the $\phi$-functions from the SSA-form
+representation.
+Finally, we handle conditionals via intersection constraints created
+during the live range splitting of variables.
 The widening analysis that we will introduce in Section~\ref{sub:micro}
 require monotonic transfer functions.
 Many assembly operations, such as modulus or division, do not afford us
 this monotonicity.
-However, these non-monotonic instructions have a conservative
-translation to our constraint system.
-Figure~\ref{fig:constraints} shows some examples of constraints that we
-derive from typical assembly instructions.
+However, these non-monotonic instructions have conservative approximations.
+%TODO: fix this discussion.
 
-\begin{figure}[t!]\begin{center}
-\begin{tabular}{|l@{\hspace{0.2cm}}l@{\hspace{0.3cm}}l|} \hline
-\textbf{Description} & \textbf{Operation} & \textbf{Constraint} \\ \hline
-Constant & $v = c$ & $V = [c, c]$ \\
-Assignment & $v_1 = v_2$ & $V_1 = V_2$ \\
-Multiplication & $v_1 = v_2 * c$ & $V_1 = c V_2$ \\
-Int. division & $v_1 = v_2 \ / \ v_3$ & $V_1 = V_2; V_1 = - V_2$ \\
-Modulus & $v_1 = v_2 \ \% \ c$ & $V_1 = [0, c - 1]$ \\
-Bitwise and & $v_1 = v_2 \ \& \ c$ & $V_1 = v_2 \sqcap [0, c]$ \\
-Bitwise or & $v_1 = v_2 \ | \ v_3$ & $V_1 = V_2 + V_3$ \\
-Left shift & $v_1 = v_2 \ \qside \ c$ & $V_1 = 2^c V_2$ \\ \hline
-\end{tabular}
-\end{center}
-\caption{\label{fig:constraints}Example of constraint derivation rules.
-We let $c$ denote a positive constant, $\{v, v_1, v_2\}$ are program
-variables and $\{V, V_1, V_2\} \subset \cal{V}$.}
-\end{figure}
+%Figure~\ref{fig:constraints} shows some examples of constraints that we
+%derive from typical assembly instructions.
+%
+%\begin{figure}[t!]\begin{center}
+%\begin{tabular}{|l@{\hspace{0.2cm}}l@{\hspace{0.3cm}}l|} \hline
+%\textbf{Description} & \textbf{Operation} & \textbf{Constraint} \\ \hline
+%Constant & $v = c$ & $V = [c, c]$ \\
+%Assignment & $v_1 = v_2$ & $V_1 = V_2$ \\
+%Multiplication & $v_1 = v_2 * c$ & $V_1 = c V_2$ \\
+%Int. division & $v_1 = v_2 \ / \ v_3$ & $V_1 = V_2; V_1 = - V_2$ \\
+%Modulus & $v_1 = v_2 \ \% \ c$ & $V_1 = [0, c - 1]$ \\
+%Bitwise and & $v_1 = v_2 \ \& \ c$ & $V_1 = v_2 \sqcap [0, c]$ \\
+%Bitwise or & $v_1 = v_2 \ | \ v_3$ & $V_1 = V_2 + V_3$ \\
+%Left shift & $v_1 = v_2 \ \qside \ c$ & $V_1 = 2^c V_2$ \\ \hline
+%\end{tabular}
+%\end{center}
+%\caption{\label{fig:constraints}Example of constraint derivation rules.
+%We let $c$ denote a positive constant, $\{v, v_1, v_2\}$ are program
+%variables and $\{V, V_1, V_2\} \subset \cal{V}$.}
+%\end{figure}
 
 \paragraph{The Constraint Graph.}
 The main data structure that we use to solve the range analysis problem is
@@ -430,7 +443,7 @@ graph}~\cite{Ferrante87}.
 For each constraint variable $V$ we create a variable node $N_v$.
 For each constraint $C$ we create a constraint node $N_c$.
 We add an edge from $N_v$ to $N_c$ if the name $V$ is used in $C$.
-We add an edge from $N_c$ to $V$ if the constraint $C$ defines the name
+We add an edge from $N_c$ to $N_v$ if the constraint $C$ defines the name
 $V$.
 Figure~\ref{fig:ex_graph} shows the dependence graph that we build for the
 e-SSA form program given in Figure~\ref{fig:ex_standard_eSSA}(a).
@@ -449,9 +462,7 @@ The dependence graph that we build to the program in
 Figure~\ref{fig:ex_standard_eSSA}.}
 \end{figure}
 
-\subsection{Solving Range Analysis on Strong Components}
-\label{sub:macro}
-
+\paragraph{Solving Range Analysis on Strong Components}
 Having built the dependence graph, we proceed to solve the range analysis
 problem by finding all the strongly connected components (SCCs) of the
 dependence graph, and reducing this graph to a directed acyclic graph.
@@ -464,11 +475,11 @@ SCC.
 A variable node $N_v$ is said to be in the frontier of a strongly connected
 component $S$ if:
 (i) $N_v \notin S$; and
-(ii) there exists a variable node $V' \in S$, and a constraint node $N_c$,
-such that $V' \leftarrow N_c$, and $N_c \leftarrow V$.
-This propagation gives us a very modular algorithm:
-when analyzing a strongly connected component $S$ we can rest assured that
-any influence that $S$ might suffer from nodes outside it has been already
+(ii) there exists a variable node $N_v' \in S$, and a constraint node $N_c$,
+such that $N_v' \leftarrow N_c$, and $N_c \leftarrow N_v$.
+This propagation gives us a very modular algorithm.
+It ensures that when analyzing a strongly connected component $S$ any influence
+that $S$ might suffer from nodes outside it has been already
 taken into consideration.
 
 When finding strongly connected components, we take control dependence
@@ -482,8 +493,13 @@ future bounds, e.g., $\fun{ft}(v)$, either variable $v$ has been solved in a
 previous component, or it belongs to the current component.
 In the latter case, as we will see soon, we can still take $v$'s interval into
 consideration.
+As we show in Section~\ref{sec:exp}, most of the strong components in actual
+programs are singletons.
+Furthermore, the composite components tend to be small.
+These two facts ensure that the more costly parts of our algorithm only have to
+handle small inputs.
 
-\subsection{Finding Ranges: the Micro Algorithm}
+\subsection{Finding Ranges in Strongly Connected Components}
 \label{sub:micro}
 
 Given a strongly connected component of the dependence graph with $N$ nodes,
@@ -534,6 +550,7 @@ precise if we evaluate the constraints a few times before applying widening.
 \inferrule{\lb{e(Y)} < \lb{I[Y]} \\ \ub{e(Y)} > \ub{I[Y]}}
 {I[Y] \leftarrow [-\infty, +\infty ]}
 \\
+\\
 \inferrule{\lb{e(Y)} < \lb{I[Y]}}
 {I[Y] \leftarrow [-\infty, \ub{I[Y]}]}
 &
@@ -546,7 +563,7 @@ precise if we evaluate the constraints a few times before applying widening.
 \end{tabular}
 \end{center}
 \caption{\label{fig:growth_analysis}
-(Left) The lattice of the widening analysis.
+(Left) The lattice of the growth analysis.
 (Right) Cousot and Cousot's widening operator. We evaluate the rules from top 
 to bottom, and stop upon finding a pattern matching.}
 \end{figure}
@@ -709,33 +726,32 @@ Cousot and Cousot's operators.
 We have implemented our range analysis algorithm in LLVM 3.0, and have run
 experiments on a Intel quad core CPU with a 2.40GHz clock, and 3.6GB of RAM.
 Each core has a 4,096KB L1 cache.
-The operation system is Linux Ubuntu 10.04.4.
+We use Linux Ubuntu 10.04.4.
 Our implementation of range analysis has 3,958 lines of
 commented C++ code, and our e-SSA conversion module has 672 lines.
-We have tested it on 428 C programs that constitute the LLVM test suite, plus
-the C programs from SPEC CPU 2006.
-These programs together gave us approximately 4.76 million assembly
-instructions to analyze.
+We have analyzed the 428 C programs in the LLVM test suite, plus the integer
+benchmarks in SPEC CPU 2006.
+Together, these programs contain 4.76 million assembly instructions.
 
 \noindent
 \textbf{Structural Properties.}
-Table~\ref{tab:struct} shows structural properties of the programs in
-the SPEC 2006 benchmark suite.
-Most of the strongly connected components that constitute
-the constraint graphs are singletons.
-For instance, 99.11\% of the SSCs found in gcc (\texttt{403.gcc}) have only
+Table~\ref{tab:struct} shows data taken from the SPEC 2006 integer benchmark
+suite for the inter-procedural version of our analysis.
+Three observations provide evidence that our algorithm is linear in practice,
+as we will show in Figure~\ref{fig:TimeCorr}.
+First, most of the strongly connected components found in constraint graphs are
+singletons.
+For instance, 99.11\% of the SSCs in gcc (\texttt{403.gcc}) have only
 one node.
-Therefore the most complex phases of our algorithm are
-confined to a few parts of the constraint graphs that we have to handle.
-Furthermore, the strongly connected components are not large -- our largest
-component, found in \texttt{403.gcc} has 2,131 nodes, and exists due to a long
-chain of mutually recursive function calls.
+Hence, the most complex phases of our algorithm are confined to a small fraction
+of the constraint graphs.
+Second, the strongly connected components are not large -- our largest
+component, found in \texttt{403.gcc}, has 2,131 nodes.
+It exists due to a long chain of mutually recursive function calls.
 We do not count control dependency edges when measuring the size of SCCs, as
 they have no impact on the algorithm explained in Section~\ref{sub:micro}.
-Finally, as we see in the table, any node was visited at most three times by
+Third, as we see in the table, any node was visited at most three times by
 the narrowing operator.
-These three observations imply that our runtime is likely to be linear in
-practice, as we show in Figure~\ref{fig:TimeCorr}.
 
 \begin{table}[t!]
 \begin{center}
@@ -749,12 +765,12 @@ Name	    & 464 &	473 & 483 & 458 & 429 & 471 & 403 & 445 & 462 & 401 & 456 \\ \h
 \#S  & 91731 & 5108 & 346451 & 13309 & 1751 & 48784 & 435372 & 79909 & 3003 & 11539 & 35619 \\ \hline
 L    & 38 & 49 & 120 & 116 & 16 & 258 & 2131 & 311 & 9 & 18 & 41  \\ \hline
 \#U  & 89461 & 4983 & 344132 & 12919 & 1726 & 48400 & 431703 & 78407 & 2885 & 11267 & 34631 \\ \hline
-\#V  & 3	2 & 2 & 2 & 2 & 2 & 2 & 3 & 2 & 2 & 2 \\ \hline
+\#V  & 3	& 2 & 2 & 2 & 2 & 2 & 2 & 3 & 2 & 2 & 2 \\ \hline
 \end{tabular}
 \end{scriptsize}
 \end{center}
 \caption{\label{tab:struct}Structural Properties of the programs in the SPEC CPU
-2006 benchmark suite.
+2006 integer benchmark suite.
 \#I: number of assembly instructions in the original program.
 \#$N_v$: number of variable nodes in the constraint graph.
 \#$N_c$: number of constraint nodes in the constraint graph.
@@ -789,7 +805,7 @@ implementation.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=1\textwidth]{images/TimeCorr}
+\includegraphics[width=0.9\textwidth]{images/TimeCorr}
 %\includegraphics[width=0.4\textwidth]{images/Complexity}
 \end{center}
 \caption{\label{fig:TimeCorr}
@@ -801,17 +817,14 @@ Coefficient of determination = 0.967.
 
 \noindent
 \textbf{Time distribution.}
-Figure~\ref{fig:timeComp}(Left) shows how the processing time is distributed
+Figure~\ref{fig:timeComp}(Left) shows the distribution of processing time
 among the main phases of the inter-procedural version of our algorithm.
-In this case, we have inlined functions to increase program sizes.
-We analyze the entire SPEC 2006 integer benchmarks in 41.42secs.
-The time to build the e-SSA representation ss 7.03secs; the time to extract
+Functions are inlined to increase program sizes.
+We analyze the SPEC 2006 integer benchmarks in 41.42secs.
+The time to build the e-SSA representation is 7.03secs; the time to extract
 constraints from the program and build the constraint graphs is 7.87secs;
-the time to run Nuutila's algorithm to separate the constraint graph into
-strong components is 10.55secs, and the time to run the analysis itself is
-15.96secs.
-Notice that the Nuutila's entry includes also the time to sort the SCCs
-topologically.
+the time to find SCCs via Nuutila's algorithm and sort them topologically is
+10.55secs, and the time to run the analysis itself is 15.96secs.
 
 \begin{figure}[t!]
 \begin{center}
@@ -829,44 +842,53 @@ The bars are normalized to the time to run the intra-procedural version.
 
 \noindent
 \textbf{Intra vs Inter-procedural runtimes.}
-As we saw in Figure~\ref{fig:algorithm}, our implementation supports three
-different execution modes: intra-procedural, inter-procedural, and
-inter-procedural with inlining.
-The latter approach gives us some form of context-sensitiveness, because our
-baseline compiler, LLVM, is able to inline non-recursive function calls.
-Figure~\ref{fig:timeComp}(Right) compares these three different setups.
-All the times are normalized to the time to run the intra-procedural version.
-On the average, the intra-procedural mode is XX\% faster than the
+As we saw in Figure~\ref{fig:algorithm}, our implementation supports
+intra- and inter-procedural execution modes.
+On top of these modes, we can optionally perform function inline to obtain
+limited context-sensitiveness.
+Our baseline compiler, LLVM, is able to inline non-recursive function calls.
+Figure~\ref{fig:timeComp}(Right) compares three different execution modes.
+Times are normalized to the time to run the intra-procedural analysis
+without inlining.
+On the average, the intra-procedural mode is 28.92\% faster than the
 inter-procedural mode.
-If we perform function inlining, then this difference is larger: XX\%.
+If we perform function inlining, then this difference is larger: 45.87\%.
+These numbers are close because we run our analysis on strong components.
 
 \noindent
-\textbf{The runtime impact of the e-SSA intermediate representation.}
-Figure~\ref{fig:eSSA_data} shows how the e-SSA transformation impacts the
-runtime of our algorithm.
-As we see in Figure~\ref{fig:eSSA_data}(Left), this alternative representation
-increases the size of the SPEC 2006 integer benchmarks by a factor of XX\%,
-when compared to the original program, in SSA form.
-Such growth is due to the $\sigma$-functions used to split live ranges
-after conditionals, and to the extra $\phi$-functions necessary to preserve the
-single static assignment property.
-The e-SSA form increases the runtime of our analysis by XX\%, as we see in
-Figure~\ref{fig:eSSA_data}(Right).
-In that figure we are comparing only the time to perform range analysis.
-The bars do not include the time to perform the e-SSA conversion, which we
-show in Figure~\ref{fig:timeComp}(Left).
+\textbf{The impact of strong components in time and precision.}
+Figure~\ref{fig:impactEssaSCC}(a) shows that strong components dramatically
+decrease the runtime of our analysis.
+For instance, this design improves the analysis time of \texttt{483.xalancbmk}
+452 times!
+Moreover, as the example in Section~\ref{sub:micro} shows, our algorithm benefits
+from the partitioning of constraint graphs into SCCs to be more precise.
+Figure~\ref{fig:impactEssaSCC}(b) measures this precision.
+Range propagation along strong components allows us, for example, to reduce
+41.5\% more bits in \texttt{401.bzip}.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=0.48\textwidth]{images/size_e_SSA}
-\includegraphics[width=0.48\textwidth]{images/time_e_SSA}
+\includegraphics[width=\textwidth]{images/impactEssaSCC}
 \end{center}
-\caption{\label{fig:eSSA_data}
-(Left) Program growth due to the conversion from the SSA to the e-SSA form.
-(Right) Runtime slowdown of the range analysis when running it on the e-SSA
-form programs relative to the time to run it on the SSA-form programs.
+\caption{\label{fig:impactEssaSCC}
+How strong components and the e-SSA representation improve our algorithm.
+This data refer to the inter-procedural analysis with function inlining.
 }
 \end{figure}
+
+\noindent
+\textbf{Impact of the e-SSA on runtime.}
+Figure~\ref{fig:impactEssaSCC}(c) shows that the e-SSA conversion increases
+the size of the SPEC 2006 integer benchmarks by 6.52\%.
+This growth is due to the $\sigma$-functions used to split live ranges
+after conditionals, and to the extra $\phi$-functions necessary to preserve the
+single static assignment property.
+As a consequence of the program growth, the e-SSA form increases the runtime of
+our analysis by 7.11\%, as seen in Figure~\ref{fig:impactEssaSCC}(d).
+We are comparing only the time to perform range analysis.
+The bars do not include the time to perform the e-SSA conversion, which we
+showed in Figure~\ref{fig:timeComp}(Left).
 
 \noindent
 \textbf{The impact of whole program analysis on precision.}
@@ -877,16 +899,16 @@ benchmarks: SPEC CPU 2006, the Stanford Suite~\footnote{\texttt{http://classes.e
 Bitwise~\cite{Stephenson00}.
 Our initial goal when developing this analysis was to support a bitwidth-aware
 register allocator.
-Thus, we measure precision in terms of the average number of bits that our
-analysis allows us to save to store the program variables.
+Thus, we measure precision by the average number of bits that our
+analysis allows us to save per program variables.
 Our results for the SPEC programs were disappointingly: on the average, the
 intra-procedural version of our analysis saves 5.23\% of the total program
 bitwidth.
 By using the inter-procedural version, with function inlining to simulate
 context-sensitiveness, we can increase this number to 8.89\%.
 A manual inspection of the SPEC programs reveal that this result is expected:
-such benchmarks manipulate files, and their code do no provide enough
-explicit constants to power our analysis.
+they manipulate files, and their code do no provide enough
+explicit constants to power our analysis up.
 However, with numerical benchmarks we fare much better.
 On the average our inter procedural algorithm reduces the bitwidth of the
 Stanford benchmarks by 36.24\%.
@@ -898,17 +920,16 @@ However, this average is brought down by two outliers: \texttt{edge\_detect} and
 The bitwise benchmarks were implemented by Stephenson
 {\em et al.}~\cite{Stephenson00} to validate their bitwidth analysis.
 Our results are on par with those found by the original authors.
-Notice that all these benchmarks contain only the \texttt{main} function; thus,
-there is no different between the different versions of our algorithm.
+The bitwise programs contain only the \texttt{main} function; thus, different
+versions of our algorithm find the same results.
 
 \noindent
 \textbf{The impact of e-SSA on precision.}
 Figure~\ref{fig:essaDivSSA}(Middle) shows that the e-SSA transformation improves
 the precision of our analysis dramatically.
 If we convert the input programs from the original SSA representation used
-by LLVM to the e-SSA format, then, in some cases, such as in
-\texttt{Stanford.queens}, in the intra-procedural case with function
-inlining, we can increase the bitwidth reduction by 154x.
+by LLVM to the e-SSA format, then, in some cases, e.g.,
+\texttt{Stanford.queens}, we can increase bitwidth reduction by 154x.
 This impressive difference happens because the standard SSA representation does
 not give our analysis any subsidy to acquire information from the outcome of
 conditionals.
@@ -922,7 +943,7 @@ The impact of different design trade-offs on precision of range analysis.}
 \end{figure}
 
 \noindent
-\textbf{The impact of the number of widening iterations on precision.}
+\textbf{The impact of the number of iterations before widening on precision.}
 It is well-known that premature widening might cause loss of
 information~\cite[Sec5.2]{Cousot09}.
 Figure~\ref{fig:essaDivSSA} shows how the precision of our analysis varies with
@@ -983,13 +1004,15 @@ In this presentation we chose to omit correctness proofs for our algorithms.
 For a proof that the widening and the narrowing operators give origin to
 approximating sequences, we recommend Cousot and Cousot's work~\cite{Cousot77}.
 For a proof that the e-SSA form transformation is semantics preserving, we
-invite the reader to check a recent report of ours~\cite{XXXX}.
+invite the reader to check a recent report of ours~\cite{Tavares11b}.
 In this work we also show that the results that we obtain via the
 sparse analysis are equivalent to the results provided by a dense analysis.
 In other words, if the dense analysis tells us that variable $v$ is
 associated with the interval range $[l, u]$ at program point $i$, and $v'$
 is the new name of $v$, alive at $i$ in the e-SSA form program, then $v'$ is
 associated with the interval $[l, u]$ along its entire live range.
+We have used a dynamic profiler, available in our webpage, to empirically
+validate our results.
 
 Our implementation of the range analysis algorithm described in this paper is
 publicly available at \texttt{http://google.code/range-analysis/}.
