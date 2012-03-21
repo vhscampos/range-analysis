@@ -266,7 +266,8 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 #endif
 #ifdef PRINT_DEBUG
 	std::string moduleIdentifier = M.getModuleIdentifier();
-	std::string mIdentifier = moduleIdentifier.substr(moduleIdentifier.rfind("/"));
+    int pos = moduleIdentifier.rfind("/");
+	std::string mIdentifier = pos > 0 ? moduleIdentifier.substr(pos) : moduleIdentifier;
 	CG->printToFile(*(M.begin()), "/tmp/" + mIdentifier + ".cgpre.dot");
 #endif
 	CG->findIntervals();
@@ -2326,7 +2327,7 @@ bool Meet::fixed(BasicOp* op){
 	Range newInterval = op->eval();
 	
 	op->getSink()->setRange(newInterval);
-	LOG_TRANSACTION("WIDEN::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << newInterval)
+	LOG_TRANSACTION("FIXED::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << newInterval)
 	return oldInterval != newInterval;
 }
 
@@ -2624,7 +2625,7 @@ void ConstraintGraph::findIntervals() {
 
 			generateEntryPoints(component, entryPoints);
 			//iterate a fixed number of time before widening
-			update(component.size()*16 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap, entryPoints);
+			update(component.size()*2 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap, entryPoints);
 
 #ifdef PRINT_DEBUG
 			if (func)
