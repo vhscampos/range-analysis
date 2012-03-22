@@ -8,8 +8,6 @@
 #ifndef RAINSTRUMENTATION_H_
 #define RAINSTRUMENTATION_H_
 
-#define DEBUG_TYPE "range-analysis-printer"
-
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
 #include "llvm/Function.h"
@@ -41,7 +39,7 @@ namespace {
         void PrintInstructionIdentifier(std::string M, std::string F, const Value *V);
 
         bool IsNotOriginal(Instruction& inst);
-        bool isValidInst(Instruction *I);
+        static bool isValidInst(Instruction *I);
         virtual bool runOnModule(Module &M);
 
         Function& GetSetCurrentMinMaxFunction();

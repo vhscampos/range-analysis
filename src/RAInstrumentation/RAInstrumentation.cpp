@@ -7,6 +7,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "range-analysis-printer"
+
 STATISTIC(numInstructions, "Number of instructions instrumented");
 
 static RegisterPass<RAInstrumentation> X("ra-instrumentation", "Range Analysis Instrumentation Pass");
