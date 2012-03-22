@@ -22,8 +22,8 @@
 
 \title {Range Analysis of Whole Programs}
 
-\author{Victor Sperle Campos, Igor Rafael, Douglas do Couto Teixeira,
-Fernando Magno Quint\~{a}o Pereira}
+\author{Victor Sperle Campos, Igor Rafael de Assis Costa, Douglas do Couto
+Teixeira, Fernando Magno Quint\~{a}o Pereira}
 
 \institute{UFMG -- 6627 Ant\^{o}nio Carlos Av, 31.270-010, Belo Horizonte, Brazil
 \email{\{victorsc,igor.rafael,douglas,fernando\}@dcc.ufmg.br}
@@ -46,7 +46,7 @@ Assignment form as the intermediate representation.
 We claim to present in this paper the most extensive empirical evaluation of
 range analysis in an industrial strength compiler.
 We have implemented our technique in LLVM and have been able to process
-programs totaling almost 2 million lines of C in a few seconds.
+programs totaling 2.72 million lines of C in a few seconds.
 We do global program analysis, and achieve a simple form of context
 sensitiveness via function inlining.
 \end{abstract}
@@ -129,7 +129,7 @@ implementation of range analysis.
 Our first endeavor to implement such an algorithm was based on Su and
 Wagner's constraint system, which can be solved exactly in polynomial
 time~\cite{Su04,Su05}.
-However, although we could use their formula to handle a subset of C-like
+However, although we could use their formulation to handle a subset of C-like
 constructs, their description of how to deal with loops was
 not very explicit.
 Thus, in order to solve loops we adopted Gawlitza
@@ -146,13 +146,13 @@ This quest reached a pinnacle in the present work.
 
 % Our experimental numbers.
 We have implemented our algorithm in the LLVM compiler~\cite{Lattner04}, and
-have used it to analyze a test suite with almost 2 million lines of C code.
+have used it to analyze a test suite with 2.72 million lines of C code.
 In Section~\ref{sec:exp} we provide empirical evidence showing that our
 implementation is fast: it globally analyzes the gcc source code in less than
 15 seconds, for instance.
 It is also precise: our results are similar to Stephenson
-{\em et al}'s~\cite{Stephenson00}, even though, contrary to them, we do not
-assume that the program is correct.
+{\em et al}'s~\cite{Stephenson00}, even though out analysis does not require
+a backward propagation phase.
 Furthermore, we have been able to find tight bounds to the majority of the
 examples used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
 {\em et al.}~\cite{Lakhdar11}, who rely on much more costly methods.
@@ -245,7 +245,7 @@ Y = X \sqcap [l', u']
 \end{array}
 \end{eqnarray*}
 \caption{\label{fig:eval_function}
-The constraint system that produces instances of the range analysis problem.}
+A suite of constraints that produce an instance of the range analysis problem.}
 \end{small}
 \end{figure}
 
@@ -332,7 +332,7 @@ conditions is true:
 (i) $l_f$ or $l_t$ dominate any use of $v$;
 (ii) there exist a use of $v$ at the dominance frontier of $l_f$ or $l_t$.
 For the notions of dominance and dominance-frontier, see Aho
-{\em et al.}~\cite{Aho06}.
+{\em et al.}~\cite[p.656]{Aho06}.
 To split the live range of $v$ at $l_f$ we insert at this
 program point a copy $v_f = v \sqcap [c, +\infty]$, where $v_f$ is a fresh name.
 We then rename every use of $v$ that is dominated by $l_f$ to $v_f$.
@@ -424,7 +424,7 @@ characters to 32-bit integers and vice-versa.
 In addition to constraints that represent actual assembly instructions, we have
 constraints to represent $\phi$-functions, and intersections, as seen in
 Figure~\ref{fig:eval_function}.
-The widening analysis that we will introduce in Section~\ref{sub:micro}
+The growth analysis that we will introduce in Section~\ref{sub:micro}
 require monotonic transfer functions.
 Many assembly operations, such as modulus or division, do not afford us
 this monotonicity.
@@ -480,11 +480,10 @@ Figure~\ref{fig:ex_standard_eSSA}.}
 \end{figure}
 
 \noindent
-\textbf{Solving Range Analysis on Strong Components.}
-We solve the range analysis
-problem by finding all the strongly connected components (SCCs) of the
-dependence graph, and reducing this graph to a directed acyclic graph.
-We perform this last step by collapsing every SCC into a single node.
+\textbf{Strongly Connected Components.}
+To solve range analysis we find all the strongly connected components (SCCs) of
+the dependence graph and collapse them into single nodes; thus, obtaining a
+directed acyclic graph.
 We then sort the resulting DAG topologically, and apply the analyses from
 Section~\ref{sub:micro} on every SCC in topological order.
 Once we solve the range analysis problem for a SCC, we propagate the
@@ -494,11 +493,10 @@ A variable node $N_v$ is said to be in the frontier of a strongly connected
 component $S$ if:
 (i) $N_v \notin S$; and
 (ii) there exists a variable node $N_v' \in S$, and a constraint node $N_c$,
-such that $N_v' \leftarrow N_c$, and $N_c \leftarrow N_v$.
-This propagation gives us a very modular algorithm.
-It ensures that when analyzing a strongly connected component $S$ any influence
-that $S$ might suffer from nodes outside it has been already
-taken into consideration.
+such that $N_v \leftarrow N_c$, and $N_c \leftarrow N_v'$.
+This propagation ensures that when analyzing a strongly connected component $S$
+any influence that $S$ might suffer from nodes outside it has already been
+considered.
 
 When finding strongly connected components, we take control dependence
 edges into consideration.
@@ -536,8 +534,8 @@ functions.
 
 \noindent
 \textbf{Growth Analysis.}
-The first step of our algorithm consists in determining the growth behavior of
-the interval bound to each constraint variable.
+The first step of our algorithm consists in determining how the interval bound
+to each variable grows.
 We ensure termination of this phase via Cousot and Cousot's widening
 operator~\cite[p.247]{Cousot77}.
 The possible behaviors of an interval are:
@@ -545,8 +543,8 @@ The possible behaviors of an interval are:
 (ii) grows towards $+\infty$;
 (iii) grows towards $-\infty$; and
 (iv) grows in both directions.
-The lattice of abstract states, plus a constraint system that represents our
-widening analysis is given in Figure~\ref{fig:growth_analysis}.
+The lattice of abstract states, plus a constraint system representing our
+growth analysis is given in Figure~\ref{fig:growth_analysis}.
 Because the lattice has height three, the intervals bound to each variable can
 change at most three times.
 However, as we show in Figure~\ref{fig:essaDivSSA}(Bottom), we can be more
@@ -583,19 +581,21 @@ precise if we evaluate the constraints a few times before applying widening.
 \caption{\label{fig:growth_analysis}
 (Left) The lattice of the growth analysis.
 (Right) Cousot and Cousot's widening operator. We evaluate the rules from
-left-to-right, top-to-bottom, and stop upon finding a pattern matching.}
+left-to-right, top-to-bottom, and stop upon finding a pattern matching.
+Again: given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
+$\ub{\iota} = u$}
 \end{figure}
 
 \noindent
 \textbf{Fixing futures.}
-The ranges found by the widening analysis tells us which variables have fixed
+The ranges found by the growth analysis tells us which variables have fixed
 bounds, independent on the intersections in the constraint system.
 Thus, we can use actual limits to replace intersections bounded by futures.
 Figure~\ref{fig:fix_intersects} shows the rules to perform these substitutions.
 In order to correctly replace a future $\fun{ft}(V)$ that limits a variable
-$V'$, we need to have already applied the widening analysis onto $V$.
+$V'$, we need to have already applied the growth analysis onto $V$.
 Had we considered only data dependence edges, then it would be possible
-that $V'$ be analyzed before $V"$.
+that $V'$ be analyzed before $V$.
 However, because of control dependence edges, this case cannot happen.
 The control dependence edges ensure that any topological ordering of the
 constraint graph either places $N_v$ before $N_{v'}$, or places these nodes
@@ -636,9 +636,9 @@ analysis.}
 
 \noindent
 \textbf{Narrowing Analysis.}
-The widening analysis associates very conservative bounds to each variable.
+The growth analysis associates very conservative bounds to each variable.
 Thus, the last step of our algorithm consists in narrowing these intervals.
-We accomplish this step via Cousot and Cousot's narrowing
+We accomplish this step via Cousot and Cousot's classic narrowing
 operator~\cite[248]{Cousot77}, which we show in
 Figure~\ref{fig:crop_analysis}.
 
@@ -686,8 +686,7 @@ bounded by $+\infty$, and
 On the other hand, because we only analyze $j$'s SCC after we have
 analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
 
-Figure~\ref{fig:ex_standard_eSSA}(b) shows the final solution that we find
-for this example.
+Figure~\ref{fig:ex_standard_eSSA}(b) shows our final solution for this example.
 This solution is very precise, in the sense that it is the maximum fixed
 point of the constraint system given in Figure~\ref{fig:eval_function}.
 However, the solution is still an over approximation of the dynamic behavior of
@@ -695,21 +694,21 @@ the program in Figure~\ref{fig:ex_standard_eSSA}.
 For instance, we have found that variable $i$ could reach the upper value of
 99.
 In any actual run of the program, $i$ could be at most 50.
-There exist static methods that are able to infer this tighter bound, such as
-Lakhdar-Chaouch's analysis on the relational domain~\cite{Lakhdar11}.
-However, analyses like this are much more expensive than ours, and seem, so
-far, unable to scale up to very large code bodies. 
+Analysis on relational lattices, such as the polyhedron~\cite{Cousot78} or the
+Octagon~\cite{Mine06} domains, can infer such tighter bounds, as shown by
+Lakhdar-Chaouch {\em et al.}~\cite{Lakhdar11}.
+However, analyses on these higher dimensional domains are much more
+computationally expensive than analyses on the interval domain~\cite{Oh12}.
 
 \begin{figure}[t!]
 \begin{center}
 \includegraphics[width=\textwidth]{images/ex_partition_grow_crop}
 \end{center}
 \caption{\label{fig:ex_partition_grow_crop}
-Four snapshots of the last SCC of Figure~\ref{fig:ex_partition_grow_crop}.
-(a) After removing control dependence edges, immediately before applying
-Cousot and Cousot's operators.
-(b) After running the widening analysis.
-(c) After fixing the intersections.
+Four snapshots of the last SCC of Figure~\ref{fig:ex_standard_eSSA}.
+(a) After removing control dependence edges.
+(b) After running the growth analysis.
+(c) After fixing the intersections bound to futures.
 (d) After running the narrowing analysis.}
 \end{figure}
 
@@ -985,12 +984,12 @@ by Stephenson {\em et al.}~\cite{Stephenson00}, Patterson~\cite{Patterson95}
 and many other researchers.
 Recently there have been many independent efforts to find exact, polynomial
 time algorithms to solve constraints on the interval
-lattice~\cite{Gawlitza09,Costan05,Lakhdar11,Su04,Su05}.
+lattice~\cite{Costan05,Gawlitza09,Lakhdar11,Su04,Su05}.
 However, these works are still very theoretical, and have not yet been used to
 analyze large programs.
 Lakhdar {\em et al.}'s relational analysis~\cite{Lakhdar11}, for instance, takes
-about 25 minutes to go over a program with almost 900 basic blocks, which we
-analyze in less than one second.
+about 25 minutes to go over a program with almost 900 basic blocks.
+We analyze programs of similar size in seconds.
 We do not claim our approach is as precise as such algorithms, even though we
 are able to exactly analyze 4/5 of the examples presented in~\cite{Lakhdar11}.
 On the contrary, this paper presents a compromise between precision and speed
@@ -998,7 +997,7 @@ that scales to very large programs.
 
 % Scalability: Astree and others.
 There have been many practical approaches to abstract interpretation,
-with special emphasis on range analysis~\cite{Blanchet03,Jung05,Cousot09}.
+with special emphasis on range analysis~\cite{Blanchet03,Cousot09,Jung05}.
 Cousot's group, for instance, has been able to globally analyze programs with
 thousands of lines of code, albeit they use domain specific tools.
 Astr\'{e}, for example, analyzes programs that do not contain recursive calls.
@@ -1033,8 +1032,8 @@ In other words, if the dense analysis tells us that variable $v$ is
 associated with the interval range $[l, u]$ at program point $i$, and $v'$
 is the new name of $v$, alive at $i$ in the e-SSA form program, then $v'$ is
 associated with the interval $[l, u]$ along its entire live range.
-We have used a dynamic profiler, available in our webpage, to empirically
-validate our results.
+Additionally, we have used a dynamic profiler, available in our webpage, to
+empirically validate our results.
 
 Our implementation of the range analysis algorithm described in this paper is
 publicly available at \texttt{http://google.code/range-analysis/}.
