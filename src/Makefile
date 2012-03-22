@@ -1,7 +1,7 @@
 llvmpath=~/workspace/ra/llvm-3.0
 
 all:
-	cd ${llvmpath}/lib/Transforms && rm -rf RangeAnalysis vSSA #RangeAnalysisTest
+	cd ${llvmpath}/lib/Transforms && rm -rf RangeAnalysis vSSA RAInstrumentation #RangeAnalysisTest
 	cp -R RangeAnalysis ${llvmpath}/lib/Transforms/RangeAnalysis
 	cp -R vSSA ${llvmpath}/lib/Transforms/vSSA
 	cp -R RAInstrumentation ${llvmpath}/lib/Transforms/RAInstrumentation
