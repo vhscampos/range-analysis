@@ -2769,7 +2769,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 	// Print the header of the .dot file.
 	OS << "digraph dotgraph {\n";
 	OS << "label=\"Constraint Graph for \'";
-	OS << F.getNameStr() << "\' function\";\n";
+	OS << F.getName() << "\' function\";\n";
 	OS << "node [shape=record,fontname=\"Times-Roman\",fontsize=14];\n";
 
 	// Print the body of the .dot file.
