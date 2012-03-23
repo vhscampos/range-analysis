@@ -22,7 +22,7 @@
 
 \title {Range Analysis of Whole Programs}
 
-\author{Victor Sperle Campos, Igor Rafael de Assis Costa, Douglas do Couto
+\author{Victor Hugo Sperle Campos, Igor Rafael de Assis Costa, Douglas do Couto
 Teixeira, Fernando Magno Quint\~{a}o Pereira}
 
 \institute{UFMG -- 6627 Ant\^{o}nio Carlos Av, 31.270-010, Belo Horizonte, Brazil
@@ -40,9 +40,6 @@ Contrary to many previous techniques, we handle comparisons between variables
 without resorting to relational lattices or expensive algorithms.
 We achieve path sensitiveness by using Bodik's Extended Static Single
 Assignment form as the intermediate representation.
-%We show that by processing the strongly connected components that constitute
-%the graph of dependences between variables in topological order we not only
-%gain in time, but also in precision.
 We claim to present in this paper the most extensive empirical evaluation of
 range analysis in an industrial strength compiler.
 We have implemented our technique in LLVM and have been able to process
@@ -72,7 +69,7 @@ Finally, range analysis has also seen use in the static prediction of
 branches~\cite{Patterson95}, to detect buffer overflow
 vulnerabilities~\cite{Simon08,Wagner00}, to find the trip count of
 loops~\cite{Lokuciejewski09}
-and even in the synthesis of hardware~\cite{Cong05,Mahlke01}.
+and even in the synthesis of hardware~\cite{Cong05,Lhairech10,Mahlke01}.
 
 % The problem: few implementations, not extensive experimental reports.
 Given this great importance, it comes as no surprise that the compiler
@@ -979,9 +976,9 @@ after each node was visited 1, 2 and 16 times.
 Range analysis is an old ally of compiler writers.
 The notions of widening and narrowing were introduced by Cousot and Cousot in
 one of the most cited papers in computer science~\cite{Cousot77}.
-Different algorithms for range analysis have been subsequently proposed
-by Stephenson {\em et al.}~\cite{Stephenson00}, Patterson~\cite{Patterson95}
-and many other researchers.
+Different algorithms for range analysis have been later proposed
+by Patterson~\cite{Patterson95}, Stephenson {\em et al.}~\cite{Stephenson00},
+Mahlke {\em et al.}~\cite{Mahlke01} and many other researchers.
 Recently there have been many independent efforts to find exact, polynomial
 time algorithms to solve constraints on the interval
 lattice~\cite{Costan05,Gawlitza09,Lakhdar11,Su04,Su05}.
@@ -997,7 +994,7 @@ that scales to very large programs.
 
 % Scalability: Astree and others.
 There have been many practical approaches to abstract interpretation,
-with special emphasis on range analysis~\cite{Blanchet03,Cousot09,Jung05}.
+with special emphasis on range analysis~\cite{Bertrane10,Blanchet03,Cousot09,Jung05}.
 Cousot's group, for instance, has been able to globally analyze programs with
 thousands of lines of code, albeit they use domain specific tools.
 Astr\'{e}, for example, analyzes programs that do not contain recursive calls.
