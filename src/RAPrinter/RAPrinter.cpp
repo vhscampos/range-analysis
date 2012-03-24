@@ -8,75 +8,77 @@
 
 using namespace llvm;
 
-class RAPrinter: public llvm::ModulePass {
-public:
-        static char ID;
-        RAPrinter() : ModulePass(ID){ }
-        virtual ~RAPrinter() { }
-        virtual bool runOnModule(Module &M){
+bool isValidInst(Instruction *I)
+{
+	// Only i32 instructions are valid
+	// Exceptions: invoke instructions
+	bool conditions = !I->getType()->isIntegerTy(BIT_WIDTH) || isa<InvokeInst>(I);
 
-        		InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
+	return !conditions;
+}
+namespace {
+	class RAPrinterInterProceduralCousot: public llvm::ModulePass {
+	public:
+			static char ID;
+			RAPrinterInterProceduralCousot() : ModulePass(ID){ }
+			virtual ~RAPrinterInterProceduralCousot() { }
+			virtual bool runOnModule(Module &M){
 
-                std::string Filename = "RAEstimatedValues.txt";
+					InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
 
-                std::string ErrorInfo;
-                raw_fd_ostream File(Filename.c_str(), ErrorInfo);
+					std::string Filename = "RAEstimatedValues.txt";
 
-                if (!ErrorInfo.empty()){
-                  errs() << "Error opening file RAEstimatedValues.txt for writing! \n";
-                  return false;
-                }
+					std::string ErrorInfo;
+					raw_fd_ostream File(Filename.c_str(), ErrorInfo);
 
-            	// Iterate through functions
-            	for (Module::iterator Fit = M.begin(), Fend = M.end(); Fit != Fend; ++Fit) {
+					if (!ErrorInfo.empty()){
+					  errs() << "Error opening file RAEstimatedValues.txt for writing! \n";
+					  return false;
+					}
 
-            		// If the function is empty, there is nothing to do...
-            		if (Fit->begin() == Fit->end())
-            			continue;
+					// Iterate through functions
+					for (Module::iterator Fit = M.begin(), Fend = M.end(); Fit != Fend; ++Fit) {
 
-            		// Iterate through basic blocks
-            		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; ++BBit) {
+						// If the function is empty, there is nothing to do...
+						if (Fit->begin() == Fit->end())
+							continue;
 
-            			// Iterate through instructions
-            			for (BasicBlock::iterator Iit = BBit->begin(); Iit != BBit->end(); ++Iit) {
+						// Iterate through basic blocks
+						for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; ++BBit) {
 
-            				llvm::Instruction* I = cast<Instruction>(Iit);
-            				if ( isValidInst(I) ){
+							// Iterate through instructions
+							for (BasicBlock::iterator Iit = BBit->begin(); Iit != BBit->end(); ++Iit) {
 
-                                const Value *v = &(*Iit);
-                                Range r = ra.getRange(v);
+								llvm::Instruction* I = cast<Instruction>(Iit);
+								if ( isValidInst(I) ){
 
-                                //Prints the variable and the range to the output file
-                                File << M.getModuleIdentifier()
-                                     << "." << Fit->getName().str()
-                                     << "." << cast<Value>(Iit)->getName()
-                                     << " " << r.getLower()
-                                     << " " << r.getUpper() << "\n";
+									const Value *v = &(*Iit);
+									Range r = ra.getRange(v);
 
-            				}
-            			}
-            		}
-            	}
+									//Prints the variable and the range to the output file
+									File << M.getModuleIdentifier()
+										 << "." << Fit->getName().str()
+										 << "." << cast<Value>(Iit)->getName()
+										 << " " << r.getLower()
+										 << " " << r.getUpper() << "\n";
+
+								}
+							}
+						}
+					}
 
 
 
-                return false;
-        }
+					return false;
+			}
 
-        virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-                AU.setPreservesAll();
-                AU.addRequired<IntraProceduralRA<Cousot> >();
-        }
+			virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+					AU.setPreservesAll();
+					AU.addRequired<InterProceduralRA<Cousot> >();
+			}
 
-        bool isValidInst(Instruction *I)
-        {
-        	// Only i32 instructions are valid
-        	// Exceptions: invoke instructions
-        	bool conditions = !I->getType()->isIntegerTy(BIT_WIDTH) || isa<InvokeInst>(I);
+	};
+}
 
-        	return !conditions;
-        }
-};
-
-char RAPrinter::ID = 0;
-static RegisterPass<RAPrinter> Y("ra-printer-inter-cousot", "RangeAnalysis printer (Interprocedural - Cousot).", false, false);
+char RAPrinterInterProceduralCousot::ID = 0;
+static RegisterPass<RAPrinterInterProceduralCousot> Y("ra-printer-inter-cousot", "RangeAnalysis printer (Interprocedural - Cousot).", false, false);
