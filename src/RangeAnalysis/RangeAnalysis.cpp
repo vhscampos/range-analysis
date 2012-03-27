@@ -2622,6 +2622,23 @@ void ConstraintGraph::findIntervals() {
 
 			// Get the entry points of the SCC
 			SmallPtrSet<const Value*, 6> entryPoints;
+			
+			// TODO
+			// Create set of constants inside component
+			DenseMap<const Value*, APInt> constantmap;
+			for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
+				const Value *V = (*cit)->getValue();
+				const ConstantInt *ci = NULL;
+				if ((ci = dyn_cast<ConstantInt>(V))) {
+					APInt constantval = ci->getValue();
+					if (constantval.getBitWidth() < MAX_BIT_INT) {
+						constantval = constantval.sext(MAX_BIT_INT);
+					}
+					
+					constantmap.insert(std::make_pair(V, constantval));
+				}
+			}
+			
 
 			generateEntryPoints(component, entryPoints);
 			//iterate a fixed number of time before widening
