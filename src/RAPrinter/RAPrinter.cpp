@@ -26,13 +26,16 @@ namespace {
 
 					InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
 
-					std::string Filename = "RAEstimatedValues.txt";
+				    int pos = M.getModuleIdentifier().rfind("/");
+					std::string mIdentifier = pos > 0 ? M.getModuleIdentifier().substr(pos + 1) : M.getModuleIdentifier();
+
+					std::string Filename = "/tmp/RAEstimatedValues." + mIdentifier + ".txt";
 
 					std::string ErrorInfo;
 					raw_fd_ostream File(Filename.c_str(), ErrorInfo);
 
 					if (!ErrorInfo.empty()){
-					  errs() << "Error opening file RAEstimatedValues.txt for writing! \n";
+					  errs() << "Error opening file /tmp/RAEstimatedValues." << mIdentifier << ".txt for writing! Error Info: " << ErrorInfo  << " \n";
 					  return false;
 					}
 
@@ -56,7 +59,7 @@ namespace {
 									Range r = ra.getRange(v);
 
 									//Prints the variable and the range to the output file
-									File << M.getModuleIdentifier()
+									File << mIdentifier
 										 << "." << Fit->getName().str()
 										 << "." << cast<Value>(Iit)->getName()
 										 << " " << r.getLower()
