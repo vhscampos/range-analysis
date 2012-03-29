@@ -52,6 +52,7 @@
 #include <stack>
 #include <set>
 #include <sstream>
+#include <algorithm>
 
 //TODO: comment the line below to disable the debug of SCCs and optimize the code
 // generated.

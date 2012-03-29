@@ -2277,6 +2277,14 @@ void ConstraintGraph::buildValueMaps(const Function& F) {
 }
 
 /*
+ * Comparison function used to sort the constant vector
+ */
+bool compareAPInt(const APInt &v1, const APInt &v2)
+{
+	return v1.slt(v2);
+}
+
+/*
  * Used to insert constant in the right position
  */
 void ConstraintGraph::insertConstantIntoVector(APInt constantval)
@@ -2285,24 +2293,6 @@ void ConstraintGraph::insertConstantIntoVector(APInt constantval)
 		constantval = constantval.sext(MAX_BIT_INT);
 	}
 
-	for (SmallVectorImpl<APInt>::iterator vit = constantvector.begin(), vend = constantvector.end(); vit != vend; ++vit) {
-		const APInt &vapint = *vit;
-
-		// If already in vector, get out of here
-		if (vapint.eq(constantval)) {
-			return;
-		}
-
-		// If have found point of insertion, do it and return
-		if (constantval.slt(vapint)) {
-			constantvector.insert(vit, constantval);
-			return;
-		}
-
-		assert(constantval.ne(vapint) && "Erro no vetor de constantes para jump-set");
-	}
-
-	// Insert at the end of the vector
 	constantvector.push_back(constantval);
 }
 
@@ -2428,6 +2418,10 @@ void ConstraintGraph::buildConstantVector(const SmallPtrSet<VarNode*, 32> &compo
 			}
 		}
 	}
+
+	// Sort vector in ascending order and remove duplicates
+	std::sort(constantvector.begin(), constantvector.end(), compareAPInt);
+	std::unique(constantvector.begin(), constantvector.end());
 }
 
 /// Iterates through all instructions in the function and builds the graph.
@@ -2505,10 +2499,6 @@ bool Meet::widen(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 	// Jump-set
 	APInt nlconstant = getFirstLessFromVector(*constantvector, newLower);
 	APInt nuconstant = getFirstGreaterFromVector(*constantvector, newUpper);
-
-	// To disable jump-set, uncomment lines below
-	//nlconstant = Min;
-	//nuconstant = Max;
 
 	if (oldInterval.isUnknown()) {
 		op->getSink()->setRange(newInterval);
@@ -2764,7 +2754,7 @@ void ConstraintGraph::findIntervals() {
 #ifdef SCC_DEBUG
 		--numberOfSCCs;
 #endif
-		PRINTCOMPONENT(component)
+		//PRINTCOMPONENT(component)
 
 		if (component.size() == 1) {
 			++numAloneSCCs;
@@ -2785,6 +2775,7 @@ void ConstraintGraph::findIntervals() {
 			SmallPtrSet<const Value*, 6> entryPoints;
 			
 			// Create vector of constants inside component
+			// Comment this line below to deactivate jump-set
 			buildConstantVector(component, compUseMap);
 			
 
