@@ -718,7 +718,7 @@ private:
 	ValuesBranchMap valuesBranchMap;
 	ValuesSwitchMap valuesSwitchMap;
 	
-	SmallVector<std::pair<const ConstantInt*, APInt>, 2 > constantvector;
+	SmallVector<APInt, 2> constantvector;
 	
 	/// Adds a BinaryOp in the graph.
 	void addBinaryOp(const Instruction* I);
@@ -732,7 +732,9 @@ private:
 	void buildValueSwitchMap(const SwitchInst *sw);
 	void buildValueMaps(const Function& F);
 	
-	void buildConstantVector(SmallPtrSet<VarNode*, 32> &component);
+	void insertConstantIntoVector(APInt constantval);
+	APInt getFirstGreaterFromVector(const APInt &val);
+	void buildConstantVector(const SmallPtrSet<VarNode*, 32> &component, const UseMap &compusemap);
 	// Perform the widening and narrowing operations
 
 protected:
