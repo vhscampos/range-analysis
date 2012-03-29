@@ -443,6 +443,7 @@ public:
 	void addSource(const VarNode* newsrc);
 	// Return source identified by index
 	const VarNode *getSource(unsigned index) const {return sources[index];}
+	unsigned getNumSources() const {return sources.size();}
 	// Methods for RTTI
 	virtual OperationId getValueId() const {return PhiOpId;}
 	static bool classof(PhiOp const *) {
@@ -718,6 +719,8 @@ private:
 	ValuesBranchMap valuesBranchMap;
 	ValuesSwitchMap valuesSwitchMap;
 	
+	// Vector containing the constants from a SCC
+	// It is cleared at the beginning of every SCC resolution
 	SmallVector<APInt, 2> constantvector;
 	
 	/// Adds a BinaryOp in the graph.
@@ -733,13 +736,14 @@ private:
 	void buildValueMaps(const Function& F);
 	
 	void insertConstantIntoVector(APInt constantval);
-	APInt getFirstGreaterFromVector(const APInt &val);
+	APInt getFirstGreaterFromVector(const SmallVector<APInt, 2> &constantvector, const APInt &val);
+	APInt getFirstLessFromVector(const SmallVector<APInt, 2> &constantvector, const APInt &val);
 	void buildConstantVector(const SmallPtrSet<VarNode*, 32> &component, const UseMap &compusemap);
 	// Perform the widening and narrowing operations
 
 protected:
 	void update(const UseMap &compUseMap,
-		SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op));
+		SmallPtrSet<const Value*, 6>& actv, bool (*meet)(BasicOp* op, const SmallVector<APInt, 2> *constantvector));
 	void update(unsigned nIterations, const UseMap &compUseMap,
 			SmallPtrSet<const Value*, 6>& actv);
 
@@ -839,12 +843,13 @@ public:
 };
 
 class Meet{
+
 public:
-	static bool widen(BasicOp* op);
-	static bool narrow(BasicOp* op);
-	static bool crop(BasicOp* op);
-	static bool growth(BasicOp* op);
-	static bool fixed(BasicOp* op);
+	static bool widen(BasicOp* op, const SmallVector<APInt, 2> *constantvector);
+	static bool narrow(BasicOp* op, const SmallVector<APInt, 2> *constantvector);
+	static bool crop(BasicOp* op, const SmallVector<APInt, 2> *constantvector);
+	static bool growth(BasicOp* op, const SmallVector<APInt, 2> *constantvector);
+	static bool fixed(BasicOp* op, const SmallVector<APInt, 2> *constantvector);
 };
 
 class RangeAnalysis{

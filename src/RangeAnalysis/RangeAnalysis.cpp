@@ -2288,33 +2288,54 @@ void ConstraintGraph::insertConstantIntoVector(APInt constantval)
 	for (SmallVectorImpl<APInt>::iterator vit = constantvector.begin(), vend = constantvector.end(); vit != vend; ++vit) {
 		const APInt &vapint = *vit;
 
+		// If already in vector, get out of here
 		if (vapint.eq(constantval)) {
-			break;
+			return;
 		}
 
+		// If have found point of insertion, do it and return
 		if (constantval.slt(vapint)) {
 			constantvector.insert(vit, constantval);
-			break;
+			return;
 		}
 
 		assert(constantval.ne(vapint) && "Erro no vetor de constantes para jump-set");
 	}
+
+	// Insert at the end of the vector
+	constantvector.push_back(constantval);
 }
 
 /*
  * Get the first constant from vector greater than val
  */
-APInt ConstraintGraph::getFirstGreaterFromVector(const APInt &val)
+APInt getFirstGreaterFromVector(const SmallVector<APInt, 2> &constantvector, const APInt &val)
 {
-	for (SmallVectorImpl<APInt>::iterator vit = constantvector.begin(), vend = constantvector.end(); vit != vend; ++vit) {
+	for (SmallVectorImpl<APInt>::const_iterator vit = constantvector.begin(), vend = constantvector.end(); vit != vend; ++vit) {
 		const APInt &vapint = *vit;
 
-		if (vapint.sgt(val)) {
+		if (vapint.sge(val)) {
 			return vapint;
 		}
 	}
 
-	return val;
+	return Max;
+}
+
+/*
+ * Get the first constant from vector less than val
+ */
+APInt getFirstLessFromVector(const SmallVector<APInt, 2> &constantvector, const APInt &val)
+{
+	for (SmallVectorImpl<APInt>::const_reverse_iterator vit = constantvector.rbegin(), vend = constantvector.rend(); vit != vend; ++vit) {
+		const APInt &vapint = *vit;
+
+		if (vapint.sle(val)) {
+			return vapint;
+		}
+	}
+
+	return Min;
 }
 
 /*
@@ -2349,8 +2370,9 @@ void ConstraintGraph::buildConstantVector(const SmallPtrSet<VarNode*, 32> &compo
 			continue;
 		}
 
-		// We assume that these operations ought to be binary
+		// Handle BinaryOp case
 		const BinaryOp *bop = dyn_cast<BinaryOp>(dfit->second);
+		const PhiOp *pop = dyn_cast<PhiOp>(dfit->second);
 		if (bop) {
 			const VarNode *source1 = bop->getSource1();
 			const Value *sourceval1 = source1->getValue();
@@ -2364,6 +2386,19 @@ void ConstraintGraph::buildConstantVector(const SmallPtrSet<VarNode*, 32> &compo
 			}
 			if ((const2 = dyn_cast<ConstantInt>(sourceval2))) {
 				insertConstantIntoVector(const2->getValue());
+			}
+		}
+		// Handle PhiOp case
+		else if (pop) {
+			for (unsigned i = 0, e = pop->getNumSources(); i < e; ++i) {
+				const VarNode *source = pop->getSource(i);
+				const Value *sourceval = source->getValue();
+
+				const ConstantInt *consti;
+
+				if ((consti = dyn_cast<ConstantInt>(sourceval))) {
+					insertConstantIntoVector(consti->getValue());
+				}
 			}
 		}
 	}
@@ -2441,7 +2476,7 @@ void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component) {
 	}
 }
 
-bool Meet::fixed(BasicOp* op){
+bool Meet::fixed(BasicOp* op, const SmallVector<APInt, 2> *constantvector){
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 	
@@ -2456,7 +2491,9 @@ bool Meet::fixed(BasicOp* op){
 /// a constant interval, e.g., [3, 15]. After this analysis runs, there will
 /// be no undefined interval. Each variable will be either bound to a
 /// constant interval, or to [-, c], or to [c, +], or to [-, +].
-bool Meet::widen(BasicOp* op) {
+bool Meet::widen(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
+	assert(constantvector != NULL && "Invalid pointer to constant vector");
+
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
@@ -2465,17 +2502,25 @@ bool Meet::widen(BasicOp* op) {
 	APInt newLower = newInterval.getLower();
 	APInt newUpper = newInterval.getUpper();
 
+	// Jump-set
+	APInt nlconstant = getFirstLessFromVector(*constantvector, newLower);
+	APInt nuconstant = getFirstGreaterFromVector(*constantvector, newUpper);
+
+	// To disable jump-set, uncomment lines below
+	//nlconstant = Min;
+	//nuconstant = Max;
+
 	if (oldInterval.isUnknown()) {
 		op->getSink()->setRange(newInterval);
 	} else {
 		if (newLower.slt(oldLower) && newUpper.sgt(oldUpper)) {
-			op->getSink()->setRange(Range(Min, Max));
+			op->getSink()->setRange(Range(nlconstant, nuconstant));
 		} else {
 			if (newLower.slt(oldLower)) {
-				op->getSink()->setRange(Range(Min, oldUpper));
+				op->getSink()->setRange(Range(nlconstant, oldUpper));
 			} else {
 				if (newUpper.sgt(oldUpper)) {
-					op->getSink()->setRange(Range(oldLower, Max));
+					op->getSink()->setRange(Range(oldLower, nuconstant));
 				}
 			}
 		}
@@ -2486,7 +2531,7 @@ bool Meet::widen(BasicOp* op) {
 	return oldInterval != sinkInterval;
 }
 
-bool Meet::growth(BasicOp* op) {
+bool Meet::growth(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
@@ -2514,17 +2559,14 @@ bool Meet::growth(BasicOp* op) {
 /// analysis expands the bounds of each variable, regardless of intersections
 /// in the constraint graph, the cropping analysis shrinks these bounds back
 /// to ranges that respect the intersections.
-bool Meet::narrow(BasicOp* op) {
+bool Meet::narrow(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 	
 	APInt oLower = op->getSink()->getRange().getLower();
 	APInt oUpper = op->getSink()->getRange().getUpper();
-	//errs() << "old> " << op->getSink()->getValue()->getName() << " [" << oLower << ", " << oUpper << "]\n";
 	Range newInterval = op->eval();
 
 	APInt nLower = newInterval.getLower();
 	APInt nUpper = newInterval.getUpper();
-	
-	//errs() << "new> " << op->getSink()->getValue()->getName() << " [" << oLower << ", " << oUpper << "]\n";
 	
 	bool hasChanged = false;
 
@@ -2555,7 +2597,7 @@ bool Meet::narrow(BasicOp* op) {
 	return hasChanged;
 }
 
-bool Meet::crop(BasicOp* op) {
+bool Meet::crop(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
 
@@ -2630,7 +2672,7 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op) {
 		if (visitedOps.count(sink))
 			continue;
 
-		Meet::crop(V);
+		Meet::crop(V, NULL);
 		visitedOps.insert(sink);
 
 		// The use list.of sink
@@ -2645,7 +2687,7 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op) {
 }
 
 void ConstraintGraph::update(const UseMap &compUseMap,
-		SmallPtrSet<const Value*, 6>& actv, bool(*meet)(BasicOp* op)) {
+		SmallPtrSet<const Value*, 6>& actv, bool(*meet)(BasicOp* op, const SmallVector<APInt, 2> *constantvector)) {
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
@@ -2663,7 +2705,7 @@ void ConstraintGraph::update(const UseMap &compUseMap,
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
 
 		for (; bgn != end; ++bgn) {
-			if (meet(*bgn)) {
+			if (meet(*bgn, &constantvector)) {
 				// I want to use it as a set, but I also want
 				// keep an order or insertions and removals.
 				actv.insert((*bgn)->getSink()->getValue());
@@ -2684,7 +2726,7 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 			if(nIterations == 0) {actv.clear(); return;}
 			else --nIterations;
 
-			if(Meet::fixed(*bgn))
+			if(Meet::fixed(*bgn, NULL))
 				actv.insert((*bgn)->getSink()->getValue());
 		}
 	}
@@ -2722,7 +2764,7 @@ void ConstraintGraph::findIntervals() {
 #ifdef SCC_DEBUG
 		--numberOfSCCs;
 #endif
-		//PRINTCOMPONENT(component)
+		PRINTCOMPONENT(component)
 
 		if (component.size() == 1) {
 			++numAloneSCCs;
