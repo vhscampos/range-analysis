@@ -879,7 +879,7 @@ Moreover, as the example in Section~\ref{sub:micro} shows, our algorithm benefit
 from the partitioning of constraint graphs into SCCs to be more precise.
 Figure~\ref{fig:impactEssaSCC}(b) measures this precision.
 Range propagation along strong components allows us, for example, to reduce
-41.5\% more bits in \texttt{401.bzip}.
+41.5\% more bits in \texttt{401.bzip2}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -915,8 +915,7 @@ Our initial goal when developing this analysis was to support a bitwidth-aware
 register allocator.
 Thus, we measure precision by the average number of bits that our
 analysis allows us to save per program variables.
-It is very important to notice that we do not consider the constants in the
-program text in our statics of precision.
+It is very important to notice that we do not consider constants in our statistics of precision.
 In other words, we only measure bitwidth reduction in variables that a constant
 propagation step could not remove.
 Our results for the SPEC programs were disappointingly: on the average, the
@@ -1033,12 +1032,12 @@ Additionally, we have used a dynamic profiler, available in our webpage, to
 empirically validate our results.
 
 Our implementation of the range analysis algorithm described in this paper is
-publicly available at \texttt{http://google.code/range-analysis/}.
+publicly available at \texttt{http://code.google.com/p/range-analysis/}.
 This repository contains instructions about how to deploy and use our
 implementation.
 We provide a gallery of examples, including source codes,
 CFGs and constraint graphs that we produce for meaningful programs at
-\texttt{http://google.code/range-analysis/wiki/gallery}.
+\texttt{http://code.google.com/p/range-analysis/wiki/gallery}.
 
 \bibliographystyle{plain}
 \bibliography{references}
