@@ -59,10 +59,13 @@
 //#define SCC_DEBUG
 
 //TODO: comment the line below to disable the dot printing of Constraint Graphs
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 
 //Used to enable the stats computing. Comment the below line to disable it
 #define STATS
+
+// Uncomment the line below to activate jump-set
+#define JUMPSET
 
 //Used to limit the number of iterations of fixed meet operator.
 // This update runs before widening and is necessary to improve the result of
@@ -647,8 +650,12 @@ class Profile {
 	
 	private:
 		AccTimesMap accumulatedtimes;
+		size_t memory;
 	
 	public:
+		Profile():
+			memory(0) {}
+
 		TimeValue timenow() {
 			TimeValue garbage, usertime;
 			sys::Process::GetTimeUsage(garbage, usertime, garbage);
@@ -673,6 +680,25 @@ class Profile {
 			std::ostringstream formatted;
 			formatted << time;
 			errs() << formatted.str() << "\t - " << key << " elapsed time\n";
+		}
+
+		void setMemoryUsage() {
+			size_t newmemory = sys::Process::GetTotalMemoryUsage();
+			if (newmemory > memory) {
+				memory = newmemory;
+			}
+		}
+
+		size_t getMemoryUsage() {
+			return memory;
+		}
+
+		void printMemoryUsage() {
+			std::ostringstream formatted;
+			// Convert bytes to kilobytes
+			double mem = memory;
+			formatted << (mem / 1024);
+			errs() << formatted.str() << "\t - " << "Memory used in KB\n";
 		}
 };
 

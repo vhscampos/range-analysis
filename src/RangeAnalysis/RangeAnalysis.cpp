@@ -172,6 +172,8 @@ bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 #ifdef STATS
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
+
+	prof.setMemoryUsage();
 #endif
 #ifdef PRINT_DEBUG
 	CG->printToFile(F, "/tmp/" + F.getName() + "cgpre.dot");
@@ -197,6 +199,7 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
 	prof.printTime("ComputeStats");
+	prof.printMemoryUsage();
 	
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
@@ -263,6 +266,8 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 #ifdef STATS
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
+
+	prof.setMemoryUsage();
 #endif
 #ifdef PRINT_DEBUG
 	std::string moduleIdentifier = M.getModuleIdentifier();
@@ -429,7 +434,7 @@ InterProceduralRA<CGT>::~InterProceduralRA(){
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
-	prof.printTime("ComputeStats");
+	prof.printMemoryUsage();
 	
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
@@ -2774,14 +2779,15 @@ void ConstraintGraph::findIntervals() {
 			// Get the entry points of the SCC
 			SmallPtrSet<const Value*, 6> entryPoints;
 			
+#ifdef JUMPSET
 			// Create vector of constants inside component
 			// Comment this line below to deactivate jump-set
 			buildConstantVector(component, compUseMap);
-			
+#endif
 
-			generateEntryPoints(component, entryPoints);
+			//generateEntryPoints(component, entryPoints);
 			//iterate a fixed number of time before widening
-			update(component.size()*2 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap, entryPoints);
+			//update(component.size()*2 /*| NUMBER_FIXED_ITERATIONS*/, compUseMap, entryPoints);
 
 #ifdef PRINT_DEBUG
 			if (func)
