@@ -861,6 +861,8 @@ public:
 #endif
 public:
 	Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap, bool single = false);
+	~Nuutila();
+
 	void addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap, VarNodes* vars);
 	void delControlDependenceEdges(UseMap *useMap);
 	void visit(Value *V, std::stack<Value*> &stack, UseMap *useMap);

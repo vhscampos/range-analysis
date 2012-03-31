@@ -1801,15 +1801,15 @@ ValueBranchMap::~ValueBranchMap() {
 }
 
 void ValueBranchMap::clear() {
-//	if (ItvT) {
-//		delete ItvT;
-//		ItvT = NULL;
-//	}
-//
-//	if (ItvF) {
-//		delete ItvF;
-//		ItvF = NULL;
-//	}
+	if (ItvT) {
+		delete ItvT;
+		ItvT = NULL;
+	}
+
+	if (ItvF) {
+		delete ItvF;
+		ItvF = NULL;
+	}
 }
 
 // ========================================================================== //
@@ -1825,12 +1825,12 @@ ValueSwitchMap::~ValueSwitchMap() {
 }
 
 void ValueSwitchMap::clear() {
-//	for (unsigned i = 0, e = BBsuccs.size(); i < e; ++i) {
-//		if (BBsuccs[i].first) {
-//			delete BBsuccs[i].first;
-//			BBsuccs[i].first = NULL;
-//		}
-//	}
+	for (unsigned i = 0, e = BBsuccs.size(); i < e; ++i) {
+		if (BBsuccs[i].first) {
+			delete BBsuccs[i].first;
+			BBsuccs[i].first = NULL;
+		}
+	}
 }
 
 // ========================================================================== //
@@ -3420,6 +3420,13 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap,
 	ASSERT(checkComponents(), "a component has been used more than once")
 	ASSERT(checkTopologicalSort(useMap), "topological sort is incorrect")
 #endif
+}
+
+Nuutila::~Nuutila()
+{
+	for (DenseMap<Value*, SmallPtrSet<VarNode*, 32>* >::iterator mit = components.begin(), mend = components.end(); mit != mend; ++mit) {
+		delete mit->second;
+	}
 }
 
 #ifdef SCC_DEBUG
