@@ -263,6 +263,7 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 		MatchParametersAndReturnValues(*I, *CG);
 	}
 	CG->buildVarNodes();
+
 #ifdef STATS
 	Profile::TimeValue elapsed = prof.timenow() - before;
 	prof.updateTime("BuildGraph", elapsed);
@@ -2281,6 +2282,13 @@ void ConstraintGraph::buildValueMaps(const Function& F) {
 	}
 }
 
+
+//void ConstraintGraph::clearValueMaps()
+//{
+//	valuesSwitchMap.clear();
+//	valuesBranchMap.clear();
+//}
+
 /*
  * Comparison function used to sort the constant vector
  */
@@ -2729,6 +2737,8 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
+//	clearValueMaps();
+
 	// Builds symbMap
 #ifdef STATS
 	Profile::TimeValue before = prof.timenow();

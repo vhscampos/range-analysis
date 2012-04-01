@@ -762,6 +762,8 @@ private:
 	void buildValueSwitchMap(const SwitchInst *sw);
 	void buildValueMaps(const Function& F);
 	
+//	void clearValueMaps();
+
 	void insertConstantIntoVector(APInt constantval);
 	APInt getFirstGreaterFromVector(const SmallVector<APInt, 2> &constantvector, const APInt &val);
 	APInt getFirstLessFromVector(const SmallVector<APInt, 2> &constantvector, const APInt &val);
