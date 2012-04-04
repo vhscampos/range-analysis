@@ -932,45 +932,47 @@ int64_t maxAND(int64_t a, int64_t b, int64_t c, int64_t d)
 }
 
 Range Range::And(const Range& other) {
-	const APInt &a = this->getLower();
-	const APInt &b = this->getUpper();
-	const APInt &c = other.getLower();
-	const APInt &d = other.getUpper();
+//	const APInt &a = this->getLower();
+//	const APInt &b = this->getUpper();
+//	const APInt &c = other.getLower();
+//	const APInt &d = other.getUpper();
+//
+//	APInt candidates[4];
+//	candidates[0] = Min;
+//	candidates[1] = Min;
+//	candidates[2] = Max;
+//	candidates[3] = Max;
+//
+//	if (a.ne(Min) && c.ne(Min)) {
+//		candidates[0] = a.And(c); // lower lower
+//	}
+//
+//	if (a.ne(Min) && d.ne(Max)) {
+//		candidates[1] = a.And(d); // lower upper
+//	}
+//
+//	if (b.ne(Max) && c.ne(Min)) {
+//		candidates[2] = b.And(c); // upper lower
+//	}
+//
+//	if (b.ne(Max) && d.ne(Max)) {
+//		candidates[3] = b.And(d); // upper upper
+//	}
+//
+//	//Lower bound is the min value from the vector, while upper bound is the max value
+//	APInt *min = &candidates[0];
+//	APInt *max = &candidates[0];
+//
+//	for (unsigned i = 1; i < 4; ++i) {
+//		if (candidates[i].sgt(*max))
+//			max = &candidates[i];
+//		else if (candidates[i].slt(*min))
+//			min = &candidates[i];
+//	}
+//
+//	return Range(*min, *max);
 
-	APInt candidates[4];
-	candidates[0] = Min;
-	candidates[1] = Min;
-	candidates[2] = Max;
-	candidates[3] = Max;
-
-	if (a.ne(Min) && c.ne(Min)) {
-		candidates[0] = a.And(c); // lower lower
-	}
-
-	if (a.ne(Min) && d.ne(Max)) {
-		candidates[1] = a.And(d); // lower upper
-	}
-
-	if (b.ne(Max) && c.ne(Min)) {
-		candidates[2] = b.And(c); // upper lower
-	}
-
-	if (b.ne(Max) && d.ne(Max)) {
-		candidates[3] = b.And(d); // upper upper
-	}
-
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
-
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+	return Range(Min, Max);
 }
 
 int64_t minOR(int64_t a, int64_t b, int64_t c, int64_t d)
@@ -1096,45 +1098,47 @@ int64_t maxXOR(int64_t a, int64_t b, int64_t c, int64_t d)
 }
 
 Range Range::Xor(const Range& other) {
-	const APInt &a = this->getLower();
-	const APInt &b = this->getUpper();
-	const APInt &c = other.getLower();
-	const APInt &d = other.getUpper();
+//	const APInt &a = this->getLower();
+//	const APInt &b = this->getUpper();
+//	const APInt &c = other.getLower();
+//	const APInt &d = other.getUpper();
+//
+//	APInt candidates[4];
+//	candidates[0] = Min;
+//	candidates[1] = Min;
+//	candidates[2] = Max;
+//	candidates[3] = Max;
+//
+//	if (a.ne(Min) && c.ne(Min)) {
+//		candidates[0] = a.Xor(c); // lower lower
+//	}
+//
+//	if (a.ne(Min) && d.ne(Max)) {
+//		candidates[1] = a.Xor(d); // lower upper
+//	}
+//
+//	if (b.ne(Max) && c.ne(Min)) {
+//		candidates[2] = b.Xor(c); // upper lower
+//	}
+//
+//	if (b.ne(Max) && d.ne(Max)) {
+//		candidates[3] = b.Xor(d); // upper upper
+//	}
+//
+//	//Lower bound is the min value from the vector, while upper bound is the max value
+//	APInt *min = &candidates[0];
+//	APInt *max = &candidates[0];
+//
+//	for (unsigned i = 1; i < 4; ++i) {
+//		if (candidates[i].sgt(*max))
+//			max = &candidates[i];
+//		else if (candidates[i].slt(*min))
+//			min = &candidates[i];
+//	}
+//
+//	return Range(*min, *max);
 
-	APInt candidates[4];
-	candidates[0] = Min;
-	candidates[1] = Min;
-	candidates[2] = Max;
-	candidates[3] = Max;
-
-	if (a.ne(Min) && c.ne(Min)) {
-		candidates[0] = a.Xor(c); // lower lower
-	}
-
-	if (a.ne(Min) && d.ne(Max)) {
-		candidates[1] = a.Xor(d); // lower upper
-	}
-
-	if (b.ne(Max) && c.ne(Min)) {
-		candidates[2] = b.Xor(c); // upper lower
-	}
-
-	if (b.ne(Max) && d.ne(Max)) {
-		candidates[3] = b.Xor(d); // upper upper
-	}
-
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
-
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+	return Range(Min, Max);
 }
 
 // Truncate
