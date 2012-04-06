@@ -1,0 +1,44 @@
+##=== TEST.libcalls.report - Report desc for libcalls tests ----*- perl -*-===##
+#
+# This file defines a report to be generated for the libcalls test.
+#
+##===----------------------------------------------------------------------===##
+
+# Sort by name
+$SortCol = 1;
+$TrimRepeatedPrefix = 1;
+
+# These are the columns for the report.  The first entry is the header for the
+# column, the second is the regex to use to match the value.  Empty list create
+# seperators, and closures may be put in for custom processing.
+(
+# Name
+ ["Name" , '\'([^\']+)\' Program'],
+ [],
+ ["Oprs", '([0-9]+).*Number of operations'],
+ ["Vars", '([0-9]+).*Number of variables'],
+ ["unk", '([0-9]+).*Number of unknown variables'],
+ ["empty", '([0-9]+).*Number of empty-set variables'],
+ ["cinf", '([0-9]+).*Number of variables \[c, \+inf\]'],
+ ["cc", '([0-9]+).*Number of variables \[c, c\]'],
+ ["infc", '([0-9]+).*Number of variables \[\-inf, c\]'],
+ ["maxrange", '([0-9]+).*Number of variables \[\-inf, \+inf\]'],
+ ["Insts", '([0-9]+).*Number of instructions \(of all types\)'],
+ ["raInstrumentationNumInstructions, '([0-9]+).*Number of instructions instrumented'],
+ [],
+ ["Init", '([0-9]+).*Initial number of bits'],
+ ["Needed", '([0-9]+).*Needed bits'],
+ ["Pct", '([0-9.]+).*Percentage of reduction'],
+ [],
+ ["SCCs", '([0-9]+).*Number of strongly connected components'],
+ ["SCCs 1", '([0-9]+).*Number of SCCs containing only one node'],
+ [],
+ ["vSSA", '([0-9.]+).*Static Single Assignment Construction'],
+ ["RangeAnalysis", '([0-9.]+).*Range Analysis*'],
+ ["BuildGraph", '([0-9.]+).*BuildGraph elapsed time'],
+ ["Nuutila", '([0-9.]+).*Nuutila elapsed time'],
+ ["SCCs resolution", '([0-9.]+).*SCCs resolution elapsed time'],
+ ["ComputeStats", '([0-9.]+).*ComputeStats elapsed time'],
+ [],
+ );
+
