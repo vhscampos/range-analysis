@@ -9,7 +9,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "range-analysis-printer"
 
-STATISTIC(numInstructions, "Number of instructions instrumented");
+STATISTIC(raInstrumentationNumInstructions, "Number of instructions instrumented");
 
 static RegisterPass<RAInstrumentation> X("ra-instrumentation", "Range Analysis Instrumentation Pass");
 
@@ -23,18 +23,32 @@ bool RAInstrumentation::isValidInst(Instruction *I)
 }
 
 
-void RAInstrumentation::PrintInstructionIdentifier(std::string M, std::string F, const Value *V){
+//void RAInstrumentation::PrintInstructionIdentifier(std::string M, std::string F, const Value *V){
+//
+//
+//	fprintf(file, "%s.%s.%s %d\n", M.c_str(), F.c_str(), V->getName().str().c_str(), (int)V);
+//
+//}
 
-    
-	fprintf(file, "%s.%s.%s %d\n", M.c_str(), F.c_str(), V->getName().str().c_str(), (int)V);
 
-}
+void RAInstrumentation::InstrumentMainFunction(Function* F, std::string mIdentifier) {
 
 
-void RAInstrumentation::InstrumentMainFunction(Function* F) {
+	//Create a global variable with the module name
+	Constant* stringConstant = llvm::ConstantArray::get(*context, mIdentifier, true);
 
-    //Put a call to printHash function before every return instruction.
-    
+	GlobalVariable* moduleName = new GlobalVariable(*module, stringConstant->getType(), true,
+	                                                llvm::GlobalValue::InternalLinkage,
+	                                                stringConstant, "moduleName");
+
+
+    Constant* constZero = ConstantInt::get(Type::getInt32Ty(*context), 0);
+	Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(moduleName, constZero);
+
+	Value* constPtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+
+	//Put a call to printHash function before every return instruction.
     
 	// Iterate through basic blocks
 	for (Function::iterator BBit = F->begin(); BBit != F->end(); ++BBit) {
@@ -42,8 +56,12 @@ void RAInstrumentation::InstrumentMainFunction(Function* F) {
     	// Iterate through instructions
     	for (BasicBlock::iterator Iit = BBit->begin(); Iit != BBit->end(); ++Iit) {     		
             if (isa<ReturnInst>(Iit)){
-                Function& printHash = GetPrintHashFunction();                         
-                CallInst* callPrintHash = CallInst::Create(&printHash, "", Iit);  
+
+                std::vector<Value*> args;
+                args.push_back(constPtr);
+
+                Function& printHash = GetPrintHashFunction();
+                CallInst* callPrintHash = CallInst::Create(&printHash, args, "", Iit);
                 MarkAsNotOriginal(*callPrintHash);
             }
         }
@@ -55,13 +73,19 @@ bool RAInstrumentation::runOnModule(Module &M) {
 
 	this->module = &M;
 	this->context = &M.getContext();
-    std::string ErrorInfo;
 
-    file = fopen("RAHashNames.txt","w");
-    if (file==NULL) {
-        errs() << "Error opening file RAHashNames.txt. Range Analysis Instrumentation Pass aborted.\n";
-        return false;
-    }
+    int pos = M.getModuleIdentifier().rfind("/");
+	std::string mIdentifier = pos > 0 ? M.getModuleIdentifier().substr(pos + 1) : M.getModuleIdentifier();
+
+	std::string Filename = "/tmp/RAHashNames." + mIdentifier + ".txt";
+
+	std::string ErrorInfo;
+	raw_fd_ostream File(Filename.c_str(), ErrorInfo);
+
+	if (!ErrorInfo.empty()){
+	  errs() << "Error opening file /tmp/RAHashNames." << mIdentifier << ".txt for writing! Error Info: " << ErrorInfo  << " \n";
+	  return false;
+	}
     
     // No main, no instrumentation!
     Function *Main = M.getFunction("main");
@@ -76,8 +100,8 @@ bool RAInstrumentation::runOnModule(Module &M) {
         return false;
     }  
     
-    InstrumentMainFunction(Main);
-    
+    InstrumentMainFunction(Main, mIdentifier);
+
 	// Iterate through functions
 	for (Module::iterator Fit = M.begin(), Fend = M.end(); Fit != Fend; ++Fit) {
 		
@@ -97,8 +121,11 @@ bool RAInstrumentation::runOnModule(Module &M) {
 				if (isValidInst(Iit)&& ! IsNotOriginal(*Iit)){
 
                     //Add the identifier of the instruction to the Hash Dictionary
-                    PrintInstructionIdentifier(M.getModuleIdentifier(),Fit->getName().str(),Iit);
-                
+					File << mIdentifier
+						 << "." << Fit->getName()
+						 << "." << cast<Value>(Iit)->getName()
+						 << " " << (int)cast<Value>(Iit) << "\n";
+
                     //Get the pointer to the instruction. Note that the same number was saved in the Hash Dictionary and it will be used into the compiled program. 
                     Value* vInstruction = cast<Value>(Iit);
                     
@@ -128,18 +155,16 @@ bool RAInstrumentation::runOnModule(Module &M) {
                             CallInst* callSetCurrentMinMax = CallInst::Create(&setCurrentMinMax, setCurrentMinMaxArgs, "", nextInstruction);  
                             MarkAsNotOriginal(*callSetCurrentMinMax);
     
-                            ++numInstructions;
+                            ++raInstrumentationNumInstructions;
                         }
                     }
 				}					
 			}
 		}
 	}
-	
-    fclose(file);
     
     // Returns true if the pass make any change to the program
-    return (numInstructions > 0);
+    return (raInstrumentationNumInstructions > 0);
 }
 
 void RAInstrumentation::MarkAsNotOriginal(Instruction& inst)
@@ -179,7 +204,10 @@ Function& RAInstrumentation::GetPrintHashFunction()
 	static Function* func = 0;
 	
 	if (func) return *func;
-	 
-	func = Function::Create(FunctionType::get(Type::getVoidTy(*context), false), GlobalValue::ExternalLinkage, "printHash", module);
+
+	std::vector<Type*> args;
+	args.push_back(Type::getInt8PtrTy(*context));
+
+	func = Function::Create(FunctionType::get(Type::getVoidTy(*context), args, false), GlobalValue::ExternalLinkage, "printHash", module);
 	return *func;
 }

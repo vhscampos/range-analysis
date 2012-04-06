@@ -169,12 +169,23 @@ void setCurrentMinMax(void* ptr, int Value){
         setCurrentMax(ptr, Value);
 }
 
+char* getFileName(const char* prefix, char* moduleName, const char* suffix){
 
+	char* result = (char*)calloc(strlen(prefix) + strlen(moduleName) + strlen(suffix), sizeof(char));
+	result[0] = '\0';
+	strcat(result, prefix);
+	strcat(result, moduleName);
+	strcat(result, suffix);
+	return result;
 
-void printHash()
+}
+
+void printHash(char* moduleName)
 {
     int i;
-    FILE* file = fopen ("RAHashValues.txt","w");
+    char* FileName = getFileName("/tmp/RAHashValues.", moduleName, ".txt");
+
+    FILE* file = fopen (FileName,"w");
     List* list;
     
     for(i = 0; i<RA_HASH_SIZE; i++){

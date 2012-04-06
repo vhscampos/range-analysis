@@ -46,11 +46,10 @@ namespace {
         Function& GetPrintHashFunction();
         Instruction* GetNextInstruction(Instruction& i);
 
-        void InstrumentMainFunction(Function* F);
+        void InstrumentMainFunction(Function* F, std::string mIdentifier);
 
         Module* module;
         LLVMContext* context;
-		FILE* file;
 
 	};
 }
