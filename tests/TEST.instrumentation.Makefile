@@ -1,11 +1,20 @@
-##===- TEST.ra.Makefile ------------------------------*- Makefile -*-===##
+##===- TEST.instrumentation.Makefile ------------------------------*- Makefile -*-===##
 #
 # Usage: 
-#     make TEST=ra (detailed list with time passes, etc.)
-#     make TEST=ra report
-#     make TEST=ra report.html
+#     make TEST=instrumentation (detailed list with time passes, etc.)
+#     make TEST=instrumentation report
+#     make TEST=instrumentation report.html
 #
-##===----------------------------------------------------------------------===##
+# Required arguments:
+#     ANALYSIS={-ra-printer-inter-cousot|...}  ==> which analysis the ra-printer should use
+#     OUTDIR={Directory} ==> directory to put the text files produced by the analysis. 
+#                            The directory should already exist.
+# Optional arguments:
+#     ESSA=1  ==> use the e-SSA representation
+#
+# Example:
+#     make TEST=instrumentation ESSA=1 ANALYSIS=-ra-printer-inter-cousot OUTDIR=/home/raphael/benchmarkResults/
+##===-----------------------------------------------------------------------------===##
 
 CURDIR  := $(shell cd .; pwd)
 PROGDIR := $(PROJ_SRC_ROOT)
@@ -23,6 +32,7 @@ $(PROGRAMS_TO_TEST:%=Output/%.$(TEST).report.txt):  \
 Output/%.$(TEST).report.txt: Output/%.linked.rbc $(LOPT) \
 	$(PROJ_SRC_ROOT)/TEST.ra.Makefile 
 	$(VERB) $(RM) -f $@
+	$(VERB) $(RM) -f /tmp/RAEstimatedValues*.txt /tmp/RAHashNames*.txt /tmp/RAHashValues*.txt
 	@echo "---------------------------------------------------------------" >> $@
 	@echo ">>> ========= '$(RELDIR)/$*' Program" >> $@
 	@echo "---------------------------------------------------------------" >> $@
@@ -47,5 +57,9 @@ Output/%.$(TEST).report.txt: Output/%.linked.rbc $(LOPT) \
 	fi
 	llvm-link -o=$<.linked.bc $<.instr.bc $(LLVM_DIR)/llvm-3.0/lib/Transforms/RAInstrumentation/RAInstrumentationHash.bc
 	lli $<.linked.bc
+	mv /tmp/RAEstimatedValues*.txt $(OUTDIR)
+	mv /tmp/RAHashNames*.txt $(OUTDIR)
+	mv /tmp/RAHashValues*.txt $(OUTDIR)
+	$(VERB) $(RM) -f /tmp/RAEstimatedValues*.txt /tmp/RAHashNames*.txt /tmp/RAHashValues*.txt
 
 REPORT_DEPENDENCIES := $(LOPT)
