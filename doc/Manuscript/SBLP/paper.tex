@@ -1,0 +1,566 @@
+\documentclass{paper}
+\usepackage{sbc-template}
+
+\usepackage{proof}
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+
+\def\qed{\unskip\kern 10pt{\unitlength1pt\linethickness{.4pt}\framebox(6,6){}}}
+
+\newcommand{\fun}[1]{\mbox{\textbf{#1}}}
+\newcommand{\lb}[1]{#1_{\downarrow}}
+\newcommand{\ub}[1]{#1_{\uparrow}}
+\newcommand{\varset}[1]{\mbox{$\cal{#1}$}}
+
+\sloppy
+
+\begin{document}
+
+\title{Speed and Precision in Range Analysis}
+
+\author{Victor Hugo Sperle Campos, Igor Rafael de Assis Costa,\\
+Raphael Hernani Rodrigues and Fernando Magno Quint\~{a}o Pereira}
+
+\address{UFMG -- 6627 Ant\^{o}nio Carlos Av, 31.270-010, Belo Horizonte, Brazil
+\email{\{victorsc,igor.rafael,raphael.hernani,fernando\}@dcc.ufmg.br}
+}
+
+
+\maketitle
+
+%mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+\begin{abstract}
+Range analysis is a compiler technique that determines statically the lower and
+upper values that each integer variable from a target program may assume
+during this program's execution.
+This type of inference is very important, because it enables several compiler
+optimizations, such as dead and redundant code elimination, bitwidth aware
+register allocation, and detection of program vulnerabilities.
+In this paper we describe an inter-procedural, context-sensitive range analysis
+algorithm that we have implemented in the LLVM compiler.
+During the effort to produce an industrial-quality implementation of our
+algorithm, we had to face a constant tension between precision and speed.
+The foremost goal of this paper is to discuss the many engineering choices
+that, due to this tension, have shaped our implementation.
+Given the breath of our evaluation, we believe that this paper
+contains the most comprehensive empirical study of a range analysis
+algorithm ever presented in the compiler related literature.
+\end{abstract}
+
+%mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+\section{Introduction}
+\label{sec:int}
+
+% What range analysis is good for
+Range analysis is a compiler technique whose objective is to determine
+statically, for each program variable, limits for the minimum and maximum
+values that this variable might assume during the program execution.
+Range analysis is important because it enables many compiler optimizations.
+Among these optimizations, the most well-known are dead and redundant
+code elimination.
+Examples of redundant code elimination include the removal of array bounds
+checks~\cite{Bodik00,Logozzo08,Venet04} and overflow checks~\cite{Sol11}.
+Additionally, range analysis is also used in bitwidth aware register
+allocation~\cite{Barik06,Pereira08,Tallam03}, branch
+prediction~\cite{Patterson95} and synthesis of hardware for specific
+applications~\cite{Cong05,Lhairech10,Mahlke01,Stephenson00}.
+Because of this importance, the programming language community has put much
+effort in the design and implementation of efficient and precise range
+analysis algorithms.
+
+% The lack of a comprehensive empirical evaluation
+However, the compiler related literature does not contain a comprehensive
+evaluation of range analysis algorithms that scale up to entire programs.
+Many works on this subject are limited to very small
+programs~\cite{Mahlke01,Simon08,Stephenson00}, or, given their theoretic
+perspective, have never been implemented in production
+compilers~\cite{Costan05,Gawlitza09,Lakhdar11,Su04,Su05}.
+There are implementations of range analysis that deal with very large
+programs~\cite{Bertrane10,Cousot09,Logozzo08,Oh11}; nevertheless, because
+these papers focus on applications of range analysis,
+and not on its implementation, they do not provide a thorough discussion
+about their engineering decisions.
+A noticeable exception is the recent work of Oh {\em et al.}~\cite{Oh12},
+which discusses a range analysis algorithm developed for C programs that can
+handle very large benchmarks.
+Oh {\em et al.} present an evaluation of the speed and memory consumption of
+their implementation.
+In this paper we claim to push this discussion considerably further.
+
+% Summary of our experiments
+We have implemented an industrial-quality range analysis algorithm in the
+LLVM compiler~\cite{Lattner04}.
+As we show in Section~\ref{sub:showdown}, our implementation, which is
+publicly available, is able to analyze programs with over one million assembly
+instructions in ten seconds.
+And our implementation is not a straw-man: it produces very precise results.
+We have compared the results produced by our implementation with the results
+obtained via a dynamic profiler, which we have also implemented.
+As we show in Section~\ref{sub:showdown}, when analyzing well-known numeric
+benchmarks we are able to estimate tight ranges for almost half of all the
+integer variables present in these programs.
+
+% Design space exploration:
+While designing and implementing our algorithm we had to face several important
+engineering choices.
+Many approaches that we have used in an attempt to increase the precision of
+our implementation would result in runtime slowdowns.
+Although we cannot determine the optimum spot in this design space, given the
+vast number of possibilities, we discuss our most important implementation
+decisions in Section~\ref{sec:design}.
+Section~\ref{sub:sccs} shows how we could improve runtime and precision
+substantially by processing data-flow information in the strongly connected
+components that underly our constraint system.
+Section~\ref{sub:program_rep} discuss the importance of choosing a suitable
+intermediate representation when implementing a sparse data-flow framework.
+Section~\ref{sub:whole} compares the intra-procedural and the inter-procedural
+versions of our algorithm.
+The role of context sensitiveness is discussed in Section~\ref{sub:context}.
+Finally, Section~\ref{sub:widen} discusses the different widening strategies
+that we have experimented with.
+
+% The history of our implementation
+This work concludes a two years long effort to produce a solid and scalable
+implementation of range analysis.
+Our first endeavor to implement such an algorithm was based on Su and
+Wagner's constraint system, which can be solved exactly in polynomial
+time~\cite{Su04,Su05}.
+However, although we could use their formulation to handle a subset of C-like
+constructs, their description of how to deal with loops was
+not very explicit.
+Thus, in order to solve loops we adopted Gawlitza
+{\em et al.}'s~\cite{Gawlitza09} approach.
+This technique uses the Bellman-Ford algorithm to detect increasing or
+decreasing cycles in the constraint system, and then saturates these cycles
+via a simple widening operator.
+A detailed description of our implementation has been published by
+Couto and Pereira~\cite{Couto11}.
+Nevertheless, the inability to handle comparisons between variables, and the
+cubic complexity of the Bellman-Ford method eventually led us to seek
+alternative solutions to range analysis.
+This quest reached a pinnacle in the present work, which we summarize in this
+paper.
+
+\section{Brief Description of our Range Analysis Algorithm}
+\label{sec:desc}
+
+% Define the lattice, the constraints and the valuation I.
+\paragraph{The Interval Lattice.}
+Following Gawlitza {\em et al.}'s notation, we shall be performing arithmetic
+operations over the complete lattice
+$\cal{Z} = \mathbb{Z} \cup \{-\infty, +\infty\}$, where the ordering is
+naturally given by $-\infty < \ldots < -2 < -1 < 0 < 1 < 2 < \ldots +\infty$.
+For any $x > -\infty$ we define:
+
+\begin{tabular}{lcl}
+$x + \infty = \infty, x \neq -\infty$ & \mbox{\hspace{0.1cm}} & $x - \infty = - \infty, x \neq +\infty$ \\
+$x \times \infty = \infty$ if $x > 0$ & & $x \times \infty = -\infty$ if $x < 0$ \\
+$0 \times \infty = 0$ & & $(-\infty) \times \infty = \ $ not defined $$ \\
+\end{tabular}
+
+From the lattice $\varset{Z}$ we define the product lattice
+$\varset{Z}^2$, which is partially ordered by the subset relation
+$\sqsubseteq$.
+$\varset{Z}^2$ is defined as follows:
+%
+\begin{equation*}
+\varset{Z}^2 = \emptyset \cup \{[z_1, z_2] | \ z_1,z_2 \in \varset{Z},
+\ z_1 \leq z_2, \  -\infty < z_2 \}
+\end{equation*}
+%
+The objective of range analysis is to determine a mapping
+$I: \varset{V} \mapsto \varset{Z}^2$ from the set of integer program variables
+$V$ to intervals, such that, for any variable $v \in V$, if
+$I(v) = [l, u]$, the, during the execution of the target program, any
+valued $i$ assigned to $v$ is such that $l \leq i \leq u$.
+
+\paragraph{A Holistic View of our Range Analysis Algorithm.}
+We perform range analysis in a number of steps.
+First, we convert the program to a suitable intermediate representation that
+makes it easier to extract constraints.
+From these constraints, we build a dependence graph that allows us to do
+range analysis sparsely.
+Finally, we solve the constraints applying different fix-point iterators on
+this dependence graph.
+Figure~\ref{fig:algorithm} gives a global view of this algorithm.
+Some of the steps in the algorithm are optional.
+They improve the precision of the range analysis, at the expense of a longer
+running time.
+In Section~\ref{sec:design} we discuss in more details these tradeoffs.
+The last phase, which we call the {\em micro algorithm}, happens per
+strong component; however, if we opted for not building these components,
+then it happens once for the entire constraint graph.
+Nevertheless, the use of strongly connected components
+is so essential for performance and precision, as we show in
+Section~\ref{sub:sccs}, that it is considered optional only because we
+can easily build our implementation without this module.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\textwidth]{images/algorithm}
+\end{center}
+\caption{\label{fig:algorithm}
+Our implementation of range analysis. Rounded boxes are optional steps.}
+\end{figure}
+
+We will illustrate the mandatory parts of the
+algorithm via the example program in Figure~\ref{fig:overall_view}.
+More details about each phase of the algorithm will be introduced in
+Section~\ref{sec:design}, when we discuss our engineering decisions.
+Figure~\ref{fig:overall_view}(a) shows an example program taken from the
+partition function of the quicksort algorithm used by Bodik
+{\em et al.}~\cite{Bodik00}.
+We have removed the code that performs array manipulation from this program,
+as it plays no role in our explanation.
+Figure~\ref{fig:overall_view}(b) shows one possible way to represent this
+program internally.
+As we explain in Section~\ref{sub:program_rep}, a good program
+representation allows us to find more precise results.
+In this example we chose a program representation called
+Extended Static Single Assignment form, which lets us to solve range
+analysis via a path sensitive algorithm.
+Figure~\ref{fig:overall_view}(c) shows the constraints that we extract from
+the intermediate representation seen in part (b) of this figure.
+From these constraints we build the {\em constraint graph} in
+Figure~\ref{fig:overall_view}(d).
+This graph is the main data-structure that we use to solve range analysis.
+For each variable $v$ in the constraint system, the constraint graph has a node
+$n_v$.
+Similarly, for each constraint $v = f(\ldots, u, \ldots)$ in the constraint
+system, the graph has an {\em operation node} $n_f$.
+For each constraint $v = f(\ldots, u, \ldots)$ we add two edges to the
+graph: $\overrightarrow{n_un_f}$ and $\overrightarrow{n_fn_v}$.
+Some edges in the constraint graph are dashed.
+These are called {\em control dependence edges}.
+If a constraint $v = f(\ldots, \fun{ft}(u), \ldots)$ uses a {\em future}
+bound from a variable $u$, then we add to the constraint graph a control
+dependence edge $\overrightarrow{n_un_f}$.
+The final solution to this instance of the range analysis problem is
+given in Figure~\ref{fig:overall_view}(e).
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\textwidth]{images/overall_view}
+\end{center}
+\caption{\label{fig:overall_view}
+Range analysis by example.
+(a) Input program.
+(b) Internal compiler representation.
+(c) Constraints of the range analysis problem.
+(d) The constraint graph.
+(e) The final solution.}
+\end{figure}
+
+\paragraph{The Micro Algorithm.}
+We find the solution given in Figure~\ref{fig:overall_view}(e) in a
+process that we call the micro algorithm.
+This phase is further divided into three sub-steps:
+(i) growth analysis;
+(ii) future resolution and
+(iii) narrowing analysis.
+
+\noindent
+\textbf{Growth analysis: }
+The objective of growth analysis is to determine the growth behavior of
+each program variable.
+There are four possible behaviors:
+(a) the variable is bound to a constant interval,
+such as $k_0$ in Figure~\ref{fig:overall_view}(b).
+(b) The variable is bound to a decreasing interval, i.e., an interval whose
+lower bound decreases.
+This is the case of $j_1$ in our example.
+(c) The variable is bound to an increasing interval, i.e., its upper bound
+increases.
+This is the case of $i_1$ in the example.
+(d) The variable is bound to an interval that expands in both directions.
+The growth analysis uses an infinite lattice, i.e., $\varset{Z}^2$.
+Thus, a careless implementation of an algorithm that infers growth patterns
+might not terminate.
+In order to ensure termination, we must reckon on a technique called
+{\em widening}, first introduced by Cousot and Cousot as a key component
+of abstract interpretation~\cite{Cousot77}.
+There are many different widening strategies.
+We discuss some of them in Section~\ref{sub:widen}.
+
+\noindent
+\textbf{Future resolution: }
+In order to learn information from comparisons between variables, such as
+\texttt{i < j} in Figure~\ref{fig:overall_view}(a), we bind some intervals
+to {\em futures}.
+Futures are symbolic limits, which will be replaced by actual numbers once
+we finish the growth analysis.
+The ranges found by the growth analysis tells us which variables have fixed
+bounds, independent on the intersections in the constraint system.
+Thus, we can use actual limits to replace intersections bounded by futures.
+Figure~\ref{fig:fix_intersects} shows the rules to perform these substitutions.
+In order to correctly replace a future $\fun{ft}(V)$ that limits a variable
+$V'$, we need to have already applied the growth analysis onto $V$.
+Had we considered only data dependence edges, then it would be possible
+that $V'$ be analyzed before $V$.
+However, because of control dependence edges, this case cannot happen.
+The control dependence edges ensure that any topological ordering of the
+constraint graph either places $N_v$ before $N_{v'}$, or places these nodes
+in the same strongly connected component.
+For instance, in Figure~\ref{fig:overall_view}(b), variables $j_1$ and $i_t$
+are in the same SCC only because of the control dependence edges.
+
+\begin{figure}[t!]
+\begin{center}
+\begin{eqnarray*}
+\begin{array}{c}
+\inferrule{Y = X \sqcap [l, \fun{ft}(V) + c] \\ \ub{I[V]} = u}
+{Y = X \sqcap [l, u + c]} \mbox{\hspace{0.3cm}} u, c \in \mathbb{Z} \cup \{-\infty, +\infty\}
+\\
+\\
+\inferrule{Y = X \sqcap [\fun{ft}(V) + c, u] \\ \lb{I[V]} = l}
+{Y = X \sqcap [l + c, u]} \mbox{\hspace{0.3cm}} l, c \in \mathbb{Z} \cup \{-\infty, +\infty\}
+\end{array}
+\end{eqnarray*}
+\end{center}
+\caption{\label{fig:fix_intersects}Rules to replace futures by actual
+bounds. $S$ is the interval bound to each variable after the widening
+analysis.}
+\end{figure}
+
+\noindent
+\textbf{Narrowing Analysis.}
+The growth analysis associates very conservative bounds to each variable.
+Thus, the last step of our algorithm consists in narrowing these intervals.
+We accomplish this step via Cousot and Cousot's classic narrowing
+operator~\cite[248]{Cousot77}, which we show in
+Figure~\ref{fig:crop_analysis}.
+
+\begin{figure}[t!]
+\begin{center}
+\begin{eqnarray*}
+\begin{array}{c@{\hspace{0.9cm}}c}
+\inferrule{\lb{I[Y]} = -\infty \\ \lb{e(Y)} > -\infty}
+{I[Y] \leftarrow [\lb{e(Y)}, \ub{I[Y]}]}
+&
+\inferrule{\lb{I[Y]} > \lb{e(Y)}}
+{I[Y] \leftarrow [\lb{e(Y)}, \ub{I[Y]}]}
+\\
+\\
+\inferrule{\ub{I[Y]} = +\infty \\ \ub{e(Y)} < +\infty}
+{I[Y] \leftarrow [\lb{I[Y]}, \ub{e(Y)}]}
+&
+\inferrule{\ub{I[Y]} < \ub{e(Y)}}
+{I[Y] \leftarrow [\lb{I[Y]}, \ub{e(Y)}]}
+\end{array}
+\end{eqnarray*}
+\end{center}
+\caption{\label{fig:crop_analysis}Cousot and Cousot's narrowing operator.}
+\end{figure}
+
+\noindent
+\textbf{Example:}
+Continuing with our example, Figure~\ref{fig:ex_partition_grow_crop} shows
+the application of our algorithm on the last strong component of
+Figure~\ref{fig:overall_view}(d).
+Upon meeting this SCC, we have already determined that the interval
+$[0, 0]$ is bound to $i_0$ and that the interval $[100, 100]$ is bound to
+$j_0$.
+We are not guaranteed to find the least fix point of a constraint system.
+However, in this example we did it.
+We emphasize that finding this tight solution was only possible because of
+the topological ordering of the constraint graph in
+Figure~\ref{fig:overall_view}(d).
+Had we applied the widening operator onto the whole graph, then we would
+have found out that variable $j_0$ is bound to $[-\infty, +\infty]$,
+because
+(i) it receives its interval directly from variable $k_t$, which is upper
+bounded by $+\infty$, and
+(ii) it is part of a negative cycle.
+On the other hand, by only analyzing $j$'s SCC after we have
+analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\textwidth]{images/ex_partition_grow_crop}
+\end{center}
+\caption{\label{fig:ex_partition_grow_crop}
+Four snapshots of the last SCC of Figure~\ref{fig:overall_view}(d).
+(a) After removing control dependence edges.
+(b) After running the growth analysis.
+(c) After fixing the intersections bound to futures.
+(d) After running the narrowing analysis.}
+\end{figure}
+
+\subsection{Range Analysis Showdown}
+\label{sub:showdown}
+
+The objective of this section is to show, via experimental numbers, that our
+implementation of range analysis is fast, economic and effective.
+We have used it to analyze a test suite with 2.72 million lines of C code,
+which includes, in addition to all the benchmarks distributed with LLVM,
+the programs in the SPEC CPU 2006 collection.
+
+\paragraph{Time and Memory Complexity}
+
+Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
+run our algorithm and the size of the input programs.
+We show data for the 100 largest benchmarks in our test suite, in number
+of variable nodes in the constraint graph.
+We perform function inlining before running our analysis, to increase program
+sizes.
+Each point in the X line corresponds to a benchmark.
+We analyze the smallest benchmark in this set, \texttt{Prolangs-C/deriv2}, which
+has 1,131 variable nodes in the constraint graph, in 20ms.
+We take 15,91secs to analyze our largest benchmark, \texttt{403.gcc}, which,
+after function inlining, has 1,266,273 assembly instructions, and a
+constraint graph with 679,652 variable nodes.
+For this data set, the coefficient of determination $(R^2)$ is 0.967, which
+provides very strong evidence about the linear asymptotic complexity of our
+implementation.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=0.9\textwidth]{images/TimeCorr}
+\end{center}
+\caption{\label{fig:TimeCorr}
+Correlation between program size (number of var nodes in constraint
+graphs after inlining) and analysis runtime (ms).
+Coefficient of determination = 0.967.
+}
+\end{figure}
+
+\noindent
+\textbf{Memory complexity.}
+The experiments also reveal that the memory consumption of our implementation
+is linear with the program size.
+Figure~\ref{fig:MemCorr} plots these two quantities together.
+The linear correlation, in this case, is even stronger than that found in
+Figure~\ref{fig:TimeCorr}, which compares runtime and program size: the
+coefficient of determination is 0.9947.
+The figure only shows our 100 largest benchmarks.
+Again, SPEC \texttt{403.gcc} is the heaviest benchmarks, requiring
+265,588KB to run.
+Memory includes stack, heap and the executable program code.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=0.9\textwidth]{images/MemCorr}
+\end{center}
+\caption{\label{fig:MemCorr}
+Comparison between program size (number of var nodes in constraint
+graphs after inlining) and memory consumption (KB).
+Coefficient of determination = 0.9947.
+}
+\end{figure}
+
+\paragraph{Precision}
+
+Our implementation of range analysis is remarkably precise, considering its
+runtime.
+Lakhdar {\em et al.}'s relational analysis~\cite{Lakhdar11}, for instance, takes
+about 25 minutes to go over a program with almost 900 basic blocks.
+We analyze programs of similar size less than one second.
+We do not claim our approach is as precise as such algorithms, even though we
+are able to find exact bounds to 4/5 of the examples presented
+in~\cite{Lakhdar11}.
+On the contrary, this paper presents a compromise between precision and speed
+that scales to very large programs.
+Nevertheless, our results are far from being trivial.
+We have implemented a dynamic profiler that measures, for each variable,
+its upper and lower limits, given an execution of the target program.
+Figure~\ref{fig:precision} compares our results with those measured
+dynamically for the Stanford benchmark suite, which is publicly
+available~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}}.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\textwidth]{images/precUpperBound}
+\includegraphics[width=\textwidth]{images/precLowerBound}
+\end{center}
+\caption{\label{fig:precision}
+(Upper) Comparison between static range analysis and dynamic profiler for
+upper bounds.
+(Lower) Comparison between static range analysis and dynamic profiler for
+lower bounds. The numbers above the benchmark names give the number of
+variables in each program.}
+\end{figure}
+
+We have classified the bounds estimated by the static analysis into four
+categories.
+The first category, which we call $1$, contains those bounds that are tight:
+during the execution of the program, the variable has been assigned an upper,
+or lower limit, that equals the limit inferred statically.
+The second category, which we call $n$, contains the estimated bounds that are
+within twice the value inferred statically.
+For instance, if the range analysis estimates that a variable $v$ is in the
+range $[0, 100]$, and during the execution the dynamic profiler finds that
+its maximum value is $51$, then $v$ falls into this category.
+The third category, $n^2$, contains variables whose actual value is within
+a quadratic factor from the estimated value.
+In our example, $v$'s upper bound would have to be at most $10$ for it to
+be in this category.
+Finally, the fourth category contains variables whose estimated value lays
+outside a quadratic factor of the actual value.
+We call this category {\em imprecise}, and it contains mostly the limits that
+our static analysis has marked as either $+\infty$ or $-\infty$.
+
+As we see in Figure~\ref{fig:precision}, 54.11\% of the lower limits that
+we have estimated statically are exact.
+Similarly, 51.99\% of our upper bounds are also tight.
+The figure also shows that, on average, 37.39\% of our lower limits are
+imprecise, and 35.40\% of our upper limits are imprecise.
+This result is on pair with those obtained by more costly analysis, such as
+Stephenson {\em et al.}'s~\cite{Stephenson00}.
+However, whereas that approach have not been used with programs larger than
+the Stanford benchmark suite, we, as shown before, have been able to
+deal with remarkably large programs.
+
+%mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+\section{Design Space}
+\label{sec:design}
+
+As we see from a cursory glance at Figure~\ref{fig:algorithm}, our range
+analysis algorithm has many optional modules.
+These modules provide the user with the possibility to choose between
+more precise results, or a faster analysis.
+Given the number of options, the design space of a range analysis algorithm
+is vast.
+In this section we try to cover some of the most important tradeoffs.
+Figure~\ref{fig:space} plots, for the integer programs in the SPEC CPU 2006
+benchmark suite, precision versus speed for different configurations of
+our implementation.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\textwidth]{images/space}
+\end{center}
+\caption{\label{fig:space}
+Design space exploration: precision versus speed for different configurations
+of our algorithm.}
+\end{figure}
+
+\subsection{Strongly Connected Components}
+\label{sub:sccs}
+
+\subsection{The choice of a program representation}
+\label{sub:program_rep}
+
+\subsection{Intra versus Inter-procedural Analysis}
+\label{sub:whole}
+
+\subsection{Context Sensitive versus Context Insensitive Analysis}
+\label{sub:context}
+
+\subsection{Choosing a Widening Strategy}
+\label{sub:widen}
+
+%mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+\section{Conclusion}
+\label{sec:con}
+
+\bibliographystyle{plain}
+\bibliography{../references}
+
+\end{document}

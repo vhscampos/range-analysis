@@ -1,0 +1,140 @@
+\relax 
+\citation{Cousot77}
+\citation{Sol11}
+\citation{Bodik00}
+\citation{Barik06,Tallam03}
+\citation{Kong98,Pereira08,Scholz02}
+\citation{Patterson95}
+\citation{Simon08,Wagner00}
+\citation{Lokuciejewski09}
+\citation{Cong05,Lhairech10,Mahlke01}
+\citation{Gawlitza09,Mahlke01,Stephenson00,Su05}
+\citation{Blanchet03,Venet04}
+\citation{Oh12}
+\@writefile{toc}{\contentsline {title}{Range Analysis of Whole Programs}{1}}
+\@writefile{toc}{\authcount {1}}
+\@writefile{toc}{\contentsline {author}{Victor Hugo Sperle Campos, Igor Rafael de Assis Costa, Douglas do Couto Teixeira, Fernando Magno Quint\~{a}o Pereira}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}}
+\newlabel{sec:intro}{{1}{1}}
+\citation{Stephenson00}
+\citation{Patterson95}
+\citation{Su05}
+\citation{Gawlitza09}
+\citation{Bodik00}
+\citation{Nielson99}
+\citation{Su04,Su05}
+\citation{Gawlitza09}
+\citation{Couto11}
+\citation{Lattner04}
+\citation{Stephenson00}
+\citation{Costan05}
+\citation{Lakhdar11}
+\citation{Cytron91}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{3}}
+\newlabel{sec:bck}{{2}{3}}
+\newlabel{def:rcp}{{1}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  A suite of constraints that produce an instance of the range analysis problem.}}{3}}
+\newlabel{fig:eval_function}{{1}{3}}
+\citation{Bodik00}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  (a) Example program. (b) Control Flow Graph in SSA form. (c) Constraints that we extract from the program. (d) Possible solution to the range analysis problem.}}{4}}
+\newlabel{fig:ex1}{{2}{4}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Our Design of a Range Analysis Algorithm}{4}}
+\newlabel{sec:algo}{{3}{4}}
+\citation{Aho06}
+\citation{Warren02}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces  Our implementation of range analysis. Rounded boxes are optional steps.}}{5}}
+\newlabel{fig:algorithm}{{3}{5}}
+\citation{Ferrante87}
+\citation{Ferrante87}
+\citation{Ferrante87}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces  (a) The control flow graph from Figure\nobreakspace  {}2\hbox {}(b) converted to standard e-SSA form. (b) A solution to the range analysis problem }}{6}}
+\newlabel{fig:ex_standard_eSSA}{{4}{6}}
+\citation{Cousot77}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces  The dependence graph that we build to the program in Figure\nobreakspace  {}4\hbox {}.}}{7}}
+\newlabel{fig:ex_graph}{{5}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Finding Ranges in Strongly Connected Components}{7}}
+\newlabel{sub:micro}{{3.1}{7}}
+\citation{Cousot77}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces  (Left) The lattice of the growth analysis. (Right) Cousot and Cousot's widening operator. We evaluate the rules from left-to-right, top-to-bottom, and stop upon finding a pattern matching. Again: given an interval $\iota = [l, u]$, we let $\iota _{\delimiter "3223379 } = l$, and $\iota _{\delimiter "3222378 } = u$}}{8}}
+\newlabel{fig:growth_analysis}{{6}{8}}
+\citation{Cousot78}
+\citation{Mine06}
+\citation{Lakhdar11}
+\citation{Oh12}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Rules to replace futures by actual bounds. $S$ is the interval bound to each variable after the widening analysis.}}{9}}
+\newlabel{fig:fix_intersects}{{7}{9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Cousot and Cousot's narrowing operator.}}{9}}
+\newlabel{fig:crop_analysis}{{8}{9}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{9}}
+\newlabel{sec:exp}{{4}{9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces  Four snapshots of the last SCC of Figure\nobreakspace  {}4\hbox {}. (a) After removing control dependence edges. (b) After running the growth analysis. (c) After fixing the intersections bound to futures. (d) After running the narrowing analysis.}}{10}}
+\newlabel{fig:ex_partition_grow_crop}{{9}{10}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Structural Properties of the programs in the SPEC CPU 2006 integer benchmark suite. \#I: number of assembly instructions in the original program. \#$N_v$: number of variable nodes in the constraint graph. \#$N_c$: number of constraint nodes in the constraint graph. \#S: number of strongly connected components (SCC). L: size of the largest SCC. \#U: number of SCCs with only one node. \#V: maximum number of times any variable node was visited by narrowing.}}{11}}
+\newlabel{tab:struct}{{1}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces  Correlation between program size (number of var nodes in constraint graphs after inlining) and analysis runtime (ms). Coefficient of determination = 0.967. }}{11}}
+\newlabel{fig:TimeCorr}{{10}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces  Comparison between program size (number of var nodes in constraint graphs after inlining) and memory consumption (KB). Coefficient of determination = 0.9947. }}{12}}
+\newlabel{fig:MemCorr}{{11}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces  (Left) Time distribution across different phases of our inter+inline algorithm. (Right) Runtime comparison between the intra, inter e inter+inline versions of our algorithm. The bars are normalized to the time to run the intra-procedural version. }}{12}}
+\newlabel{fig:timeComp}{{12}{12}}
+\citation{Stephenson00}
+\citation{Stephenson00}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces  How strong components and the e-SSA representation improve our algorithm. This data refer to the inter-procedural analysis with function inlining. }}{13}}
+\newlabel{fig:impactEssaSCC}{{13}{13}}
+\citation{Cousot09}
+\citation{Cousot77}
+\citation{Patterson95}
+\citation{Stephenson00}
+\citation{Mahlke01}
+\citation{Costan05,Gawlitza09,Lakhdar11,Su04,Su05}
+\citation{Lakhdar11}
+\citation{Lakhdar11}
+\citation{Bertrane10,Blanchet03,Cousot09,Jung05}
+\citation{Oh12}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Related works}{14}}
+\newlabel{sec:rel}{{5}{14}}
+\citation{Cousot77}
+\citation{Tavares11b}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces  The impact of different design trade-offs on precision of range analysis.}}{15}}
+\newlabel{fig:essaDivSSA}{{14}{15}}
+\bibstyle{plain}
+\bibdata{references}
+\bibcite{Aho06}{1}
+\bibcite{Barik06}{2}
+\bibcite{Bertrane10}{3}
+\bibcite{Blanchet03}{4}
+\bibcite{Bodik00}{5}
+\bibcite{Cong05}{6}
+\bibcite{Costan05}{7}
+\bibcite{Cousot77}{8}
+\bibcite{Cousot78}{9}
+\bibcite{Cousot09}{10}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Final Considerations}{16}}
+\newlabel{sec:con}{{6}{16}}
+\bibcite{Cytron91}{11}
+\bibcite{Couto11}{12}
+\bibcite{Ferrante87}{13}
+\bibcite{Gawlitza09}{14}
+\bibcite{Jung05}{15}
+\bibcite{Kong98}{16}
+\bibcite{Lakhdar11}{17}
+\bibcite{Lattner04}{18}
+\bibcite{Lhairech10}{19}
+\bibcite{Lokuciejewski09}{20}
+\bibcite{Mahlke01}{21}
+\bibcite{Mine06}{22}
+\bibcite{Nielson99}{23}
+\bibcite{Oh12}{24}
+\bibcite{Patterson95}{25}
+\bibcite{Pereira08}{26}
+\bibcite{Scholz02}{27}
+\bibcite{Simon08}{28}
+\bibcite{Sol11}{29}
+\bibcite{Stephenson00}{30}
+\bibcite{Su04}{31}
+\bibcite{Su05}{32}
+\bibcite{Tallam03}{33}
+\bibcite{Tavares11b}{34}
+\bibcite{Venet04}{35}
+\bibcite{Wagner00}{36}
+\bibcite{Warren02}{37}

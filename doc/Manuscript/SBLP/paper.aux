@@ -1,0 +1,107 @@
+\relax 
+\citation{Bodik00}
+\citation{Logozzo08}
+\citation{Venet04}
+\citation{Sol11}
+\citation{Barik06}
+\citation{Pereira08}
+\citation{Tallam03}
+\citation{Patterson95}
+\citation{Cong05}
+\citation{Lhairech10}
+\citation{Mahlke01}
+\citation{Stephenson00}
+\citation{Mahlke01}
+\citation{Simon08}
+\citation{Stephenson00}
+\citation{Costan05}
+\citation{Gawlitza09}
+\citation{Lakhdar11}
+\citation{Su04}
+\citation{Su05}
+\citation{Bertrane10}
+\citation{Cousot09}
+\citation{Logozzo08}
+\citation{Oh11}
+\citation{Oh12}
+\citation{Lattner04}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}}
+\newlabel{sec:int}{{1}{1}}
+\citation{Su04}
+\citation{Su05}
+\citation{Gawlitza09}
+\citation{Couto11}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Brief Description of our Range Analysis Algorithm}{2}}
+\newlabel{sec:desc}{{2}{2}}
+\@writefile{toc}{\contentsline {paragraph}{The Interval Lattice.}{2}}
+\citation{Bodik00}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  Our implementation of range analysis. Rounded boxes are optional steps.}}{3}}
+\newlabel{fig:algorithm}{{1}{3}}
+\@writefile{toc}{\contentsline {paragraph}{A Holistic View of our Range Analysis Algorithm.}{3}}
+\citation{Cousot77}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  Range analysis by example. (a) Input program. (b) Internal compiler representation. (c) Constraints of the range analysis problem. (d) The constraint graph. (e) The final solution.}}{4}}
+\newlabel{fig:overall_view}{{2}{4}}
+\@writefile{toc}{\contentsline {paragraph}{The Micro Algorithm.}{4}}
+\citation{Cousot77}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Rules to replace futures by actual bounds. $S$ is the interval bound to each variable after the widening analysis.}}{5}}
+\newlabel{fig:fix_intersects}{{3}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Cousot and Cousot's narrowing operator.}}{5}}
+\newlabel{fig:crop_analysis}{{4}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces  Four snapshots of the last SCC of Figure\nobreakspace  {}2\hbox {}(d). (a) After removing control dependence edges. (b) After running the growth analysis. (c) After fixing the intersections bound to futures. (d) After running the narrowing analysis.}}{6}}
+\newlabel{fig:ex_partition_grow_crop}{{5}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Range Analysis Showdown}{6}}
+\newlabel{sub:showdown}{{2.1}{6}}
+\@writefile{toc}{\contentsline {paragraph}{Time and Memory Complexity}{6}}
+\citation{Lakhdar11}
+\citation{Lakhdar11}
+\citation{Stephenson00}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces  Correlation between program size (number of var nodes in constraint graphs after inlining) and analysis runtime (ms). Coefficient of determination = 0.967. }}{7}}
+\newlabel{fig:TimeCorr}{{6}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces  Comparison between program size (number of var nodes in constraint graphs after inlining) and memory consumption (KB). Coefficient of determination = 0.9947. }}{7}}
+\newlabel{fig:MemCorr}{{7}{7}}
+\@writefile{toc}{\contentsline {paragraph}{Precision}{7}}
+\bibstyle{plain}
+\bibdata{../references}
+\bibcite{Barik06}{1}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces  (Upper) Comparison between static range analysis and dynamic profiler for upper bounds. (Lower) Comparison between static range analysis and dynamic profiler for lower bounds. The numbers above the benchmark names give the number of variables in each program.}}{8}}
+\newlabel{fig:precision}{{8}{8}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Design Space}{8}}
+\newlabel{sec:design}{{3}{8}}
+\bibcite{Bertrane10}{2}
+\bibcite{Bodik00}{3}
+\bibcite{Cong05}{4}
+\bibcite{Costan05}{5}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces  Design space exploration: precision versus speed for different configurations of our algorithm.}}{9}}
+\newlabel{fig:space}{{9}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Strongly Connected Components}{9}}
+\newlabel{sub:sccs}{{3.1}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}The choice of a program representation}{9}}
+\newlabel{sub:program_rep}{{3.2}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Intra versus Inter-procedural Analysis}{9}}
+\newlabel{sub:whole}{{3.3}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Context Sensitive versus Context Insensitive Analysis}{9}}
+\newlabel{sub:context}{{3.4}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Choosing a Widening Strategy}{9}}
+\newlabel{sub:widen}{{3.5}{9}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Conclusion}{9}}
+\newlabel{sec:con}{{4}{9}}
+\bibcite{Cousot77}{6}
+\bibcite{Cousot09}{7}
+\bibcite{Couto11}{8}
+\bibcite{Gawlitza09}{9}
+\bibcite{Lakhdar11}{10}
+\bibcite{Lattner04}{11}
+\bibcite{Lhairech10}{12}
+\bibcite{Logozzo08}{13}
+\bibcite{Mahlke01}{14}
+\bibcite{Oh11}{15}
+\bibcite{Oh12}{16}
+\bibcite{Patterson95}{17}
+\bibcite{Pereira08}{18}
+\bibcite{Simon08}{19}
+\bibcite{Sol11}{20}
+\bibcite{Stephenson00}{21}
+\bibcite{Su04}{22}
+\bibcite{Su05}{23}
+\bibcite{Tallam03}{24}
+\bibcite{Venet04}{25}
