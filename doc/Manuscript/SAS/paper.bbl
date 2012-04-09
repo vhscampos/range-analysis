@@ -1,0 +1,219 @@
+\begin{thebibliography}{10}
+
+\bibitem{Aho06}
+Alfred~V. Aho, Monica~S. Lam, Ravi Sethi, and Jeffrey~D. Ullman.
+\newblock {\em Compilers: Principles, Techniques, and Tools (2nd Edition)}.
+\newblock {Addison Wesley}, 2006.
+
+\bibitem{Barik06}
+Rajkishore Barik, Christian Grothoff, Rahul Gupta, Vinayaka Pandit, and
+  Raghavendra Udupa.
+\newblock Optimal bitwise register allocation using integer linear programming.
+\newblock In {\em LCPC}, volume 4382 of {\em Lecture Notes in Computer
+  Science}, pages 267--282. Springer, 2006.
+
+\bibitem{Bertrane10}
+J{.} Bertrane, P{.} Cousot, R{.} Cousot, J{.} Feret, L{.} Mauborgne, A{.}
+  Min{\'e}, and X{.} Rival.
+\newblock Static analysis and verification of aerospace software by abstract
+  interpretation.
+\newblock In {\em I$@$A}, pages 1--38. AIAA, 2010.
+
+\bibitem{Blanchet03}
+B.~Blanchet, P~Cousot, R.~Cousot, J.~Feret, L.~Mauborgne, A~Min\'{e},
+  D.~Monniaux, and X.~Rival.
+\newblock A static analyzer for large safety-critical software.
+\newblock In {\em PLDI}, pages 196--207. ACM, 2003.
+
+\bibitem{Bodik00}
+Rastislav Bodik, Rajiv Gupta, and Vivek Sarkar.
+\newblock {ABCD}: eliminating array bounds checks on demand.
+\newblock In {\em PLDI}, pages 321--333. ACM, 2000.
+
+\bibitem{Cong05}
+Jason Cong, Yiping Fan, Guoling Han, Yizhou Lin, Junjuan Xu, Zhiru Zhang, and
+  Xu~Cheng.
+\newblock Bitwidth-aware scheduling and binding in high-level synthesis.
+\newblock {\em Design Automation Conference, 2005. Proceedings of the ASP-DAC
+  2005. Asia and South Pacific}, 2:856--861, 18-21 Jan. 2005.
+
+\bibitem{Costan05}
+Alexandru Costan, Stephane Gaubert, Eric Goubault, Matthieu Martel, and Sylvie
+  Putot.
+\newblock A policy iteration algorithm for computing fixed points in static
+  analysis of programs.
+\newblock In {\em CAV}, pages 462--475, 2005.
+
+\bibitem{Cousot77}
+P.~Cousot and R.~Cousot.
+\newblock Abstract interpretation: a unified lattice model for static analysis
+  of programs by construction or approximation of fixpoints.
+\newblock In {\em POPL}, pages 238--252. ACM, 1977.
+
+\bibitem{Cousot78}
+P.~Cousot and N.. Halbwachs.
+\newblock Automatic discovery of linear restraints among variables of a
+  program.
+\newblock In {\em POPL}, pages 84--96. ACM, 1978.
+
+\bibitem{Cousot09}
+Patrick Cousot, Radhia Cousot, J{\'e}r\^{o}me Feret, Laurent Mauborgne, Antoine
+  Min{\'e}, and Xavier Rival.
+\newblock Why does astr\&\#233;e scale up?
+\newblock {\em Form. Methods Syst. Des.}, 35(3):229--264, 2009.
+
+\bibitem{Cytron91}
+Ron Cytron, Jeanne Ferrante, Barry~K. Rosen, Mark~N. Wegman, and F.~Kenneth
+  Zadeck.
+\newblock Efficiently computing static single assignment form and the control
+  dependence graph.
+\newblock {\em TOPLAS}, 13(4):451--490, 1991.
+
+\bibitem{Couto11}
+Douglas do~Couto~Teixeira and Fernando Magno~Quintao Pereira.
+\newblock The design and implementation of a non-iterative range analysis
+  algorithm on a production compiler.
+\newblock In {\em SBLP}, pages 45--59. SBC, 2011.
+
+\bibitem{Ferrante87}
+Jeanne Ferrante, Karl~J. Ottenstein, and Joe~D. Warren.
+\newblock {The program dependence graph and its use in optimization}.
+\newblock {\em TOPLAS}, 9(3):319--349, 1987.
+
+\bibitem{Gawlitza09}
+Thomas Gawlitza, Jerome Leroux, Jan Reineke, Helmut Seidl, Gregoire Sutre, and
+  Reinhard Wilhelm.
+\newblock Polynomial precise interval analysis revisited.
+\newblock {\em Efficient Algorithms}, 1:422 -- 437, 2009.
+
+\bibitem{Jung05}
+Yungbum Jung, Jaehwang Kim, Jaeho Shin, and Kwangkeun Yi.
+\newblock Taming false alarms from a domain-unaware c analyzer by a bayesian
+  statistical post analysis.
+\newblock In {\em SAS}, pages 203--217, 2005.
+
+\bibitem{Kong98}
+Timothy Kong and Kent~D Wilken.
+\newblock Precise register allocation for irregular architectures.
+\newblock In {\em MICRO}, pages 297--307. IEEE, 1998.
+
+\bibitem{Lakhdar11}
+Lies Lakhdar-Chaouch, Bertrand Jeannet, and Alain Girault.
+\newblock Widening with thresholds for programs with complex control graphs.
+\newblock In {\em ATVA}, pages 492--502. Springer-Verlag, 2011.
+
+\bibitem{Lattner04}
+Chris Lattner and Vikram~S. Adve.
+\newblock {LLVM}: A compilation framework for lifelong program analysis {\&}
+  transformation.
+\newblock In {\em CGO}, pages 75--88. IEEE, 2004.
+
+\bibitem{Lhairech10}
+G~Lhairech-Lebreton, P~Coussy, D.~Heller, and E.~Martin.
+\newblock Bitwidth-aware high-level synthesis for designing low-power dsp
+  applications.
+\newblock In {\em ICECS}, pages 531--534. IEEE, 2010.
+
+\bibitem{Lokuciejewski09}
+Paul Lokuciejewski, Daniel Cordes, Heiko Falk, and Peter Marwedel.
+\newblock A fast and precise static loop analysis based on abstract
+  interpretation, program slicing and polytope models.
+\newblock In {\em CGO}, pages 136--146, 2009.
+
+\bibitem{Mahlke01}
+S.~Mahlke, R.~Ravindran, M.~Schlansker, R.~Schreiber, and T.~Sherwood.
+\newblock Bitwidth cognizant architecture synthesis of custom hardware
+  accelerators.
+\newblock {\em Computer-Aided Design of Integrated Circuits and Systems, IEEE
+  Transactions on}, 20(11):1355--1371, 2001.
+
+\bibitem{Mine06}
+Antoine Min\'{e}.
+\newblock The octagon abstract domain.
+\newblock {\em Higher Order Symbol. Comput.}, 19:31--100, 2006.
+
+\bibitem{Nielson99}
+Flemming Nielson, Hanne~R. Nielson, and Chris Hankin.
+\newblock {\em Principles of Program Analysis}.
+\newblock Springer, 1999.
+
+\bibitem{Oh12}
+Hakjoo Oh, Kihong Heo, Wonchan Lee, Woosuk Lee, and Kwangkeun Yi.
+\newblock Design and implementation of sparse global analyses for c-like
+  languages.
+\newblock In {\em {PLDI}}, page to appear. ACM, 2012.
+
+\bibitem{Patterson95}
+Jason R.~C. Patterson.
+\newblock Accurate static branch prediction by value range propagation.
+\newblock In {\em PLDI}, pages 67--78. ACM, 1995.
+
+\bibitem{Pereira08}
+Fernando Magno~Quintao Pereira and Jens Palsberg.
+\newblock Register allocation by puzzle solving.
+\newblock In {\em PLDI}, pages 216--226. ACM, 2008.
+
+\bibitem{Scholz02}
+Bernhard Scholz and Erik Eckstein.
+\newblock Register allocation for irregular architectures.
+\newblock In {\em LCTES/SCOPES}, pages 139--148. ACM, 2002.
+
+\bibitem{Simon08}
+Axel Simon.
+\newblock {\em Value-Range Analysis of C Programs: Towards Proving the Absence
+  of Buffer Overflow Vulnerabilities}.
+\newblock Springer, 1th edition, 2008.
+
+\bibitem{Sol11}
+Marcos Rodrigo~Sol Souza, Christophe Guillon, Fernando Magno~Quintao Pereira,
+  and Mariza~Andrade da~Silva~Bigonha.
+\newblock Dynamic elimination of overflow tests in a trace compiler.
+\newblock In {\em CC}, pages 2--21, 2011.
+
+\bibitem{Stephenson00}
+Mark Stephenson, Jonathan Babb, and Saman Amarasinghe.
+\newblock Bitwidth analysis with application to silicon compilation.
+\newblock In {\em PLDI}, pages 108--120. ACM, 2000.
+
+\bibitem{Su04}
+Zhendong Su and David Wagner.
+\newblock A class of polynomially solvable range constraints for interval
+  analysis without widenings and narrowings.
+\newblock In {\em TACAS}, pages 280--295, 2004.
+
+\bibitem{Su05}
+Zhendong Su and David Wagner.
+\newblock A class of polynomially solvable range constraints for interval
+  analysis without widenings.
+\newblock {\em Theoretical Computeter Science}, 345(1):122--138, 2005.
+
+\bibitem{Tallam03}
+Sriraman Tallam and Rajiv Gupta.
+\newblock Bitwidth aware global register allocation.
+\newblock In {\em POPL}, pages 85--96, New York, NY, USA, 2003. ACM.
+
+\bibitem{Tavares11b}
+Andre L.~C. Tavares, Benoit Boissinot, Mariza A.~S. Bigonha, Roberto Bigonha,
+  Fernando M.~Q. Pereira, and Fabrice Rastello.
+\newblock A program representation for sparse dataflow analyses.
+\newblock {\em Science of Computer Programming}, X(X):2--25, 201X.
+\newblock Invited paper with publication expected for 2012.
+
+\bibitem{Venet04}
+Arnaud Venet and Guillaume Brat.
+\newblock Precise and efficient static array bound checking for large embedded
+  c programs.
+\newblock {\em SIGPLAN Not.}, 39:231--242, 2004.
+
+\bibitem{Wagner00}
+David Wagner, Jeffrey~S. Foster, Eric~A. Brewer, and Alexander Aiken.
+\newblock A first step towards automated detection of buffer overrun
+  vulnerabilities.
+\newblock In {\em NDSS}, pages 3--17. ACM, 2000.
+
+\bibitem{Warren02}
+Henry~S. Warren.
+\newblock {\em Hacker's Delight}.
+\newblock Addison-Wesley Longman Publishing Co., Inc., 2002.
+
+\end{thebibliography}
