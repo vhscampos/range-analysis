@@ -431,8 +431,6 @@ Coefficient of determination = 0.967.
 }
 \end{figure}
 
-\noindent
-\textbf{Memory complexity.}
 The experiments also reveal that the memory consumption of our implementation
 is linear with the program size.
 Figure~\ref{fig:MemCorr} plots these two quantities together.
@@ -461,7 +459,7 @@ Our implementation of range analysis is remarkably precise, considering its
 runtime.
 Lakhdar {\em et al.}'s relational analysis~\cite{Lakhdar11}, for instance, takes
 about 25 minutes to go over a program with almost 900 basic blocks.
-We analyze programs of similar size less than one second.
+We analyze programs of similar size in less than one second.
 We do not claim our approach is as precise as such algorithms, even though we
 are able to find exact bounds to 4/5 of the examples presented
 in~\cite{Lakhdar11}.
@@ -531,14 +529,23 @@ In this section we try to cover some of the most important tradeoffs.
 Figure~\ref{fig:space} plots, for the integer programs in the SPEC CPU 2006
 benchmark suite, precision versus speed for different configurations of
 our implementation.
+Our initial goal when developing this analysis was to support a bitwidth-aware
+register allocator.
+Thus, we measure precision by the average number of bits that our
+analysis allows us to save per program variables.
+It is very important to notice that we do not consider constants in our statistics of precision.
+In other words, we only measure bitwidth reduction in variables that a constant
+propagation step could not remove.
+
 
 \begin{figure}[t!]
 \begin{center}
 \includegraphics[width=\textwidth]{images/space}
 \end{center}
 \caption{\label{fig:space}
-Design space exploration: precision versus speed for different configurations
-of our algorithm.}
+Design space exploration: precision (percentage of bitwidth reduction)
+versus speed (secs) for different configurations of our algorithm analyzing
+the SPEC CPU 2006 integer benchmarks.}
 \end{figure}
 
 \subsection{Strongly Connected Components}
@@ -590,13 +597,19 @@ $0, +\infty$.
 \subsection{Intra versus Inter-procedural Analysis}
 \label{sub:whole}
 
-A naive implementation of range analysis would solve it once for each
-function.
-However, we can gain in precision by performing it inter-procedurally; that
-is, by allowing the results found for a function $f$ to flow into other
-functions that $f$ calls.
+A naive implementation of range analysis would be intra-procedural; that is,
+would solve the range analysis problem once for each function.
+However, we can gain in precision by performing it inter-procedurally.
+An inter-procedural implementation allows the results found for a function $f$
+to flow into other functions that $f$ calls.
 Figure~\ref{fig:intra} illustrates the inter-procedural analysis for the
 program seen in Figure~\ref{fig:overall_view}(a).
+The trivial way to produce an inter-procedural implementation is to insert
+into the constraint system assignments from the actual parameter names to the
+actual parameter names.
+In our example of Figure~\ref{fig:intra}, our constraint graph contains a flow
+of information from $0$, the actual parameter, to $k_0$, the formal parameter
+of function \texttt{foo}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -613,16 +626,9 @@ moderately the precision of our analysis.
 We show results for the five largest programs in three different categories of
 benchmarks: SPEC CPU 2006, the Stanford Suite~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}} and
 Bitwise~\cite{Stephenson00}.
-Our initial goal when developing this analysis was to support a bitwidth-aware
-register allocator.
-Thus, we measure precision by the average number of bits that our
-analysis allows us to save per program variables.
-It is very important to notice that we do not consider constants in our statistics of precision.
-In other words, we only measure bitwidth reduction in variables that a constant
-propagation step could not remove.
-Our results for the SPEC programs were disappointingly: on the average, the
-intra-procedural version of our analysis saves 5.23\% of the total program
-bitwidth.
+Our results for the SPEC programs were disappointingly: on the average for
+the five largest programs, the intra-procedural version of our analysis saves
+5.23\% of the total program bitwidth.
 By using the inter-procedural version we can increase this number to 8.89\%.
 A manual inspection of the SPEC programs reveal that this result is expected:
 they manipulate files, and their texts do no provide enough
@@ -646,7 +652,7 @@ Another way to increase the precision of range analysis is by using a
 context-sensitive implementation.
 Context-sensitiveness allows us to distinguish different calling sites of
 the same function.
-Figure~\ref{context} shows way the ability to make this distinction is
+Figure~\ref{fig:context} shows why the ability to make this distinction is
 important for precision.
 In Figure~\ref{fig:context}(a) we have two different calls of function
 \texttt{foo}.
@@ -658,7 +664,7 @@ makes the ranges of these parameters very large, whereas in reality they
 are not.
 A way to circumvent this source of imprecision is via function inlining,
 as we show in Figure~\ref{fig:context}(c).
-The results that we can derive for the transformed program are much more
+The results that we can derive for the transformed program are more
 precise, as each input parameter is assigned a single value.
 
 \begin{figure}[t!]
@@ -671,6 +677,20 @@ range analysis.
 }
 \end{figure}
 
+Figure~\ref{fig:wholeImpact} also shows how function inlining modifies the
+precision of our results.
+It is difficult to find an adequate way to compare the precision of
+our analysis with, and without inlining.
+This difficulty stems from the fact that this transformation tends to change
+the target program too much.
+In absolute numbers, we always reduce the bitwidth of more variables after
+function inlining.
+However, proportionally function inlining leads to a smaller percentage of
+bitwidth reduction for many benchmarks.
+In the Stanford Collection, for instance, where most of the functions are
+called in only one location, inlining leads to worst precision results.
+On the other hand, for the SPEC programs inlining, even in terms of
+percentage of reduction, tends to increase our measure of precision.
 
 \begin{figure}[t!]
 \begin{center}
@@ -680,6 +700,28 @@ range analysis.
 The impact of whole program analysis on precision. Each bar gives precision in
 \%bitwidth reduciton.}
 \end{figure}
+
+\noindent
+\textbf{Intra vs Inter-procedural runtimes.}
+Figure~\ref{fig:timeComp}(Right) compares three different execution modes.
+Bars are normalized to the time to run the intra-procedural analysis
+without inlining.
+On the average, the intra-procedural mode is 28.92\% faster than the
+inter-procedural mode.
+If we perform function inlining, then this difference is larger: 45.87\%.
+These numbers are close because we run our analysis on strong components.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=0.45\textwidth]{images/timeIntraInterInline}
+\end{center}
+\caption{\label{fig:timeComp}
+Runtime comparison between the intra, inter e inter+inline versions of
+our algorithm.
+The bars are normalized to the time to run the intra-procedural analysis.
+}
+\end{figure}
+
 
 \subsection{The choice of a program representation}
 \label{sub:program_rep}
