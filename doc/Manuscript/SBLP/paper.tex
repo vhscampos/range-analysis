@@ -29,7 +29,7 @@
 Raphael Ernani Rodrigues and Fernando Magno Quint\~{a}o Pereira}
 
 \address{UFMG -- 6627 Ant\^{o}nio Carlos Av, 31.270-010, Belo Horizonte, Brazil
-\email{\{victorsc,igor,raphael,fernando\}@dcc.ufmg.br}
+\email{\{victorsc,raphael.ernani,igor.rafael,fernando\}@dcc.ufmg.br}
 }
 
 
@@ -152,7 +152,8 @@ paper.
 \label{sec:desc}
 
 % Define the lattice, the constraints and the valuation I.
-\paragraph{The Interval Lattice.}
+\noindent
+\textbf{The Interval Lattice.}
 Following Gawlitza {\em et al.}'s notation, we shall be performing arithmetic
 operations over the complete lattice
 $\cal{Z} = \mathbb{Z} \cup \{-\infty, +\infty\}$, where the ordering is
@@ -181,7 +182,8 @@ $V$ to intervals, such that, for any variable $v \in V$, if
 $I(v) = [l, u]$, the, during the execution of the target program, any
 valued $i$ assigned to $v$ is such that $l \leq i \leq u$.
 
-\paragraph{A Holistic View of our Range Analysis Algorithm.}
+\noindent
+\textbf{A Holistic View of our Range Analysis Algorithm.}
 We perform range analysis in a number of steps.
 First, we convert the program to a suitable intermediate representation that
 makes it easier to extract constraints.
@@ -258,7 +260,8 @@ Range analysis by example.
 (e) The final solution.}
 \end{figure}
 
-\paragraph{The Micro Algorithm.}
+\noindent
+\textbf{The Micro Algorithm.}
 We find the solution given in Figure~\ref{fig:overall_view}(e) in a
 process that we call the micro algorithm.
 This phase is further divided into three sub-steps:
@@ -402,7 +405,8 @@ We have used it to analyze a test suite with 2.72 million lines of C code,
 which includes, in addition to all the benchmarks distributed with LLVM,
 the programs in the SPEC CPU 2006 collection.
 
-\paragraph{Time and Memory Complexity}
+\noindent
+\textbf{Time and Memory Complexity}
 
 Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
 run our algorithm and the size of the input programs.
@@ -453,7 +457,8 @@ Coefficient of determination = 0.9947.
 }
 \end{figure}
 
-\paragraph{Precision}
+\noindent
+\textbf{Precision}
 
 Our implementation of range analysis is remarkably precise, considering its
 runtime.
@@ -732,12 +737,10 @@ precision.
 However, here we no longer have a win-win condition: a more expressive
 program representation decreases our runtime, because it increases the
 size of the target program.
-Nevertheless, the slowdown is inexpressive.
-We chose to run our analysis in programs in the Extended Static Single
-Assignment (e-SSA) form~\cite{Bodik00}.
-The alternative, which gives us a faster, albeit imprecise, analysis, is to run
-our algorithm in programs in Static Single Assignment (SSA)
-form~\cite{Cytron91}.
+We have tried our analysis in two different program representations: the
+Static Single Assignment (SSA) Form~\cite{Cytron91}, and the Extended Static
+Single Assignment (e-SSA) form~\cite{Bodik00}.
+The SSA form gives us a faster, albeit more imprecise, analysis.
 Any program in e-SSA form has also the SSA core property: any variable name
 has at most one definition site.
 The contrary is not true: SSA form programs do not have the core e-SSA
@@ -789,9 +792,118 @@ conversion.}
 \subsection{Choosing a Widening Strategy}
 \label{sub:widen}
 
+We have implemented the widening operator used in the growth analysis in
+two different ways.
+The first way, which we call {\em simple}, is based on Cousot and
+Cousot's original widening operator~\cite{Cousot77}.
+This operator is shown in Figure~\ref{fig:widening}, and it is the one
+used in Figure~\ref{fig:ex_partition_grow_crop}(b).
+The second widening strategy, which we call {\em jump-set widening} consists
+in using the constants that appear in the program text, in sorted order, as
+the next limits of each interval after widening is applied.
+This operator is common in implementations of range
+analysis~\cite[p.228]{Nielson99}.
+There are situations in which jump-set widening produces better results
+than the simple operator.
+Figure~\ref{fig:jumpSet} shows an example taken from the code of
+SPEC CPU \texttt{bzip2}.
+Part of the constraint graph of the program in Figure~\ref{fig:jumpSet}(a)
+is given in Figure~\ref{fig:jumpSet}(b).
+The result of applying the simple operator is shown in
+Figure~\ref{fig:jumpSet}(c).
+Jump-set widening would use the lattice in Figure~\ref{fig:jumpSet}(d),
+instead of the lattice in Figure~\ref{fig:widening}(Right).
+This lattice would yield the result given in Figure~\ref{fig:jumpSet}(e),
+which is more precise.
+
+\begin{figure}[t!]
+\begin{center}
+\begin{tabular}{c@{\hspace{1.5cm}}c}
+\begin{minipage}{2cm}
+\includegraphics{images/growth_lattice}
+\end{minipage}
+&
+\begin{minipage}{8cm}
+\begin{small}
+\begin{eqnarray*}
+\begin{array}{c@{\hspace{0.5cm}}c}
+\inferrule{I[Y] = [\bot, \bot]}{I[Y] \leftarrow e(Y)}
+&
+\inferrule{\lb{e(Y)} < \lb{I[Y]} \\ \ub{e(Y)} > \ub{I[Y]}}
+{I[Y] \leftarrow [-\infty, +\infty ]}
+\\
+\\
+\inferrule{\lb{e(Y)} < \lb{I[Y]}}
+{I[Y] \leftarrow [-\infty, \ub{I[Y]}]}
+&
+\inferrule{\ub{e(Y)} > \ub{I[Y]}}
+{I[Y] \leftarrow [\lb{I[Y]}, +\infty]}
+\end{array}
+\end{eqnarray*}
+\end{small}
+\end{minipage}
+\end{tabular}
+\end{center}
+\caption{\label{fig:widening}
+(Left) The lattice used in the simple widening strategy.
+(Right) Cousot and Cousot's widening operator. We evaluate the rules from
+left-to-right, top-to-bottom, and stop upon finding a pattern matching.
+Again: given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
+$\ub{\iota} = u$}
+\end{figure}
+
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{images/jumpSet}
+\end{center}
+\caption{\label{fig:jumpSet}
+An example where jump-set widening is more precise.}
+\end{figure}
+
+Another way to improve the precision of growth analysis is to perform a few
+rounds of abstract interpretation on the constraint graph, and, in case the
+process does not reach a fix point, only then applying the widening operator.
+Each round consists in evaluating all the constraints, and updating the
+intervals that change from one evaluation to the other.
+The simple widening strategy, coupled with one round of abstract interpretation
+would give us precise results in the example from Figure~\ref{fig:jumpSet}.
+We have experimented with 0 and 16 iterations before doing widening, and the
+overall result, for the programs in the SPEC CPU 2006 suite is given in
+Figure~\ref{fig:space}.
+Figure~\ref{fig:wideningPrec} shows some of these results in more details
+for a broader set of benchmarks.
+In general jump-set widening improves the precision of our results in
+non-trivial ways.
+Nevertheless, the simple widening operator preceded by 16 rounds of
+abstract interpretation in general is more precise than jump-set widening
+without any cycle of pre-evaluation, as we see in Figure~\ref{fig:space}.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{images/wideningPrec}
+\end{center}
+\caption{\label{fig:wideningPrec}
+The impact of the widening strategy on precision.
+Each bar gives precision in \%bitwidth reduciton.}
+\end{figure}
+
+
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Conclusion}
 \label{sec:con}
+
+This paper presents what we believe is the most comprehensive evaluation of
+range analysis in the literature.
+Altogether we have experimented with 32 different configurations of our
+range analysis algorithm.
+Our implementation is
+publicly available at \texttt{http://code.google.com/p/range-analysis/}.
+This repository contains instructions about how to deploy and use our
+implementation.
+We provide a gallery of examples, including source codes,
+CFGs and constraint graphs that we produce for meaningful programs at
+\texttt{http://code.google.com/p/range-analysis/wiki/gallery}.
 
 \bibliographystyle{plain}
 \bibliography{../references}
