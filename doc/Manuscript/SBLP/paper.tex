@@ -179,7 +179,7 @@ $\varset{Z}^2$ is defined as follows:
 The objective of range analysis is to determine a mapping
 $I: \varset{V} \mapsto \varset{Z}^2$ from the set of integer program variables
 $V$ to intervals, such that, for any variable $v \in V$, if
-$I(v) = [l, u]$, the, during the execution of the target program, any
+$I(v) = [l, u]$, then, during the execution of the target program, any
 valued $i$ assigned to $v$ is such that $l \leq i \leq u$.
 
 \noindent
@@ -270,7 +270,7 @@ This phase is further divided into three sub-steps:
 (iii) narrowing analysis.
 
 \noindent
-\textbf{Growth analysis: }
+\textbf{Growth analysis. }
 The objective of growth analysis is to determine the growth behavior of
 each program variable.
 There are four possible behaviors:
@@ -293,7 +293,7 @@ There are many different widening strategies.
 We discuss some of them in Section~\ref{sub:widen}.
 
 \noindent
-\textbf{Future resolution: }
+\textbf{Future resolution. }
 In order to learn information from comparisons between variables, such as
 \texttt{i < j} in Figure~\ref{fig:overall_view}(a), we bind some intervals
 to {\em futures}.
@@ -333,7 +333,7 @@ analysis.}
 \end{figure}
 
 \noindent
-\textbf{Narrowing Analysis.}
+\textbf{Narrowing analysis.}
 The growth analysis associates very conservative bounds to each variable.
 Thus, the last step of our algorithm consists in narrowing these intervals.
 We accomplish this step via Cousot and Cousot's classic narrowing
@@ -363,7 +363,7 @@ Figure~\ref{fig:crop_analysis}.
 \end{figure}
 
 \noindent
-\textbf{Example:}
+\textbf{Example.}
 Continuing with our example, Figure~\ref{fig:ex_partition_grow_crop} shows
 the application of our algorithm on the last strong component of
 Figure~\ref{fig:overall_view}(d).
@@ -442,7 +442,7 @@ The linear correlation, in this case, is even stronger than that found in
 Figure~\ref{fig:TimeCorr}, which compares runtime and program size: the
 coefficient of determination is 0.9947.
 The figure only shows our 100 largest benchmarks.
-Again, SPEC \texttt{403.gcc} is the heaviest benchmarks, requiring
+Again, SPEC \texttt{403.gcc} is the heaviest benchmark, requiring
 265,588KB to run.
 Memory includes stack, heap and the executable program code.
 
@@ -452,7 +452,7 @@ Memory includes stack, heap and the executable program code.
 \end{center}
 \caption{\label{fig:MemCorr}
 Comparison between program size (number of var nodes in constraint
-graphs after inlining) and memory consumption (KB).
+graphs) and memory consumption (KB).
 Coefficient of determination = 0.9947.
 }
 \end{figure}
@@ -518,7 +518,7 @@ This result is on pair with those obtained by more costly analysis, such as
 Stephenson {\em et al.}'s~\cite{Stephenson00}.
 However, whereas that approach have not been used with programs larger than
 the Stanford benchmark suite, we, as shown before, have been able to
-deal with remarkably large programs.
+deal with remarkably larger programs.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Design Space}
@@ -583,7 +583,7 @@ In some cases, as in \texttt{xalancbmk} the analysis on strong components is
 (Left) Bars give time to run our analysis without building strong components
 divided by time to run the analysis on strongly connected components.
 (Right) Bars give precision, in bitwidth reduction, that we obtain with strong
-components, dividid by the precision that we obtain without them.
+components, divided by the precision that we obtain without them.
 }
 \end{figure}
 
@@ -611,7 +611,7 @@ Figure~\ref{fig:intra} illustrates the inter-procedural analysis for the
 program seen in Figure~\ref{fig:overall_view}(a).
 The trivial way to produce an inter-procedural implementation is to insert
 into the constraint system assignments from the actual parameter names to the
-actual parameter names.
+formal parameter names.
 In our example of Figure~\ref{fig:intra}, our constraint graph contains a flow
 of information from $0$, the actual parameter, to $k_0$, the formal parameter
 of function \texttt{foo}.
@@ -661,7 +661,7 @@ Figure~\ref{fig:context} shows why the ability to make this distinction is
 important for precision.
 In Figure~\ref{fig:context}(a) we have two different calls of function
 \texttt{foo}.
-A usual way to perform a data-flow analysis inter-procedurally is to
+An usual way to perform a data-flow analysis inter-procedurally is to
 create assignments between formal and actual parameters, as we show in
 Figure~\ref{fig:context}(b).
 However, in this case the multiple assignment of values to parameters
@@ -694,7 +694,7 @@ However, proportionally function inlining leads to a smaller percentage of
 bitwidth reduction for many benchmarks.
 In the Stanford Collection, for instance, where most of the functions are
 called in only one location, inlining leads to worst precision results.
-On the other hand, for the SPEC programs inlining, even in terms of
+On the other hand, for the SPEC programs, inlining, even in terms of
 percentage of reduction, tends to increase our measure of precision.
 
 \begin{figure}[t!]
@@ -703,7 +703,7 @@ percentage of reduction, tends to increase our measure of precision.
 \end{center}
 \caption{\label{fig:wholeImpact}
 The impact of whole program analysis on precision. Each bar gives precision in
-\%bitwidth reduciton.}
+\%bitwidth reduction.}
 \end{figure}
 
 \noindent
@@ -721,7 +721,7 @@ These numbers are close because we run our analysis on strong components.
 \includegraphics[width=0.45\textwidth]{images/timeIntraInterInline}
 \end{center}
 \caption{\label{fig:timeComp}
-Runtime comparison between the intra, inter e inter+inline versions of
+Runtime comparison between intra, inter and inter+inline versions of
 our algorithm.
 The bars are normalized to the time to run the intra-procedural analysis.
 }
@@ -732,10 +732,10 @@ The bars are normalized to the time to run the intra-procedural analysis.
 \label{sub:program_rep}
 
 If strong components account for the largest gains in speed, the choice of
-a suitable program representation are responsible for the largest gains in
+a suitable program representation is responsible for the largest gains in
 precision.
 However, here we no longer have a win-win condition: a more expressive
-program representation decreases our runtime, because it increases the
+program representation decreases our speed, because it increases the
 size of the target program.
 We have tried our analysis in two different program representations: the
 Static Single Assignment (SSA) Form~\cite{Cytron91}, and the Extended Static
@@ -885,7 +885,7 @@ without any cycle of pre-evaluation, as we see in Figure~\ref{fig:space}.
 \end{center}
 \caption{\label{fig:wideningPrec}
 The impact of the widening strategy on precision.
-Each bar gives precision in \%bitwidth reduciton.}
+Each bar gives precision in \%bitwidth reduction.}
 \end{figure}
 
 
