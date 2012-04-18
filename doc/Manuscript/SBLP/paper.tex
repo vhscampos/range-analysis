@@ -99,7 +99,7 @@ We have implemented an industrial-quality range analysis algorithm in the
 LLVM compiler~\cite{Lattner04}.
 As we show in Section~\ref{sub:showdown}, our implementation, which is
 publicly available, is able to analyze programs with over one million assembly
-instructions in ten seconds.
+instructions in sixteen seconds.
 And our implementation is not a straw-man: it produces very precise results.
 We have compared the results produced by our implementation with the results
 obtained via a dynamic profiler, which we have also implemented.
@@ -526,8 +526,8 @@ deal with remarkably larger programs.
 
 As we see from a cursory glance at Figure~\ref{fig:algorithm}, our range
 analysis algorithm has many optional modules.
-These modules provide the user with the possibility to choose between
-more precise results, or a faster analysis.
+These modules give the user the chance to choose between more precise results,
+or a faster analysis.
 Given the number of options, the design space of a range analysis algorithm
 is vast.
 In this section we try to cover some of the most important tradeoffs.
@@ -537,7 +537,7 @@ our implementation.
 Our initial goal when developing this analysis was to support a bitwidth-aware
 register allocator.
 Thus, we measure precision by the average number of bits that our
-analysis allows us to save per program variables.
+analysis allows us to save per program variable.
 It is very important to notice that we do not consider constants in our statistics of precision.
 In other words, we only measure bitwidth reduction in variables that a constant
 propagation step could not remove.
@@ -569,7 +569,7 @@ It is well-known that this technique is essential to speedup constraint solving
 algorithms~\cite[Sec 6.3]{Nielson99}.
 In our case, the results are dramatic, mostly in terms of speed, but also in
 terms of precision.
-Figure~\ref{fig:impactSCC} shows the speed up that we gain by using strong
+Figure~\ref{fig:impactSCC} shows the speedup that we gain by using strong
 components.
 We show results for the integer programs in the SPEC CPU 2006 benchmark suite.
 In some cases, as in \texttt{xalancbmk} the analysis on strong components is
@@ -588,8 +588,8 @@ components, divided by the precision that we obtain without them.
 \end{figure}
 
 The strong components improve the precision of our growth analysis.
-As we see in Figure~\ref{fig:impactSCC}, in some cases, as in \texttt{bzip2},
-it is 40\% more precise.
+According to Figure~\ref{fig:impactSCC}, in some cases, as in \texttt{bzip2},
+strong components increase our precision by 40\%.
 The gains in precision happen because, by completely resolving a component,
 we are able to propagate constant intervals to the next components, instead
 of propagating intervals that can grow in both directions.
@@ -599,11 +599,75 @@ Had we run the analysis in the entire constraint graph, by the time we
 applied the growth analysis on $j$ we would still find $k$ bound to
 $0, +\infty$.
 
+
+\subsection{The choice of a program representation}
+\label{sub:program_rep}
+
+If strong components account for the largest gains in speed, the choice of
+a suitable program representation is responsible for the largest gains in
+precision.
+However, here we no longer have a win-win condition: a more expressive
+program representation decreases our speed, because it increases the
+size of the target program.
+We have tried our analysis in two different program representations: the
+Static Single Assignment (SSA) Form~\cite{Cytron91}, and the Extended Static
+Single Assignment (e-SSA) form~\cite{Bodik00}.
+The SSA form gives us a faster, albeit more imprecise, analysis.
+Any program in e-SSA form has also the SSA core property: any variable name
+has at most one definition site.
+The contrary is not true: SSA form programs do not have the core e-SSA
+property: any use site of a variable that appears in a conditional test
+post-dominates its definition.
+The program in Figure~\ref{fig:overall_view}(b) is in e-SSA form.
+The live ranges of variables $i_1$ and $j_1$ have been split right after the
+conditional test via the assertions that creates variables $i_t$ and $j_t$.
+The e-SSA format serves well analyses that extract information from definition
+sites and conditional tests, and propagate this information forwardly.
+Examples include, in addition to range analysis, tainted flow
+analysis~\cite{Rimsa11} and array bounds checks elimination~\cite{Bodik00}.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{images/impactESSA}
+\end{center}
+\caption{\label{fig:impactESSA}
+(Left) Bars give the time to run analysis on e-SSA form programs divided by
+the time to run analysis on SSA form programs.
+(Right) Bars give the size of the e-SSA form program, in number of
+assembly instructions, divided by the size of the SSA form program.}
+\end{figure}
+
+Figure~\ref{fig:impactESSA} compares these two program representations in
+terms of runtime.
+As we see in Figure~\ref{fig:impactESSA}(Left), the e-SSA form slows down our
+analysis.
+In some cases, as in \texttt{xalancbmk}, this slowdown increases execution
+time by 71\%.
+Runtime increases because the e-SSA form programs are larger than the SSA
+form programs, as we show in Figure~\ref{fig:impactESSA}(Right).
+However, this growth is small: in none of the integer programs in SPEC
+CPU 2006 we verified an increase in code size of more than 9\%.
+But, if the e-SSA form slowdowns the analysis runtime, its gains in precision
+are remarkable, as seen in Figure~\ref{fig:precESSA}.
+These gains happen because the e-SSA format lets the analysis to use the
+results of comparisons to narrow the ranges of variables.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{images/precESSA}
+\end{center}
+\caption{\label{fig:precESSA}
+The impact of the e-SSA transformation on precision for three different
+benchmark suites. Bars give the ratio of precision (in bitwidth reduction),
+obtained with e-SSA form conversion divided by precision without e-SSA form
+conversion.}
+\end{figure}
+
 \subsection{Intra versus Inter-procedural Analysis}
 \label{sub:whole}
 
 A naive implementation of range analysis would be intra-procedural; that is,
-would solve the range analysis problem once for each function.
+would solve the range analysis problem once per each function.
 However, we can gain in precision by performing it inter-procedurally.
 An inter-procedural implementation allows the results found for a function $f$
 to flow into other functions that $f$ calls.
@@ -626,34 +690,34 @@ results.
 }
 \end{figure}
 
-Figure~\ref{fig:wholeImpact} shows that the whole program analysis increases
-moderately the precision of our analysis.
-We show results for the five largest programs in three different categories of
-benchmarks: SPEC CPU 2006, the Stanford Suite~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}} and
+Figure~\ref{fig:wholeImpact} compares the precision of the intra and
+inter-procedural analyses for the five largest programs in three different
+categories of benchmarks: SPEC CPU 2006, the Stanford Suite~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}} and
 Bitwise~\cite{Stephenson00}.
 Our results for the SPEC programs were disappointingly: on the average for
 the five largest programs, the intra-procedural version of our analysis saves
-5.23\% of the total program bitwidth.
-By using the inter-procedural version we can increase this number to 8.89\%.
-A manual inspection of the SPEC programs reveal that this result is expected:
-they manipulate files, and their texts do no provide enough
+5.23\% of bits per variable.
+The inter-procedural version increases this number to 8.89\%.
+A manual inspection of the SPEC programs reveals that this result is expected:
+these programs manipulate files, and their source codes do no provide enough
 explicit constants to power our analysis up.
 However, with numerical benchmarks we fare much better.
 On the average our inter-procedural algorithm reduces the bitwidth of the
 Stanford benchmarks by 36.24\%.
-Finally, for Bitwise we obtain a bitwidth reduction of 12.27\%.
-However, this average is brought down by two outliers: \texttt{edge\_detect} and
+For Bitwise we obtain a bitwidth reduction of 12.27\%.
+However, this average is lowered by two outliers: \texttt{edge\_detect} and
 \texttt{sha}, which cannot be reduced.
 The bitwise benchmarks were implemented by Stephenson
 {\em et al.}~\cite{Stephenson00} to validate their bitwidth analysis.
 Our results are on par with those found by the original authors.
 The bitwise programs contain only the \texttt{main} function; thus, different
-versions of our algorithm find the same results.
+versions of our algorithm find the same results when applied onto these
+programs.
 
 \subsection{Context Sensitive versus Context Insensitive Analysis}
 \label{sub:context}
 
-Another way to increase the precision of range analysis is by using a
+Another way to increase the precision of range analysis is via a
 context-sensitive implementation.
 Context-sensitiveness allows us to distinguish different calling sites of
 the same function.
@@ -664,6 +728,10 @@ In Figure~\ref{fig:context}(a) we have two different calls of function
 An usual way to perform a data-flow analysis inter-procedurally is to
 create assignments between formal and actual parameters, as we show in
 Figure~\ref{fig:context}(b).
+If a function is called more than once, then its formal parameters will receive
+information from many actual parameters.
+We use $\phi$-functions to bind this information together into a single
+flow.
 However, in this case the multiple assignment of values to parameters
 makes the ranges of these parameters very large, whereas in reality they
 are not.
@@ -713,8 +781,11 @@ Bars are normalized to the time to run the intra-procedural analysis
 without inlining.
 On the average, the intra-procedural mode is 28.92\% faster than the
 inter-procedural mode.
-If we perform function inlining, then this difference is larger: 45.87\%.
-These numbers are close because we run our analysis on strong components.
+If we perform function inlining, then this difference is 45.87\%.
+These numbers are close because our runtime is bound to the
+size of the strong components.
+We have observed that function inlining does not increase too much these
+components.
 
 \begin{figure}[t!]
 \begin{center}
@@ -725,68 +796,6 @@ Runtime comparison between intra, inter and inter+inline versions of
 our algorithm.
 The bars are normalized to the time to run the intra-procedural analysis.
 }
-\end{figure}
-
-
-\subsection{The choice of a program representation}
-\label{sub:program_rep}
-
-If strong components account for the largest gains in speed, the choice of
-a suitable program representation is responsible for the largest gains in
-precision.
-However, here we no longer have a win-win condition: a more expressive
-program representation decreases our speed, because it increases the
-size of the target program.
-We have tried our analysis in two different program representations: the
-Static Single Assignment (SSA) Form~\cite{Cytron91}, and the Extended Static
-Single Assignment (e-SSA) form~\cite{Bodik00}.
-The SSA form gives us a faster, albeit more imprecise, analysis.
-Any program in e-SSA form has also the SSA core property: any variable name
-has at most one definition site.
-The contrary is not true: SSA form programs do not have the core e-SSA
-property: any use site of a variable that appears in a conditional test
-post-dominates its definition.
-The program in Figure~\ref{fig:overall_view}(b) is in e-SSA form.
-The live ranges of variables $i_1$ and $j_1$ have been split right after the
-conditional test via the assertions that created variables $i_t$ and $j_t$.
-The e-SSA format serves well analyses that extract information from definition
-sites and conditional tests, and propagate this information forwardly.
-Examples include, in addition to range analysis, tainted flow
-analysis~\cite{Rimsa11} and array bounds checks elimination~\cite{Bodik00}.
-
-\begin{figure}[t!]
-\begin{center}
-\includegraphics[width=1\textwidth]{images/impactESSA}
-\end{center}
-\caption{\label{fig:impactESSA}
-(Left) Bars give the time to run analysis on e-SSA form programs divided by
-the time to run analysis on SSA form programs.
-(Right) Bars give the size of the e-SSA form program, in number of
-assembly instructions, divided by the size of the SSA form program.}
-\end{figure}
-
-Figure~\ref{fig:impactESSA} compares these two program representations in
-terms of runtime.
-As we see in Figure~\ref{fig:impactESSA}(Left), the e-SSA form slows down our
-analysis.
-In some cases, as in \texttt{xalancbmk}, this slowdown increases execution
-time by 71\%.
-Runtime increases because the e-SSA form programs are larger than the SSA
-form programs, as we show in Figure~\ref{fig:impactESSA}(Right).
-However, this growth is small: in none of the integer programs in SPEC
-CPU 2006 we verified an increase in code size of more than 9\%.
-But, if the e-SSA form slowdowns the analysis runtime, its gains in precision
-are remarkable, as we show in Figure~\ref{fig:precESSA}.
-
-\begin{figure}[t!]
-\begin{center}
-\includegraphics[width=1\textwidth]{images/precESSA}
-\end{center}
-\caption{\label{fig:precESSA}
-The impact of the e-SSA transformation on precision for three different
-benchmark suites. Bars give the ratio of precision (in bitwidth reduction),
-obtained with e-SSA form conversion divided by precision without e-SSA form
-conversion.}
 \end{figure}
 
 \subsection{Choosing a Widening Strategy}
@@ -813,7 +822,7 @@ The result of applying the simple operator is shown in
 Figure~\ref{fig:jumpSet}(c).
 Jump-set widening would use the lattice in Figure~\ref{fig:jumpSet}(d),
 instead of the lattice in Figure~\ref{fig:widening}(Right).
-This lattice would yield the result given in Figure~\ref{fig:jumpSet}(e),
+This lattice yields the result given in Figure~\ref{fig:jumpSet}(e),
 which is more precise.
 
 \begin{figure}[t!]
@@ -861,31 +870,47 @@ $\ub{\iota} = u$}
 An example where jump-set widening is more precise.}
 \end{figure}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Another way to improve the precision of growth analysis is to perform a few
 rounds of abstract interpretation on the constraint graph, and, in case the
-process does not reach a fix point, only then applying the widening operator.
-Each round consists in evaluating all the constraints, and updating the
-intervals that change from one evaluation to the other.
-The simple widening strategy, coupled with one round of abstract interpretation
-would give us precise results in the example from Figure~\ref{fig:jumpSet}.
+process does not reach a fix point, only then to apply the widening operator.
+Each round of abstract interpretation consists in evaluating all the
+constraints, and then updating the intervals that change from one evaluation to
+the other.
+For instance, in Figure~\ref{fig:jumpSet} one round of abstract interpretation,
+coupled with the simple widening operator, would be enough to reach the
+fix point of that constraint system.
 We have experimented with 0 and 16 iterations before doing widening, and the
 overall result, for the programs in the SPEC CPU 2006 suite is given in
 Figure~\ref{fig:space}.
 Figure~\ref{fig:wideningPrec} shows some of these results in more details
-for a broader set of benchmarks.
+for the five largest benchmarks in this collection.
 In general jump-set widening improves the precision of our results in
 non-trivial ways.
 Nevertheless, the simple widening operator preceded by 16 rounds of
 abstract interpretation in general is more precise than jump-set widening
-without any cycle of pre-evaluation, as we see in Figure~\ref{fig:space}.
+without any cycle of pre-evaluation, as we see in Figure~\ref{fig:wideningPrec}.
 
 \begin{figure}[t!]
+\begin{small}
 \begin{center}
-\includegraphics[width=1\textwidth]{images/wideningPrec}
+\renewcommand{\tabcolsep}{0.2cm}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|} \hline
+Benchmark &    Size & 0 + Simple &   16 + Simple &     0 + Jump & 16 + Jump \\ \hline
+hmmer     &  38,409 &       9.98 & 11.40 (12.45) & 10.98 (9.11) & 11.40 (12.45) \\ \hline
+gobmk     &  84,846 &       8.15 &  9.93 (17.92) &  9.02 (9.64) & 10.13 (19.54) \\ \hline
+h264ref   &  97,494 &      12.58 &  13.11 (4.04) & 13.00 (3.23) & 13.11 (4.04) \\ \hline
+xalancbmk & 352,423 &       7.71 &   7.98 (3.38) &  7.95 (3.02) & 7.98 (3.38) \\ \hline
+gcc       & 449,442 &      16.09 &  16.63 (3.25) & 16.41 (1.95) & 16.64 (3.31) \\ \hline
+\end{tabular}
 \end{center}
+\end{small}
 \caption{\label{fig:wideningPrec}
-The impact of the widening strategy on precision.
-Each bar gives precision in \%bitwidth reduction.}
+Variation in the precision of our analysis given the widening strategy.
+The size of each benchmark is given in number of variable nodes in the
+constraint graph.
+Precision is given in percentage of bitwidth reduction.
+Numbers in parenthesis are percentage of gain over 0 + Simple.}
 \end{figure}
 
 
