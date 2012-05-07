@@ -173,7 +173,7 @@ is so essential for performance and precision that it is considered optional onl
 can easily build our implementation without this module.
 
 
-\begin{figure}[H]
+\begin{figure}[h]
 \begin{center}
 \includegraphics[width=\textwidth]{images/algorithm}
 \end{center}
@@ -272,7 +272,7 @@ static RegisterPass<ClientRA>
 	X("client-ra", "A client that uses RangeAnalysis", false, false);
 \end{lstlisting}
 
-Our Range Analysis interface provides a method, \textit{getRange}, that returns a \textit{Range} object for any variable in the original code. This object of type \textit{Range} contains the range information related to the variable. There are many versions of our range analysis pass, e.g., intra/inter procedural, with different narrowing operators, etc. In this example we are using the intra-procedural version using Cousot & Cousot's original narrowing operator.
+Our Range Analysis interface provides a method, \textit{getRange}, that returns a \textit{Range} object for any variable in the original code. This object of type \textit{Range} contains the range information related to the variable. There are many versions of our range analysis pass, e.g., intra/inter procedural, with different narrowing operators, etc. In this example we are using the intra-procedural version using Cousot \& Cousot's original narrowing operator.
 
 %Steps to compile and run
 In order to use the example client, you need to give it a bitcode input file. Below we show how to do this.
