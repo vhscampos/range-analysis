@@ -27,13 +27,14 @@
 \begin{document}
 \lstset{language=, basicstyle=\small} 
 
-\title{Tool for Range Analysis of Whole Programs}
+\title{A Tool for Range Analysis of Whole Programs}
 
 \author{Victor Hugo Sperle Campos, Raphael Ernani Rodrigues, \\
-Igor Rafael de Assis Costa and Fernando Magno Quint\~{a}o Pereira}
+Igor Rafael de Assis Costa, Douglas do Couto Teixeira \\
+and Fernando Magno Quint\~{a}o Pereira}
 
 \address{UFMG -- 6627 Ant\^{o}nio Carlos Av, 31.270-010, Belo Horizonte, Brazil
-\email{\{victorsc,raphael,igor,fernando\}@dcc.ufmg.br}
+\email{\{victorsc,raphael,igor,douglas,fernando\}@dcc.ufmg.br}
 }
 
 
@@ -47,12 +48,14 @@ during this program's execution.
 This type of inference is very important, because it enables several compiler
 optimizations, such as dead and redundant code elimination, bitwidth aware
 register allocation, and detection of program vulnerabilities.
-In this paper we present a tool that provides an inter-procedural, context-sensitive 
-range analysis algorithm for the LLVM compiler. This algorithm is a result
-of a two years work, in which we had to face a constant tension between precision 
-and speed.
-The foremost goal of this paper is to show an easy way other optimization passes
-can use the information provided by our range analysis tool.
+In this paper we present a tool that implements an inter-procedural,
+context-sensitive  range analysis algorithm for the LLVM compiler.
+Our tool can be used as a standalone compiler pass that gives the user
+static information about the variables in a program, or it can be used to
+enable other compiler optimizations.
+This tool has been implemented to be able to scale to large code bodies.
+As an example, we have used it to analyze the whole gcc compiler is less than
+15 seconds.
 \end{abstract}
 
 \section{Introduction}
@@ -69,36 +72,24 @@ For instance, it allows the optimizing compiler to remove from the program text
 redundant overflow tests~\cite{Sol11} and unnecessary array bound
 checks~\cite{Bodik00}.
 Additionally, range analysis is essential not only to the bitwidth aware
-register allocator~\cite{Barik06,Tallam03}, but also to more traditional
+register allocator~\cite{Barik06}, but also to more traditional
 allocators that handle registers of different
-sizes~\cite{Kong98,Pereira08,Scholz02}.
+sizes~\cite{Pereira08}.
 Finally, range analysis has also seen use in the static prediction of
 branches~\cite{Patterson95}, to detect buffer overflow
-vulnerabilities~\cite{Simon08,Wagner00}, to find the trip count of
+vulnerabilities~\cite{Simon08}, to find the trip count of
 loops~\cite{Lokuciejewski09}
-and even in the synthesis of hardware~\cite{Cong05,Lhairech10,Mahlke01}.
-
-% The problem: few implementations, not extensive experimental reports.
-Given this great importance, it comes as no surprise that the compiler
-literature is rich in works describing in details algorithmic variations of
-range analyses~\cite{Gawlitza09,Mahlke01,Stephenson00,Su05}.
-On the other hand, none of these authors provide experimental evidence that
-their approaches are able to deal with very large programs.
-There are researchers who have implemented range analyses that scale up to
-large programs~\cite{Blanchet03,Venet04}; nevertheless, because the
-algorithm itself is not the main focus of their works, they neither give
-details about their design choices nor provide experimental data about it.
-This scenario was recently changed by Oh {\em et al.}~\cite{Oh12}, who
-introduced an abstract interpretation framework which processes programs with
-hundreds of thousands of lines of code.
-Nevertheless, Oh {\em et al.} have designed a very simple range analysis,
-which does not handle comparisons between variables, for instance.
-They also do not discuss the precision of their implementation, but only its
-runtime.
+and even in the synthesis of hardware~\cite{Mahlke01}.
 
 % Tool capabilities.
-We have implemented our algorithm in the LLVM compiler~\cite{Lattner04} as a pass, 
-that can be used either as a stand alone analysis pass or called by a client pass. 
+We have implemented a range analysis tool on top of the LLVM
+compiler~\cite{Lattner04}.
+This tool can be used either as a standalone analysis, or it can be called by a
+client pass in order to feed this client with more information about the
+program.
+One of our main concerns when developing our range analysis was scalability,
+and we believe that our final product meets the requirements of
+industrial-quality software.
 We have used it to analyze a test suite with 2.72 million lines of C code.
 Our implementation is fast: it globally analyzes the gcc source code in less than
 15 seconds, for instance. 
@@ -111,11 +102,17 @@ examples used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
 In Section~\ref{sec:dsc} we provide a description of our implementation.
 
 % The demo tool.
-Our demo tool provides a visual interface that allows the user to try our
-range analysis. The tool runs our analysis in the source
-code of user's programs. The user can produce the CFG, the Constraint Graph
-and evaluate the analysis precision with the execution of an instrumented
-version of his program.
+\noindent
+\textbf{Software: }
+Our tool is publicly available for
+download at \texttt{http://code.google.com/p/range-analysis/}.
+In our webpage we provide, in addition to the static range analysis itself,
+a profiler that records the minimum and maximum values assigned to each
+variable during program execution.
+We also provide a visual interval to our tool, which lets the user to
+see the control flow graph of the target program.
+This visual interface also lets the user to see the integer intervals that
+the analysis estimates to each variable.
 
 % The rest of this paper.
 
@@ -125,8 +122,7 @@ version of his program.
 % Define the lattice, the constraints and the valuation I.
 \noindent
 \textbf{The Interval Lattice.}
-Following Gawlitza {\em et al.}'s notation, we shall be performing arithmetic
-operations over the complete lattice
+We perform arithmetic operations over the complete lattice
 $\cal{Z} = \mathbb{Z} \cup \{-\infty, +\infty\}$, where the ordering is
 naturally given by $-\infty < \ldots < -2 < -1 < 0 < 1 < 2 < \ldots +\infty$.
 For any $x > -\infty$ we define:
@@ -151,7 +147,7 @@ The objective of range analysis is to determine a mapping
 $I: \varset{V} \mapsto \varset{Z}^2$ from the set of integer program variables
 $V$ to intervals, such that, for any variable $v \in V$, if
 $I(v) = [l, u]$, then, during the execution of the target program, any
-valued $i$ assigned to $v$ is such that $l \leq i \leq u$.
+value $i$ assigned to $v$ is such that $l \leq i \leq u$.
 
 \noindent
 \textbf{A Holistic View of our Range Analysis Algorithm.}
@@ -196,7 +192,7 @@ Range analysis by example.
 
 We will illustrate the mandatory parts of the
 algorithm via the example program in Figure~\ref{fig:overall_view}.
-Figure~\ref{fig:overall_view}(a) shows an example program taken from the
+Figure~\ref{fig:overall_view}(a) shows a program taken from the
 partition function of the quicksort algorithm used by Bodik
 {\em et al.}~\cite{Bodik00}.
 We have removed the code that performs array manipulation from this program,
@@ -205,8 +201,8 @@ Figure~\ref{fig:overall_view}(b) shows one possible way to represent this
 program internally.
 A good program representation allows us to find more precise results.
 In this example we chose a program representation called
-Extended Static Single Assignment form, which lets us to solve range
-analysis via a path sensitive algorithm.
+Extended Static Single Assignment form~\cite{Bodik00}, which lets us to solve
+range analysis via a path sensitive algorithm.
 Figure~\ref{fig:overall_view}(c) shows the constraints that we extract from
 the intermediate representation seen in part (b) of this figure.
 From these constraints we build the {\em constraint graph} in
@@ -214,15 +210,18 @@ Figure~\ref{fig:overall_view}(d).
 This graph is the main data-structure that we use to solve range analysis.
 For each variable $v$ in the constraint system, the constraint graph has a node
 $n_v$.
-Similarly, for each constraint $v = f(\ldots, u, \ldots)$ in the constraint
-system, the graph has an {\em operation node} $n_f$.
-For each constraint $v = f(\ldots, u, \ldots)$ we add two edges to the
+Similarly, for each operation $v = f(\ldots, u, \ldots)$ in the program, the
+graph has an {\em operation node} $n_f$.
+For each operation $v = f(\ldots, u, \ldots)$ we add two edges to the
 graph: $\overrightarrow{n_un_f}$ and $\overrightarrow{n_fn_v}$.
 Some edges in the constraint graph are dashed.
 These are called {\em control dependence edges}.
 If a constraint $v = f(\ldots, \fun{ft}(u), \ldots)$ uses a {\em future}
 bound from a variable $u$, then we add to the constraint graph a control
 dependence edge $\overrightarrow{n_un_f}$.
+Futures are symbolic expressions, which denote intervals whose limits are
+not known immediately, but might be known after the analysis starts solving
+the constraints.
 The final solution to this instance of the range analysis problem is
 given in Figure~\ref{fig:overall_view}(e).
 
@@ -231,8 +230,19 @@ given in Figure~\ref{fig:overall_view}(e).
 \section{How to Create a LLVM pass using our Analysis}
 \label{sec:howto}
 
-Our analysis can be used stand-alone, to identify logical problems in the analyzed code. However, the Range Analysis can be used as a tool to identify dead code, memory overflow, redundant checks and many other analyses. Then, our analysis tool was designed to allow being called from client passes.
-In order to use our range analysis, one can write a LLVM pass that calls it. There is vast documentation \footnote{http://llvm.org/docs/WritingAnLLVMPass.html} about how to write LLVM passes in the web. The program below, which is self-contained, is an example of such a pass.
+Our analysis can be used independently from other compiler clients, to identify
+logical problems in the analyzed code.
+However, the Range Analysis is more often used as a tool to identify dead code,
+memory overflow and redundant checks; hence, enabling other compiler analysis.
+We will illustrate this last mode via an example.
+In order to use our range analysis, one can write a LLVM pass that calls it.
+There is vast documentation~\footnote{\texttt{http://llvm.org/docs/WritingAnLLVMPass.html}} about how to write LLVM passes in the web.
+The program below, which is self-contained, is an example of such a pass.
+This program is a LLVM pass; that is, it is called as part of the LLVM
+tool chain, and receives as input a data-structure of the \texttt{Function}
+type, that describes the program.
+An iterator over such a data-structure returns a list of basic blocks.
+Iterators over basic-blocks return a list of instructions.
 
 %Example pass: Source code
 \begin{lstlisting}[frame=single]
@@ -272,7 +282,14 @@ static RegisterPass<ClientRA>
 	X("client-ra", "A client that uses RangeAnalysis", false, false);
 \end{lstlisting}
 
-Our Range Analysis interface provides a method, \textit{getRange}, that returns a \textit{Range} object for any variable in the original code. This object of type \textit{Range} contains the range information related to the variable. There are many versions of our range analysis pass, e.g., intra/inter procedural, with different narrowing operators, etc. In this example we are using the intra-procedural version using Cousot \& Cousot's original narrowing operator.
+Our Range Analysis interface provides a method, \textit{getRange}, that returns
+a \textit{Range} object for any variable in the original code.
+This object, of type \textit{Range}, contains the range information related to
+the variable.
+There are many versions of our range analysis pass, e.g., intra/inter procedural,
+with different narrowing operators, etc.
+In this example we are using the intra-procedural version using
+Cousot \& Cousot's original narrowing operator~\cite{Cousot77}.
 
 %Steps to compile and run
 In order to use the example client, you need to give it a bitcode input file. Below we show how to do this.
@@ -280,24 +297,39 @@ First, we can translate a c file into a bitcode file using clang:
 \begin{lstlisting}[frame=single]
 clang -c -emit-llvm test.c -o test.bc
 \end{lstlisting}
-
-Next thing: we must convert the bitcode file to e-SSA form. We do it using the \textit{vssa} pass.
+Next thing: we must convert the bitcode file to e-SSA form.
+We do it using the \textit{vssa} pass.
+The e-SSA conversion module is distributed together with our analysis; however,
+its use is not mandatory.
+It increases the precision of the analysis, at the expenses of a small slowdown.
+In our experiments, we have observed that this slowdown is very small.
 \begin{lstlisting}[frame=single]
 opt -instnamer -mem2reg -break-crit-edges test.bc -o test.bc
 opt -load LLVM_SRC_PATH/Debug/lib/vSSA.so -vssa test.bc -o test.essa.bc
 \end{lstlisting}
 
-Notice that we use a number of other passes too, to improve the quality of the code that we are producing:
-\textit{instnamer} just assigns strings to each variable. This will make the dot files that we produce to look nicer. We only use this pass for aesthetic reasons.
-\textit{mem2reg} maps variables allocated in the stack to virtual registers. Without this pass everything is mapped into memory, and then our range analysis will not be able to find any meaningful ranges to the variables.
-\textit{break-crit-edges} removes the critical edges from the control flow graph of the input program. This will increase the precision of our range analysis (just a tiny bit though), because the e-SSA transformation will be able to insert more sigma-functions into the code.
-
-Now, we can run our example client. We can do this with the code below:
+Notice that we use a number of other passes too, to improve the quality of the
+code that we are producing:
+\textit{instnamer} just assigns strings to each variable.
+We only use this pass for aesthetic reasons.
+This pass will help our visual interface to look nicer.
+\textit{mem2reg} maps variables allocated in the stack to virtual registers.
+Without this pass everything is mapped into memory, and then our range analysis
+will not be able to find any meaningful ranges to the variables.
+\textit{break-crit-edges} removes the critical edges from the control flow graph
+of the input program.
+This pass will increase the precision of our range analysis (just a tiny bit
+though), because the e-SSA transformation will be able to convert more variables
+into a better format.
+We run the example client with the commands below:
 \begin{lstlisting}[frame=single]
 opt -load LLVM_SRC_PATH/Debug/lib/RangeAnalysis.so 
     -load LLVM_SRC_PATH/Debug/lib/ClientRA.so -client-ra test.essa.bc
 \end{lstlisting}
-
+This sequence of calls will cause our example pass to be dynamically loaded
+by the LLVM framework.
+It will receive the bitcodes that we had produced before, and will produce,
+as output, a list of variables, followed by their intervals.
 
 
 
