@@ -27,7 +27,7 @@
 \begin{document}
 \lstset{language=, basicstyle=\small} 
 
-\title{Tool for Static Range Analysis of Whole Programs}
+\title{Tool for Range Analysis of Whole Programs}
 
 \author{Victor Hugo Sperle Campos, Raphael Ernani Rodrigues, \\
 Igor Rafael de Assis Costa and Fernando Magno Quint\~{a}o Pereira}
@@ -47,15 +47,12 @@ during this program's execution.
 This type of inference is very important, because it enables several compiler
 optimizations, such as dead and redundant code elimination, bitwidth aware
 register allocation, and detection of program vulnerabilities.
-In this paper we describe an inter-procedural, context-sensitive range analysis
-algorithm that we have implemented in the LLVM compiler.
-During the effort to produce an industrial-quality implementation of our
-algorithm, we had to face a constant tension between precision and speed.
-The foremost goal of this paper is to discuss the many engineering choices
-that, due to this tension, have shaped our implementation.
-Given the breath of our evaluation, we believe that this paper
-contains the most comprehensive empirical study of a range analysis
-algorithm ever presented in the compiler related literature.
+In this paper we present a tool that provides an inter-procedural, context-sensitive 
+range analysis algorithm for the LLVM compiler. This algorithm is a result
+of a two years work, in which we had to face a constant tension between precision 
+and speed.
+The foremost goal of this paper is to show an easy way other optimization passes
+can use the information provided by our range analysis tool.
 \end{abstract}
 
 \section{Introduction}
@@ -184,6 +181,19 @@ can easily build our implementation without this module.
 Our implementation of range analysis. Rounded boxes are optional steps.}
 \end{figure}
 
+\begin{figure}[H]
+\begin{center}
+\includegraphics[width=\textwidth]{images/overall_view}
+\end{center}
+\caption{\label{fig:overall_view}
+Range analysis by example.
+(a) Input program.
+(b) Internal compiler representation.
+(c) Constraints of the range analysis problem.
+(d) The constraint graph.
+(e) The final solution.}
+\end{figure}
+
 We will illustrate the mandatory parts of the
 algorithm via the example program in Figure~\ref{fig:overall_view}.
 Figure~\ref{fig:overall_view}(a) shows an example program taken from the
@@ -216,18 +226,7 @@ dependence edge $\overrightarrow{n_un_f}$.
 The final solution to this instance of the range analysis problem is
 given in Figure~\ref{fig:overall_view}(e).
 
-\begin{figure}[h!]
-\begin{center}
-\includegraphics[width=\textwidth]{images/overall_view}
-\end{center}
-\caption{\label{fig:overall_view}
-Range analysis by example.
-(a) Input program.
-(b) Internal compiler representation.
-(c) Constraints of the range analysis problem.
-(d) The constraint graph.
-(e) The final solution.}
-\end{figure}
+
 
 \section{How to Create a LLVM pass using our Analysis}
 \label{sec:howto}
@@ -239,18 +238,14 @@ In order to use our range analysis, one can write a LLVM pass that calls it. The
 \begin{lstlisting}[frame=single]
 //We are ommiting the LLVM includes
 #include "../RangeAnalysis/RangeAnalysis.h"
-
 using namespace llvm;
-
 class ClientRA: public llvm::FunctionPass {
 public:
   static char ID;
   ClientRA() : FunctionPass(ID){ }
   virtual ~ClientRA() { }
   virtual bool runOnFunction(Function &F){
-    IntraProceduralRA<Cousot> &ra = 
-      getAnalysis<IntraProceduralRA<Cousot> >();
-
+    IntraProceduralRA<Cousot> &ra = getAnalysis<IntraProceduralRA<Cousot>>();
     errs() << "\nCousot Intra Procedural analysis 
                (Values -> Ranges) of " << F.getName() << ":\n";
     for(Function::iterator bb=F.begin(), bbEnd=F.end(); bb!=bbEnd; ++bb){
@@ -286,7 +281,7 @@ First, we can translate a c file into a bitcode file using clang:
 clang -c -emit-llvm test.c -o test.bc
 \end{lstlisting}
 
-Next thing: we must convert the bitcode file to e-SSA form. We do it using the `vssa` pass.
+Next thing: we must convert the bitcode file to e-SSA form. We do it using the \textit{vssa} pass.
 \begin{lstlisting}[frame=single]
 opt -instnamer -mem2reg -break-crit-edges test.bc -o test.bc
 opt -load LLVM_SRC_PATH/Debug/lib/vSSA.so -vssa test.bc -o test.essa.bc
