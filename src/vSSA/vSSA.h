@@ -1,3 +1,17 @@
+//#####################################################
+//           vSSA Transformation Pass
+//
+//	This pass is an implementation of Bodik's
+//	Extended Static Single Assignment form.
+//	It is based on a completely different
+//	algorithm from the previous version, which was
+//	present in LLVM 2.7.
+//	Thus, it is extremely faster than that one.
+//
+//	Author: Victor Campos (vhscampos at gmail dot com)
+//#####################################################
+
+
 #include "llvm/Pass.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/Dominators.h"
