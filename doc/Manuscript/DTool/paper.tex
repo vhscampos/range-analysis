@@ -91,7 +91,7 @@ One of our main concerns when developing our range analysis was scalability,
 and we believe that our final product meets the requirements of
 industrial-quality software.
 We have used it to analyze a test suite with 2.72 million lines of C code.
-Our implementation is fast: it globally analyzes the gcc source code in less than
+Our implementation is fast: it globally analyzes the GCC source code in less than
 15 seconds, for instance. 
 It is also precise: our results are similar to Stephenson
 {\em et al}'s~\cite{Stephenson00}, even though our analysis does not require
@@ -109,7 +109,7 @@ download at \texttt{http://code.google.com/p/range-analysis/}.
 In our webpage we provide, in addition to the static range analysis itself,
 a profiler that records the minimum and maximum values assigned to each
 variable during program execution.
-We also provide a visual interval to our tool, which lets the user to
+We also provide a visual interface to our tool, which lets the user to
 see the control flow graph of the target program.
 This visual interface also lets the user to see the integer intervals that
 the analysis estimates to each variable.
@@ -162,8 +162,8 @@ Figure~\ref{fig:algorithm} gives a global view of this algorithm.
 Some of the steps in the algorithm are optional.
 They improve the precision of the range analysis, at the expense of a longer
 running time.
-The last phase happens per strong component; however, if we opted for not building 
-these components, then it happens once for the entire constraint graph.
+The last phase happens per strong component; however, if we opted not for building 
+these components, then it would happen once for the entire constraint graph.
 Nevertheless, the use of strongly connected components
 is so essential for performance and precision that it is considered optional only because we
 can easily build our implementation without this module.
@@ -230,23 +230,22 @@ given in Figure~\ref{fig:overall_view}(e).
 \section{How to Create a LLVM pass using our Analysis}
 \label{sec:howto}
 
-Our analysis can be used independently from other compiler clients, to identify
+Our analysis can be used independently from other compiler clients to identify
 logical problems in the analyzed code.
 However, the Range Analysis is more often used as a tool to identify dead code,
-memory overflow and redundant checks; hence, enabling other compiler analysis.
+memory overflow and redundant checks; hence, enabling other compiler analyses.
 We will illustrate this last mode via an example.
 In order to use our range analysis, one can write a LLVM pass that calls it.
-There is vast documentation~\footnote{\texttt{http://llvm.org/docs/WritingAnLLVMPass.html}} about how to write LLVM passes in the web.
-The program below, which is self-contained, is an example of such a pass.
-This program is a LLVM pass; that is, it is called as part of the LLVM
+For this purpose, there is vast documentation~\footnote{\texttt{http://llvm.org/docs/WritingAnLLVMPass.html}} about how to write LLVM passes.
+This program below is an example of LLVM client pass, that is, it is called as part of the LLVM
 tool chain, and receives as input a data-structure of the \texttt{Function}
 type, that describes the program.
 An iterator over such a data-structure returns a list of basic blocks.
-Iterators over basic-blocks return a list of instructions.
+Consequently, iterators over basic-blocks return a list of instructions.
 
 %Example pass: Source code
 \begin{lstlisting}[frame=single]
-//We are ommiting the LLVM includes
+//We are omitting the LLVM includes
 #include "../RangeAnalysis/RangeAnalysis.h"
 using namespace llvm;
 class ClientRA: public llvm::FunctionPass {
@@ -293,39 +292,40 @@ Cousot \& Cousot's original narrowing operator~\cite{Cousot77}.
 
 %Steps to compile and run
 In order to use the example client, you need to give it a bitcode input file. Below we show how to do this.
-First, we can translate a c file into a bitcode file using clang:
+Firstly, we must translate a c file into a bitcode file using clang:
 \begin{lstlisting}[frame=single]
 clang -c -emit-llvm test.c -o test.bc
 \end{lstlisting}
-Next thing: we must convert the bitcode file to e-SSA form.
+
+Next step: we must convert the bitcode file to e-SSA form.
 We do it using the \textit{vssa} pass.
 The e-SSA conversion module is distributed together with our analysis; however,
 its use is not mandatory.
-It increases the precision of the analysis, at the expenses of a small slowdown.
-In our experiments, we have observed that this slowdown is very small.
+It increases the precision of the analysis, at the expense of a small slowdown.
 \begin{lstlisting}[frame=single]
-opt -instnamer -mem2reg -break-crit-edges test.bc -o test.bc
-opt -load LLVM_SRC_PATH/Debug/lib/vSSA.so -vssa test.bc -o test.essa.bc
+opt -mem2reg -instnamer -break-crit-edges test.bc -o test.bc
+opt -load LLVM_SRC_PATH/BUILD_TYPE/lib/vSSA.so -vssa test.bc -o test.essa.bc
 \end{lstlisting}
 
 Notice that we use a number of other passes too, to improve the quality of the
 code that we are producing:
 \textit{instnamer} just assigns strings to each variable.
-We only use this pass for aesthetic reasons.
-This pass will help our visual interface to look nicer.
+We only use this pass for aesthetic reasons, as it 
+will help our visual interface to look nicer.
 \textit{mem2reg} maps variables allocated in the stack to virtual registers.
 Without this pass everything is mapped into memory, and then our range analysis
 will not be able to find any meaningful ranges to the variables.
 \textit{break-crit-edges} removes the critical edges from the control flow graph
 of the input program.
-This pass will increase the precision of our range analysis (just a tiny bit
+Therefore, this pass will increase the precision of our range analysis (just a tiny bit
 though), because the e-SSA transformation will be able to convert more variables
 into a better format.
 We run the example client with the commands below:
 \begin{lstlisting}[frame=single]
-opt -load LLVM_SRC_PATH/Debug/lib/RangeAnalysis.so 
-    -load LLVM_SRC_PATH/Debug/lib/ClientRA.so -client-ra test.essa.bc
+opt -load LLVM_SRC_PATH/BUILD_TYPE/lib/RangeAnalysis.so 
+    -load LLVM_SRC_PATH/BUILD_TYPE/lib/ClientRA.so -client-ra test.essa.bc
 \end{lstlisting}
+
 This sequence of calls will cause our example pass to be dynamically loaded
 by the LLVM framework.
 It will receive the bitcodes that we had produced before, and will produce,
