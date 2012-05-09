@@ -27,7 +27,7 @@
 \begin{document}
 \lstset{language=, basicstyle=\small} 
 
-\title{A Tool for Range Analysis of Whole Programs}
+\title{A Tool for the Range Analysis of Whole Programs}
 
 \author{Victor Hugo Sperle Campos, Raphael Ernani Rodrigues, \\
 Igor Rafael de Assis Costa, Douglas do Couto Teixeira \\
@@ -105,7 +105,7 @@ In Section~\ref{sec:dsc} we provide a description of our implementation.
 \noindent
 \textbf{Software: }
 Our tool is publicly available for
-download at \texttt{http://code.google.com/p/range-analysis/}.
+download at \texttt{http://code.google.} \texttt{com/p/range-analysis/}.
 In our webpage we provide, in addition to the static range analysis itself,
 a profiler that records the minimum and maximum values assigned to each
 variable during program execution.
@@ -330,7 +330,31 @@ This sequence of calls will cause our example pass to be dynamically loaded
 by the LLVM framework.
 It will receive the bitcodes that we had produced before, and will produce,
 as output, a list of variables, followed by their intervals.
+Below we have the output that our analysis prints for the input program in Figure~\ref{fig:overall_view}(a).
+%Example pass: Source code
+\begin{lstlisting}[frame=single]
+Cousot Intra Procedural analysis (Values -> Ranges) of foo:
+[0, 100]  %k.0 = phi i32 [ 0, %bb ], [ %tmp9, %bb8 ]
+[0, 99]  %vSSA_sigma = phi i32 [ %k.0, %bb1 ]
+[-1, 99]  %j.0 = phi i32 [ %vSSA_sigma, %bb2 ], [ %tmp7, %bb5 ]
+[0, 99]  %i.0 = phi i32 [ 0, %bb2 ], [ %tmp6, %bb5 ]
+[0, 99]  %vSSA_sigma3 = phi i32 [ %j.0, %bb3 ]
+[0, 98]  %vSSA_sigma2 = phi i32 [ %i.0, %bb3 ]
+[1, 99]  %tmp6 = add nsw i32 %vSSA_sigma2, 1
+[-1, 98]  %tmp7 = sub nsw i32 %vSSA_sigma3, 1
+[1, 100]  %tmp9 = add nsw i32 %vSSA_sigma, 1
+[100, 100]  %vSSA_sigma1 = phi i32 [ %k.0, %bb1 ]
 
+Cousot Intra Procedural analysis (Values -> Ranges) of main:
+\end{lstlisting}
+Notice that we get a number of output lines for function \texttt{foo}, and zero
+for function \texttt{main}.
+Each output line is the range of a given variable, using LLVM's internal
+representation.
+It is important to use the \texttt{instnamer} pass, like we did before, to get
+some meaningful names for the variables.
+We did not get any line for \texttt{main} just because this function did not have
+any variable with a known range.
 
 
 \bibliographystyle{plain}
