@@ -1,0 +1,185 @@
+\begin{thebibliography}{10}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem{Cousot77}
+Cousot P, Cousot R. Abstract interpretation: a unified lattice model for static
+  analysis of programs by construction or approximation of fixpoints.
+  \emph{POPL}, ACM, 1977; 238--252.
+
+\bibitem{Sol11}
+Souza MRS, Guillon C, Pereira FMQ, da~Silva~Bigonha MA. Dynamic elimination of
+  overflow tests in a trace compiler. \emph{CC}, 2011; 2--21.
+
+\bibitem{Bodik00}
+Bodik R, Gupta R, Sarkar V. {ABCD}: eliminating array bounds checks on demand.
+  \emph{PLDI}, ACM, 2000; 321--333.
+
+\bibitem{Gampe11}
+Gampe A, von Ronne J, Niedzielski D, Vasek J, Psarris L. Safe, multiphase
+  bounds check elimination in java. \emph{Software -- Practice and Experience}
+  2011; \textbf{41}:753--788.
+
+\bibitem{Barik06}
+Barik R, Grothoff C, Gupta R, Pandit V, Udupa R. Optimal bitwise register
+  allocation using integer linear programming. \emph{LCPC}, \emph{Lecture Notes
+  in Computer Science}, vol. 4382, Springer, 2006; 267--282.
+
+\bibitem{Tallam03}
+Tallam S, Gupta R. Bitwidth aware global register allocation. \emph{POPL}, ACM:
+  New York, NY, USA, 2003; 85--96,
+  \doi{http://doi.acm.org/10.1145/604131.604139}.
+
+\bibitem{Kong98}
+Kong T, Wilken KD. Precise register allocation for irregular architectures.
+  \emph{MICRO}, IEEE, 1998; 297--307.
+
+\bibitem{Pereira08}
+Pereira FMQ, Palsberg J. Register allocation by puzzle solving. \emph{PLDI},
+  ACM, 2008; 216--226.
+
+\bibitem{Scholz02}
+Scholz B, Eckstein E. Register allocation for irregular architectures.
+  \emph{LCTES/SCOPES}, ACM, 2002; 139--148.
+
+\bibitem{Patterson95}
+Patterson JRC. Accurate static branch prediction by value range propagation.
+  \emph{PLDI}, ACM, 1995; 67--78.
+
+\bibitem{Simon08}
+Simon A. \emph{Value-Range Analysis of C Programs: Towards Proving the Absence
+  of Buffer Overflow Vulnerabilities}. 1th edn., Springer, 2008.
+
+\bibitem{Wagner00}
+Wagner D, Foster JS, Brewer EA, Aiken A. A first step towards automated
+  detection of buffer overrun vulnerabilities. \emph{NDSS}, ACM, 2000; 3--17.
+
+\bibitem{Lokuciejewski09}
+Lokuciejewski P, Cordes D, Falk H, Marwedel P. A fast and precise static loop
+  analysis based on abstract interpretation, program slicing and polytope
+  models. \emph{CGO}, IEEE, 2009; 136--146.
+
+\bibitem{Cong05}
+Cong J, Fan Y, Han G, Lin Y, Xu J, Zhang Z, Cheng X. Bitwidth-aware scheduling
+  and binding in high-level synthesis. \emph{Design Automation Conference,
+  2005. Proceedings of the ASP-DAC 2005. Asia and South Pacific}  18-21 Jan
+  2005; \textbf{2}:856--861.
+
+\bibitem{Lhairech10}
+Lhairech-Lebreton G, Coussy P, Heller D, Martin E. Bitwidth-aware high-level
+  synthesis for designing low-power dsp applications. \emph{ICECS}, IEEE, 2010;
+  531--534.
+
+\bibitem{Mahlke01}
+Mahlke S, Ravindran R, Schlansker M, Schreiber R, Sherwood T. Bitwidth
+  cognizant architecture synthesis of custom hardware accelerators.
+  \emph{Computer-Aided Design of Integrated Circuits and Systems, IEEE
+  Transactions on}  2001; \textbf{20}(11):1355--1371.
+
+\bibitem{Gawlitza09}
+Gawlitza T, Leroux J, Reineke J, Seidl H, Sutre G, Wilhelm R. Polynomial
+  precise interval analysis revisited. \emph{Efficient Algorithms}  2009;
+  \textbf{1}:422 -- 437.
+
+\bibitem{Stephenson00}
+Stephenson M, Babb J, Amarasinghe S. Bitwidth analysis with application to
+  silicon compilation. \emph{PLDI}, ACM, 2000; 108--120.
+
+\bibitem{Su05}
+Su Z, Wagner D. A class of polynomially solvable range constraints for interval
+  analysis without widenings. \emph{Theoretical Computeter Science}  2005;
+  \textbf{345}(1):122--138.
+
+\bibitem{Blanchet03}
+Blanchet B, Cousot P, Cousot R, Feret J, Mauborgne L, Min\'{e} A, Monniaux D,
+  Rival X. A static analyzer for large safety-critical software. \emph{PLDI},
+  ACM, 2003; 196--207.
+
+\bibitem{Venet04}
+Venet A, Brat G. Precise and efficient static array bound checking for large
+  embedded c programs. \emph{SIGPLAN Not.}  2004; \textbf{39}:231--242.
+
+\bibitem{Oh12}
+Oh H, Heo K, Lee W, Lee W, Yi K. Design and implementation of sparse global
+  analyses for c-like languages. \emph{{PLDI}}, ACM, 2012; to appear.
+
+\bibitem{Nielson99}
+Nielson F, Nielson HR, Hankin C. \emph{Principles of Program Analysis}.
+  Springer, 1999.
+
+\bibitem{Lattner04}
+Lattner C, Adve VS. {LLVM}: A compilation framework for lifelong program
+  analysis {\&} transformation. \emph{CGO}, IEEE, 2004; 75--88.
+
+\bibitem{Costan05}
+Costan A, Gaubert S, Goubault E, Martel M, Putot S. A policy iteration
+  algorithm for computing fixed points in static analysis of programs.
+  \emph{CAV}, 2005; 462--475.
+
+\bibitem{Lakhdar11}
+Lakhdar-Chaouch L, Jeannet B, Girault A. Widening with thresholds for programs
+  with complex control graphs. \emph{ATVA}, Springer-Verlag, 2011; 492--502.
+
+\bibitem{Su04}
+Su Z, Wagner D. A class of polynomially solvable range constraints for interval
+  analysis without widenings and narrowings. \emph{TACAS}, 2004; 280--295.
+
+\bibitem{Couto11}
+do~Couto~Teixeira D, Pereira FMQ. The design and implementation of a
+  non-iterative range analysis algorithm on a production compiler. \emph{SBLP},
+  SBC, 2011; 45--59.
+
+\bibitem{Cytron91}
+Cytron R, Ferrante J, Rosen BK, Wegman MN, Zadeck FK. Efficiently computing
+  static single assignment form and the control dependence graph. \emph{TOPLAS}
+   1991; \textbf{13}(4):451--490.
+
+\bibitem{Aho06}
+Aho AV, Lam MS, Sethi R, Ullman JD. \emph{Compilers: Principles, Techniques,
+  and Tools (2nd Edition)}. {Addison Wesley}, 2006.
+
+\bibitem{Warren02}
+Warren HS. \emph{Hacker's Delight}. Addison-Wesley Longman Publishing Co.,
+  Inc., 2002.
+
+\bibitem{Ferrante87}
+Ferrante J, Ottenstein KJ, Warren JD. {The program dependence graph and its use
+  in optimization}. \emph{TOPLAS}  1987; \textbf{9}(3):319--349.
+
+\bibitem{Cousot78}
+Cousot P, Halbwachs N. Automatic discovery of linear restraints among variables
+  of a program. \emph{POPL}, ACM, 1978; 84--96.
+
+\bibitem{Mine06}
+Min\'{e} A. The octagon abstract domain. \emph{Higher Order Symbol. Comput.}
+  2006; \textbf{19}:31--100.
+
+\bibitem{Rimsa11}
+Rimsa AA, D'Amorim M, Pereira FMQ. Tainted flow analysis on {e-SSA}-form
+  programs. \emph{CC}, Springer, 2011; 124--143.
+
+\bibitem{Bertrane10}
+Bertrane J, Cousot P, Cousot R, Feret J, Mauborgne L, Min{\'e} A, Rival X.
+  Static analysis and verification of aerospace software by abstract
+  interpretation. \emph{I$@$A}, AIAA, 2010; 1--38.
+
+\bibitem{Cousot09}
+Cousot P, Cousot R, Feret J, Mauborgne L, Min{\'e} A, Rival X. Why does
+  astr\&\#233;e scale up? \emph{Form. Methods Syst. Des.}  2009;
+  \textbf{35}(3):229--264.
+
+\bibitem{Jung05}
+Jung Y, Kim J, Shin J, Yi K. Taming false alarms from a domain-unaware c
+  analyzer by a bayesian statistical post analysis. \emph{SAS}, 2005; 203--217.
+
+\bibitem{Tavares11b}
+Tavares ALC, Boissinot B, Bigonha MAS, Bigonha R, Pereira FMQ, Rastello F. A
+  program representation for sparse dataflow analyses. \emph{Science of
+  Computer Programming}  201X; \textbf{X}(X):2--25. Invited paper with
+  publication expected for 2012.
+
+\end{thebibliography}
