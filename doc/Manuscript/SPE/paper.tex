@@ -100,7 +100,7 @@ introduced an abstract interpretation framework which processes programs with
 hundreds of thousands of lines of code.
 Nevertheless, Oh {\em et al.} have designed a simple range analysis,
 which does not handle comparisons between variables, for instance.
-They also do not discuss the precision of their implementation, but only its
+They do not discuss the precision of their implementation, but only its
 runtime and memory consumption.
 In this paper we claim to push this discussion considerably further.
 
@@ -147,7 +147,7 @@ As we show in Section~\ref{sub:showdown}, when analyzing well-known numeric
 benchmarks we are able to estimate tight ranges for almost half of all the
 integer variables present in these programs.
 Our results are similar to Stephenson
-{\em et al}'s~\cite{Stephenson00}, even though out analysis does not require
+{\em et al}'s~\cite{Stephenson00}, even though our analysis does not require
 a backward propagation phase.
 Furthermore, we have been able to find tight bounds to the majority of the
 examples used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
@@ -209,14 +209,24 @@ $0 \times \infty = 0$ & & $(-\infty) \times \infty = \ $ not defined $$ \\
 \end{tabular}
 
 From the lattice $\varset{Z}$ we define the product lattice
-$\varset{Z}^2$, which is partially ordered by the subset relation
-$\sqsubseteq$.
-$\varset{Z}^2$ is defined as follows:
-
+$\varset{Z}^2$, which is defined as follows:
+%
 \begin{equation*}
-\varset{Z}^2 = \emptyset \cup \{[z_1, z_2] | \ z_1,z_2 \in \varset{Z},
+\varset{Z}^2 = \{ \emptyset \} \cup \{[z_1, z_2] | \ z_1,z_2 \in \varset{Z},
 \ z_1 \leq z_2, \  -\infty < z_2 \}
 \end{equation*}
+%
+This interval lattice is partially ordered by the subset relation, which we
+denote by ``$\sqsubseteq$".
+The meet operator ``$\sqcap$" is defined by:
+\[
+[a_1, a_2] \sqcap [b_1, b_2] =
+\begin{cases}
+[\mbox{max}(a_1, b_1), \mbox{min}(a_2, b_2)], \ \mbox{if} \ a_1 \leq b_1 \leq a_2 \ \mbox{or} \ b_1 \leq a_1 \leq b_2 \\
+[a_1, a_2] \sqcap [b_1, b_2] = \emptyset, \ \mbox{otherwise}
+\end{cases}
+\]
+
 
 Given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
 $\ub{\iota} = u$.
@@ -225,8 +235,11 @@ $I: \varset{V} \mapsto \varset{Z}^2$ a
 mapping from these variables to intervals in $\varset{Z}^2$.
 Our objective is to solve a constraint system $C$, formed by constraints such
 as those seen in Figure~\ref{fig:eval_function}(left).
-Figure~\ref{fig:eval_function}(right) defines a valuation function $e$ that
-computes $Y = f(\ldots)$, given I.
+We let the $\phi$-functions be as defined by Cytron
+{\em et al.}~\cite{Cytron91}: they join different variable names into a single
+definition.
+Figure~\ref{fig:eval_function}(right) defines a valuation function $e$ on the
+interval domain.
 Armed with these concepts, we define the range analysis problem as follows:
 
 \begin{definition}
@@ -238,7 +251,7 @@ variables. \\
 $V \in \varset{V}$, e(V) = I[V].
 \end{definition}
 
-\begin{figure}[hbt]
+\begin{figure}[t!]
 \begin{center}
 \begin{small}
 \begin{eqnarray*}
@@ -293,7 +306,7 @@ There is a clear correspondence between instructions and constraints.
 A possible solution to the range analysis problem, as obtained via the
 techniques that we will introduce in Section~\ref{sec:algo}, is given in
 Figure~\ref{fig:ex1}(d).
-The SSA form, so conspicuous in modern compilers, leads to a very conservative
+The SSA form, so common in modern compilers, leads to a very conservative
 solution.
 As we will see shortly, we can improve this solution substantially by using
 a more sophisticated program representation -- the e-SSA form -- which
@@ -380,17 +393,27 @@ and $v_{2f} = v_2 \sqcap [-\infty, \fun{ft}(v_1)]$.
 Similarly, at $l_t$ we insert
 $v_{1v} = v_1 \sqcap [-\infty, \fun{ft}(v_2) - 1]$
 and $v_{2f} = v_2 \sqcap [\fun{ft}(v_1) + 1, +\infty]$.
+Notice that a variable $v$ can never be associated with a future bound to
+itself, e.g., $\fun{ft}(v)$.
+This invariant holds because whenever the e-SSA conversion associates a variable
+$u$ with $\fun{ft}(v)$, then $u$ is a fresh name created to split the live range
+of $v$, given that $v$ was used in a conditional.
 
 We use the notation $\fun{ft}(v)$ to denote the {\em future} bounds of a
 variable.
 As we will show in Section~\ref{sub:micro}, once the growth pattern of $v$ is
 known, we can replace $\fun{ft}(v)$ by an actual value.
-Once we are done placing copies, we insert $\phi$-functions into the
-transformed program to convert it to SSA form.
+After splitting the live ranges according to the rules stated above, we might
+have to insert $\phi$-functions into the transformed program to re-convert it to
+SSA form.
 This last step avoids that two different names given to the same original
 variable be simultaneously alive at the program code.
 Figure~\ref{fig:ex_standard_eSSA}(a) shows our running example changed into
 standard e-SSA form.
+We have not created variable names for $i_f$ and $j_f$, because neither
+$i_1$ nor $i_j$ are dominated by the target of the conditional's else case.
+In this example, new $\phi$-functions are not necessary: new variable
+names are not alive together with the original variables.
 The part (b) of this figure shows the solution that we get to this new
 program.
 The e-SSA form allows us to bind interval information directly to the live
@@ -517,7 +540,7 @@ Figure~\ref{fig:ex_standard_eSSA}.}
 \noindent
 \textbf{Strongly Connected Components.}
 To solve range analysis we find all the strongly connected components (SCCs) of
-the dependence graph and collapse them into single nodes; thus, obtaining a
+the dependence graph and collapse them into single nodes, obtaining a
 directed acyclic graph.
 We then sort the resulting DAG topologically, and apply the analyses from
 Section~\ref{sub:micro} on every SCC in topological order.
@@ -544,11 +567,19 @@ future bounds, e.g., $\fun{ft}(v)$, either variable $v$ has been solved in a
 previous component, or it belongs to the current component.
 In the latter case, as we will see soon, we can still take $v$'s interval into
 consideration.
+This flexibility is possible because we first discover how each variable in
+a strong component grows, before resolving future bounds.
 As we show in Section~\ref{sub:showdown}, most of the strong components in
 actual programs are singletons.
 Furthermore, the composite components tend to be small.
 These two facts ensure that the more costly parts of our algorithm only have to
 handle small inputs.
+
+An interesting question is: can a variable $v$ be associated with a future
+bound of itself, e.g., $\fun{ft}(v)$?
+The answer is yes, but only if the program contains pathological comparisons
+between a variable and itself, e.g., $v < v$, or $v == v$.
+All these comparisons
 
 \subsection{Finding Ranges in Strongly Connected Components}
 \label{sub:micro}
@@ -704,7 +735,7 @@ Continuing with our example, Figure~\ref{fig:ex_partition_grow_crop} shows
 the application of our algorithm on the last strong component of
 Figure~\ref{fig:ex_graph}.
 Upon meeting this SCC, we have already determined that the interval
-$[0, 0]$ is bound to $I_0$ and that the interval $[100, 100]$ is bound to
+$[0, 0]$ is bound to $I_0$ and that the interval $[0, 99]$ is bound to
 $J_0$, as we show in Figure~\ref{fig:ex_graph}(a).
 We are not guaranteed to find the least fix point of a constraint system.
 However, in this example we did it.
@@ -1055,15 +1086,17 @@ On the average our inter-procedural algorithm reduces the bitwidth of the
 Stanford benchmarks by 36.24\%.
 For Bitwise we obtain a bitwidth reduction of 12.27\%.
 However, this average is lowered by two outliers: \texttt{edge\_detect} and
-\texttt{sha}, which cannot be reduced.
+\texttt{sha}, which have been purposely engineered to be resilient against
+range analyses~\cite{Stephenson00}.
 The bitwise benchmarks were implemented by Stephenson
-{\em et al.}~\cite{Stephenson00} to validate their bitwidth analysis.
+{\em et al.}~\cite{Stephenson00} to validate their intra-procedural bitwidth
+analysis.
 Our results are on par with those found by the original authors.
 The bitwise programs contain only the \texttt{main} function; thus, different
 versions of our algorithm find the same results when applied onto these
 programs.
 
-\subsection{Context Sensitive versus Context Insensitive Analysis}
+\subsection{Achieving Partial Context-Sensitiveness via Function Inlining}
 \label{sub:context}
 
 Another way to increase the precision of range analysis is via a
@@ -1074,11 +1107,10 @@ Figure~\ref{fig:context} shows why the ability to make this distinction is
 important for precision.
 In Figure~\ref{fig:context}(a) we have two different calls of function
 \texttt{foo}.
-An usual way to perform a data-flow analysis inter-procedurally is to
-create assignments between formal and actual parameters, as we show in
-Figure~\ref{fig:context}(b).
-If a function is called more than once, then its formal parameters will receive
-information from many actual parameters.
+If we apply the trivial intra-procedural approach of Section~\ref{sub:whole},
+then we get the graph shown in Figure~\ref{fig:context}(b).
+In other words, if a function is called more than once, then its formal
+parameters will receive information from many actual parameters.
 We use $\phi$-functions to bind this information together into a single
 flow.
 However, in this case the multiple assignment of values to parameters
@@ -1133,8 +1165,10 @@ inter-procedural mode.
 If we perform function inlining, then this difference is 45.87\%.
 These numbers are close because our runtime is bound to the
 size of the strong components.
-We have observed that function inlining does not increase too much these
-components.
+Although function inlining can increase the number of strongly connected
+components in the constraint graph, it cannot increase the size of the largest
+component, when compared to the simple inter-procedural analysis of
+Section~\ref{sub:whole}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1267,7 +1301,7 @@ There have been many practical approaches to abstract interpretation,
 with special emphasis on range analysis~\cite{Bertrane10,Blanchet03,Cousot09,Gampe11,Jung05}.
 Cousot's group, for instance, has been able to globally analyze programs with
 thousands of lines of code, albeit they use domain specific tools.
-Astr\'{e}, for example, analyzes programs that do not contain recursive calls.
+Astr\'{e}e, for example, analyzes programs that do not contain recursive calls.
 The work that is the closest to us is Oh {\em et al.}'s very recent abstract
 interpretation framework~\cite{Oh12}.
 Oh {\em et al.} discuss an implementation of range analysis on the interval
