@@ -1,4 +1,4 @@
-This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  24 MAY 2012 12:03
+This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  25 MAY 2012 11:16
 entering extended mode
 \write18 enabled.
  %&-line parsing enabled.
@@ -378,21 +378,21 @@ File: hpdftex.def 2009/02/22 v6.78p Hyperref driver for pdfTeX
 (./paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Try loading font information for OT1+ptm on input line 27.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 28.
  (/usr/local/texlive/2008/texmf-dist/tex/latex/psnfss/ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
@@ -412,7 +412,7 @@ File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: hyperref package is loaded.
 Package caption Info: End \AtBeginDocument code.
-Package hyperref Info: Link coloring ON on input line 27.
+Package hyperref Info: Link coloring ON on input line 28.
  (/usr/local/texlive/2008/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
 
@@ -421,272 +421,272 @@ Package: refcount 2008/08/11 v3.1 Data extraction from references (HO)
 )
 \c@section@level=\count125
 )
-LaTeX Info: Redefining \ref on input line 27.
-LaTeX Info: Redefining \pageref on input line 27.
+LaTeX Info: Redefining \ref on input line 28.
+LaTeX Info: Redefining \pageref on input line 28.
 
 (./paper.out) (./paper.out)
 \@outlinefile=\write4
 \openout4 = `paper.out'.
 
 \AtBeginShipoutBox=\box34
-LaTeX Font Info:    Try loading font information for OMS+ptm on input line 62.
+LaTeX Font Info:    Try loading font information for OMS+ptm on input line 63.
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/psnfss/omsptm.fd
 File: omsptm.fd 
 )
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <9.5> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 62.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 63.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 62.
-LaTeX Font Info:    Calculating math sizes for size <10.3> on input line 62.
+(Font)              size <9> substituted on input line 63.
+LaTeX Font Info:    Calculating math sizes for size <10.3> on input line 63.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <7.20996> not available
-(Font)              size <7> substituted on input line 62.
+(Font)              size <7> substituted on input line 63.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <5.15> not available
-(Font)              size <5> substituted on input line 62.
+(Font)              size <5> substituted on input line 63.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <10.3> not available
-(Font)              size <10> substituted on input line 62.
+(Font)              size <10> substituted on input line 63.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <7.20996> not available
-(Font)              size <7> substituted on input line 62.
+(Font)              size <7> substituted on input line 63.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <5.15> not available
-(Font)              size <5> substituted on input line 62.
+(Font)              size <5> substituted on input line 63.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <10.3> not available
-(Font)              size <10> substituted on input line 62.
+(Font)              size <10> substituted on input line 63.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <7.20996> not available
-(Font)              size <7> substituted on input line 62.
+(Font)              size <7> substituted on input line 63.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <5.15> not available
-(Font)              size <5> substituted on input line 62.
+(Font)              size <5> substituted on input line 63.
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <10.3> not available
-(Font)              size <10> substituted on input line 62.
-LaTeX Font Info:    Try loading font information for U+lasy on input line 62.
+(Font)              size <10> substituted on input line 63.
+LaTeX Font Info:    Try loading font information for U+lasy on input line 63.
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/base/ulasy.fd
 File: ulasy.fd 1998/08/17 v2.2e LaTeX symbol font definitions
 )
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <10.3> not available
-(Font)              size <10> substituted on input line 62.
+(Font)              size <10> substituted on input line 63.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <7.20996> not available
-(Font)              size <7> substituted on input line 62.
+(Font)              size <7> substituted on input line 63.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <5.15> not available
-(Font)              size <5> substituted on input line 62.
-LaTeX Font Info:    Try loading font information for U+msa on input line 62.
+(Font)              size <5> substituted on input line 63.
+LaTeX Font Info:    Try loading font information for U+msa on input line 63.
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2002/01/19 v2.2g AMS font definitions
 )
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <10.3> not available
-(Font)              size <10> substituted on input line 62.
+(Font)              size <10> substituted on input line 63.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <7.20996> not available
-(Font)              size <7> substituted on input line 62.
+(Font)              size <7> substituted on input line 63.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <5.15> not available
-(Font)              size <5> substituted on input line 62.
-LaTeX Font Info:    Try loading font information for U+msb on input line 62.
+(Font)              size <5> substituted on input line 63.
+LaTeX Font Info:    Try loading font information for U+msb on input line 63.
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2002/01/19 v2.2g AMS font definitions
 )
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <10.3> not available
-(Font)              size <10> substituted on input line 62.
+(Font)              size <10> substituted on input line 63.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <7.20996> not available
-(Font)              size <7> substituted on input line 62.
+(Font)              size <7> substituted on input line 63.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <5.15> not available
-(Font)              size <5> substituted on input line 62.
-LaTeX Font Info:    Calculating math sizes for size <11.5> on input line 65.
+(Font)              size <5> substituted on input line 63.
+LaTeX Font Info:    Calculating math sizes for size <11.5> on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <5.75> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <5.75> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <5.75> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <5.75> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <5.75> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <11.5> not available
-(Font)              size <12> substituted on input line 65.
+(Font)              size <12> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <8.04996> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <5.75> not available
-(Font)              size <6> substituted on input line 65.
-LaTeX Font Info:    Calculating math sizes for size <8.04996> on input line 65.
+(Font)              size <6> substituted on input line 66.
+LaTeX Font Info:    Calculating math sizes for size <8.04996> on input line 66.
 
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <5.63493> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <4.02498> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <5.63493> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <4.02498> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <5.63493> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <4.02498> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <5.63493> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <4.02498> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <5.63493> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <4.02498> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <5.63493> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <4.02498> not available
-(Font)              size <5> substituted on input line 65.
-LaTeX Font Info:    Calculating math sizes for size <8.5> on input line 65.
+(Font)              size <5> substituted on input line 66.
+LaTeX Font Info:    Calculating math sizes for size <8.5> on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <5.94997> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <4.25> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <5.94997> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <4.25> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <5.94997> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <4.25> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <5.94997> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <4.25> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <5.94997> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <4.25> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 65.
+(Font)              size <8> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <5.94997> not available
-(Font)              size <6> substituted on input line 65.
+(Font)              size <6> substituted on input line 66.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <4.25> not available
-(Font)              size <5> substituted on input line 65.
+(Font)              size <5> substituted on input line 66.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8.5> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 106.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 107.
 LaTeX Font Info:    Font shape `OMS/ptm/m/n' in size <8.5> not available
-(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 106.
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 107.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <8.5> not available
-(Font)              size <8> substituted on input line 106.
-LaTeX Font Info:    Try loading font information for OT1+phv on input line 106.
+(Font)              size <8> substituted on input line 107.
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 107.
 
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/psnfss/ot1phv.fd
 File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
 )
 LaTeX Font Info:    Font shape `OT1/phv/m/it' in size <8.5> not available
-(Font)              Font shape `OT1/phv/m/sl' tried instead on input line 106.
+(Font)              Font shape `OT1/phv/m/sl' tried instead on input line 107.
  [1{/usr/local/texlive/2008/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
 
 
 Non-PDF special ignored!]
-LaTeX Font Info:    Calculating math sizes for size <7.20996> on input line 114
+LaTeX Font Info:    Calculating math sizes for size <7.20996> on input line 115
 .
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <5.04694> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <3.60498> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <5.04694> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <3.60498> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <5.04694> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <3.60498> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <5.04694> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <3.60498> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <5.04694> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <3.60498> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <5.04694> not available
-(Font)              size <5> substituted on input line 114.
+(Font)              size <5> substituted on input line 115.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <3.60498> not available
-(Font)              size <5> substituted on input line 114.
-LaTeX Font Info:    Try loading font information for OT1+pcr on input line 116.
+(Font)              size <5> substituted on input line 115.
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 117.
 
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 ) [2]
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10.3> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 248.
-LaTeX Font Info:    Calculating math sizes for size <9.5> on input line 257.
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 249.
+LaTeX Font Info:    Calculating math sizes for size <9.5> on input line 258.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <6.64996> not available
-(Font)              size <7> substituted on input line 257.
+(Font)              size <7> substituted on input line 258.
 LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <4.75> not available
-(Font)              size <5> substituted on input line 257.
+(Font)              size <5> substituted on input line 258.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <6.64996> not available
-(Font)              size <7> substituted on input line 257.
+(Font)              size <7> substituted on input line 258.
 LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <4.75> not available
-(Font)              size <5> substituted on input line 257.
+(Font)              size <5> substituted on input line 258.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <6.64996> not available
-(Font)              size <7> substituted on input line 257.
+(Font)              size <7> substituted on input line 258.
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <4.75> not available
-(Font)              size <5> substituted on input line 257.
+(Font)              size <5> substituted on input line 258.
 LaTeX Font Warning: Font shape `OMX/cmex/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <6.64996> not available
-(Font)              size <7> substituted on input line 257.
+(Font)              size <7> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/lasy/m/n' in size <4.75> not available
-(Font)              size <5> substituted on input line 257.
+(Font)              size <5> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <6.64996> not available
-(Font)              size <7> substituted on input line 257.
+(Font)              size <7> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/msa/m/n' in size <4.75> not available
-(Font)              size <5> substituted on input line 257.
+(Font)              size <5> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <9.5> not available
-(Font)              size <9> substituted on input line 257.
+(Font)              size <9> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <6.64996> not available
-(Font)              size <7> substituted on input line 257.
+(Font)              size <7> substituted on input line 258.
 LaTeX Font Warning: Font shape `U/msb/m/n' in size <4.75> not available
-(Font)              size <5> substituted on input line 257.
+(Font)              size <5> substituted on input line 258.
 
 <images/ex1.pdf, id=165, 550.05402pt x 215.80524pt>
 File: images/ex1.pdf Graphic file (type pdf)
@@ -723,70 +723,69 @@ Overfull \hbox (35.22191pt too wide) in alignment at lines 624--638
  []
 
 [7 <./images/growth_lattice.pdf>]
-<images/ex_partition_grow_crop.pdf, id=422, 403.50548pt x 253.94977pt>
+<images/ex_partition_grow_crop.pdf, id=408, 403.50548pt x 253.94977pt>
 File: images/ex_partition_grow_crop.pdf Graphic file (type pdf)
 
 <use images/ex_partition_grow_crop.pdf>
-<images/TimeCorr.pdf, id=426, 746.79pt x 198.7425pt>
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [8 <./images/ex_partition_grow_crop.pdf>]
+<images/TimeCorr.pdf, id=481, 746.79pt x 198.7425pt>
 File: images/TimeCorr.pdf Graphic file (type pdf)
  <use images/TimeCorr.pdf>
-[8] <images/MemCorr.pdf, id=437, 622.325pt x 171.64125pt>
+<images/MemCorr.pdf, id=484, 622.325pt x 171.64125pt>
 File: images/MemCorr.pdf Graphic file (type pdf)
-
-<use images/MemCorr.pdf>
-<images/precUpperBound.pdf, id=442, 680.5425pt x 183.68625pt>
+ <use images/MemCorr.pdf>
+<images/precUpperBound.pdf, id=489, 680.5425pt x 183.68625pt>
 File: images/precUpperBound.pdf Graphic file (type pdf)
 
 <use images/precUpperBound.pdf>
-<images/precLowerBound.pdf, id=443, 566.11298pt x 168.62799pt>
+<images/precLowerBound.pdf, id=490, 566.11298pt x 168.62799pt>
 File: images/precLowerBound.pdf Graphic file (type pdf)
 
-<use images/precLowerBound.pdf>
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
- [9 <./images/ex_partition_grow_crop.pdf> <./images/TimeCorr.pdf>] [10 <./image
-s/MemCorr.pdf> <./images/precUpperBound.pdf> <./images/precLowerBound.pdf>]
-<images/space.pdf, id=574, 478.78876pt x 261.09747pt>
+<use images/precLowerBound.pdf> [9 <./images/TimeCorr.pdf>] [10 <./images/MemCo
+rr.pdf> <./images/precUpperBound.pdf> <./images/precLowerBound.pdf>]
+<images/space.pdf, id=575, 478.78876pt x 261.09747pt>
 File: images/space.pdf Graphic file (type pdf)
  <use images/space.pdf>
 [11 <./images/space.pdf>]
-<images/impactSCC.pdf, id=609, 562.636pt x 165.954pt>
+<images/impactSCC.pdf, id=610, 562.636pt x 165.954pt>
 File: images/impactSCC.pdf Graphic file (type pdf)
 
 <use images/impactSCC.pdf>
-<images/impactESSA.pdf, id=617, 563.10577pt x 166.62552pt>
+<images/impactESSA.pdf, id=618, 563.10577pt x 166.62552pt>
 File: images/impactESSA.pdf Graphic file (type pdf)
 
 <use images/impactESSA.pdf>
-<images/precESSA.pdf, id=622, 556.33444pt x 173.65076pt>
+<images/precESSA.pdf, id=623, 556.33444pt x 173.65076pt>
 File: images/precESSA.pdf Graphic file (type pdf)
 
 <use images/precESSA.pdf>
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [12 <./images/impactSCC.pdf>] <images/intra.pdf, id=815, 429.602pt x 172.64601
+ [12 <./images/impactSCC.pdf>] <images/intra.pdf, id=816, 429.602pt x 172.64601
 pt>
 File: images/intra.pdf Graphic file (type pdf)
 
 <use images/intra.pdf> [13 <./images/impactESSA.pdf> <./images/precESSA.pdf>]
-<images/context.pdf, id=1067, 525.96703pt x 191.71826pt>
+<images/context.pdf, id=1068, 525.96703pt x 191.71826pt>
 File: images/context.pdf Graphic file (type pdf)
 
 <use images/context.pdf> [14 <./images/intra.pdf> <./images/context.pdf>]
-<images/wholeImpact.pdf, id=1149, 556.32745pt x 170.63649pt>
+<images/wholeImpact.pdf, id=1150, 556.32745pt x 170.63649pt>
 File: images/wholeImpact.pdf Graphic file (type pdf)
 
 <use images/wholeImpact.pdf>
-<images/timeIntraInterInline.pdf, id=1152, 322.20375pt x 200.75pt>
+<images/timeIntraInterInline.pdf, id=1153, 322.20375pt x 200.75pt>
 File: images/timeIntraInterInline.pdf Graphic file (type pdf)
 
 <use images/timeIntraInterInline.pdf>
-<images/timeWideningOperators.pdf, id=1153, 434.62375pt x 249.93375pt>
+<images/timeWideningOperators.pdf, id=1154, 434.62375pt x 249.93375pt>
 File: images/timeWideningOperators.pdf Graphic file (type pdf)
 
 <use images/timeWideningOperators.pdf> [15 <./images/wholeImpact.pdf> <./images
 /timeIntraInterInline.pdf> <./images/timeWideningOperators.pdf>]
-<images/jumpSet.pdf, id=1246, 515.92848pt x 224.83899pt>
+<images/jumpSet.pdf, id=1247, 515.92848pt x 224.83899pt>
 File: images/jumpSet.pdf Graphic file (type pdf)
 
 <use images/jumpSet.pdf> [16 <./images/jumpSet.pdf>] (./paper.bbl
@@ -801,7 +800,7 @@ LaTeX Font Warning: Size substitutions with differences
 Here is how much of TeX's memory you used:
  7134 strings out of 493876
  105135 string characters out of 1150568
- 190146 words of memory out of 3000000
+ 189054 words of memory out of 3000000
  10110 multiletter control sequences out of 10000+50000
  34994 words of font info for 91 fonts, out of 3000000 for 5000
  715 hyphenation exceptions out of 8191
@@ -828,9 +827,9 @@ exlive/2008/texmf-dist/fonts/type1/urw/helvetic/uhvro8a.pfb></usr/local/texlive
 /2008/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2008/texm
 f-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2008/texmf-dist/fon
 ts/type1/urw/times/utmri8a.pfb>
-Output written on paper.pdf (18 pages, 1071607 bytes).
+Output written on paper.pdf (18 pages, 1071585 bytes).
 PDF statistics:
- 1411 PDF objects out of 1440 (max. 8388607)
+ 1412 PDF objects out of 1440 (max. 8388607)
  102 named destinations out of 1000 (max. 131072)
  217 words of extra memory for PDF output out of 10000 (max. 10000000)
 

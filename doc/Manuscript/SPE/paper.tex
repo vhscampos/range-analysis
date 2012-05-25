@@ -1,3 +1,5 @@
+% TODO: discuss more related works: sparsity, and actual implementations.
+% TODO: Explain why we are using Stanford
 \documentclass[times]{speauth}
 
 % Packages that I must import to compile this latex file:
@@ -43,12 +45,12 @@ Range analysis estimates statically the lower and upper values that
 the variables may assume during a program's execution.
 This analysis is used to detect program vulnerabilities, and to enable compiler
 optimizations such as dead and redundant code elimination.
-This paper describes an inter-procedural range analysis of integer variables that
-scales up to programs with millions of assembly instructions.
+This paper describes an inter-procedural range analysis of integer variables
+that scales up to programs with millions of assembly instructions.
 Contrary to previous techniques, we handle comparisons between variables
 without resorting to relational lattices or expensive algorithms.
-We achieve path sensitiveness by using Bodik's Extended Static Single
-Assignment intermediate representation, and we obtain partial
+We gain precision from conditional tests by using Bodik's Extended Static
+Single Assignment intermediate representation, and we obtain partial
 context sensitiveness via function inlining.
 We have implemented our technique in LLVM and have been able to process
 programs totaling 2.72 million lines of C in a few seconds.
@@ -57,8 +59,8 @@ algorithm, we had to face a constant tension between precision and speed.
 In this paper we discuss the many engineering choices that, due to this tension,
 have shaped our implementation.
 Given the breath of our evaluation, we believe that this paper contains the most
-comprehensive empirical study of a range analysis algorithm ever presented in the
-compiler related literature.
+comprehensive empirical study of a range analysis algorithm ever presented in
+the compiler related literature.
 \end{abstract}
 
 \maketitle
@@ -75,7 +77,7 @@ This analysis has many uses.
 For instance, it allows the optimizing compiler to remove from the program text
 redundant overflow tests~\cite{Sol11} and unnecessary array bound
 checks~\cite{Bodik00,Gampe11}.
-Additionally, range analysis is essential not only to the bitwidth aware
+Furthermore, range analysis is essential not only to the bitwidth aware
 register allocator~\cite{Barik06,Tallam03}, but also to more traditional
 allocators that handle registers of different
 sizes~\cite{Kong98,Pereira08,Scholz02}.
@@ -92,7 +94,7 @@ range analyses~\cite{Gawlitza09,Mahlke01,Stephenson00,Su05}.
 On the other hand, none of these authors provide experimental evidence that
 their approaches are able to deal with very large programs.
 There are researchers who have implemented range analyses that scale up to
-large programs~\cite{Blanchet03,Patterson95,Venet04}; nevertheless, because the
+large programs~\cite{Patterson95,Blanchet03,Venet04}; nevertheless, because the
 algorithm itself is not the main focus of their works, they neither give
 details about their design choices nor provide experimental data about it.
 This scenario was recently changed by Oh {\em et al.}~\cite{Oh12}, who
@@ -151,16 +153,16 @@ Our results are similar to Stephenson
 a backward propagation phase.
 Furthermore, we have been able to find tight bounds to the majority of the
 examples used by Costan {\em et al.}~\cite{Costan05} and Lakhdar
-{\em et al.}~\cite{Lakhdar11}, who rely on much more costly methods.
+{\em et al.}~\cite{Lakhdar11}, who rely on more costly methods.
 
 % Design space exploration:
 While designing and implementing our algorithm we had to face several important
-engineering choices.
+engineering decisions.
 Many approaches that we have used to increase the precision of
 our results would result in runtime slowdowns.
 We cannot determine the optimum spot in this design space, given the
 vast number of possibilities that it contains, but we discuss our most important
-implementation decisions in Section~\ref{sec:design}.
+implementation choices in Section~\ref{sec:design}.
 Section~\ref{sub:sccs} shows how we could improve runtime and precision
 substantially by processing data-flow information in the strongly connected
 components that underly our constraint system.
@@ -177,7 +179,7 @@ This work concludes a two years long effort to produce a solid and scalable
 implementation of range analysis.
 Our first endeavor to implement such an algorithm was based on Su and
 Wagner's constraint system, which can be solved exactly in polynomial
-time~\cite{Su04,Su05}.
+time~\cite{Su05,Su04}.
 However, although we could use their formulation to handle a subset of C-like
 constructs, their description of how to deal with loops was not very explicit.
 Thus, in order to solve loops we adopted Gawlitza
@@ -575,12 +577,6 @@ Furthermore, the composite components tend to be small.
 These two facts ensure that the more costly parts of our algorithm only have to
 handle small inputs.
 
-An interesting question is: can a variable $v$ be associated with a future
-bound of itself, e.g., $\fun{ft}(v)$?
-The answer is yes, but only if the program contains pathological comparisons
-between a variable and itself, e.g., $v < v$, or $v == v$.
-All these comparisons
-
 \subsection{Finding Ranges in Strongly Connected Components}
 \label{sub:micro}
 
@@ -602,16 +598,18 @@ functions.
 \textbf{Growth Analysis.}
 The first step of our algorithm consists in determining how the interval bound
 to each variable grows.
-We ensure termination of this phase via the widening operators that we
-discuss in Section~\ref{sub:widen}.
 The possible behaviors of an interval are:
 (i) does not change;
 (ii) grows towards $+\infty$;
 (iii) grows towards $-\infty$; and
 (iv) grows in both directions.
-The lattice of abstract states, plus a constraint system representing
-Cousot and Cousot's widening operator~\cite[p.247]{Cousot77} is given in
-Figure~\ref{fig:growth_analysis}.
+We ensure termination of this phase via a {\em widening operator}.
+We have experimented with four different widening strategies, which we
+discuss in Section~\ref{sub:widen}.
+One of these strategies is based on Cousot and Cousot's widening
+operator~\cite[p.247]{Cousot77}.
+The lattice of abstract states, plus a constraint system representing this
+operator is given in Figure~\ref{fig:growth_analysis}.
 Because the lattice has height three, the intervals bound to each variable can
 change at most three times.
 
@@ -651,23 +649,6 @@ Again: given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
 $\ub{\iota} = u$}
 \end{figure}
 
-\noindent
-\textbf{Fixing futures.}
-The ranges found by the growth analysis tells us which variables have fixed
-bounds, independent on the intersections in the constraint system.
-Thus, we can use actual limits to replace intersections bounded by futures.
-Figure~\ref{fig:fix_intersects} shows the rules to perform these substitutions.
-In order to correctly replace a future $\fun{ft}(V)$ that limits a variable
-$V'$, we need to have already applied the growth analysis onto $V$.
-Had we considered only data dependence edges, then it would be possible
-that $V'$ be analyzed before $V$.
-However, because of control dependence edges, this case cannot happen.
-The control dependence edges ensure that any topological ordering of the
-constraint graph either places $N_v$ before $N_{v'}$, or places these nodes
-in the same strongly connected component.
-For instance, in Figure~\ref{fig:ex_graph}, variables $J_1$ and $I_t$ are in
-the same SCC only because of the control dependence edges.
-
 \begin{figure}[t!]
 \begin{center}
 \begin{eqnarray*}
@@ -682,8 +663,7 @@ the same SCC only because of the control dependence edges.
 \end{eqnarray*}
 \end{center}
 \caption{\label{fig:fix_intersects}Rules to replace futures by actual
-bounds. $S$ is the interval bound to each variable after the widening
-analysis.}
+bounds.}
 \end{figure}
 
 %\begin{figure}[t!]
@@ -698,14 +678,6 @@ analysis.}
 %\end{equation*}
 %\caption{\label{fig:st_mem}The growth state of each variable.}
 %\end{figure}
-
-\noindent
-\textbf{Narrowing Analysis.}
-The growth analysis associates very conservative bounds to each variable.
-Thus, the last step of our algorithm consists in narrowing these intervals.
-We accomplish this step via Cousot and Cousot's classic narrowing
-operator~\cite[248]{Cousot77}, which we show in
-Figure~\ref{fig:crop_analysis}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -730,40 +702,29 @@ Figure~\ref{fig:crop_analysis}.
 \end{figure}
 
 \noindent
-\textbf{Example:}
-Continuing with our example, Figure~\ref{fig:ex_partition_grow_crop} shows
-the application of our algorithm on the last strong component of
-Figure~\ref{fig:ex_graph}.
-Upon meeting this SCC, we have already determined that the interval
-$[0, 0]$ is bound to $I_0$ and that the interval $[0, 99]$ is bound to
-$J_0$, as we show in Figure~\ref{fig:ex_graph}(a).
-We are not guaranteed to find the least fix point of a constraint system.
-However, in this example we did it.
-We emphasize that finding this tight solution was only possible because of
-the topological ordering of the constraint graph in
-Figure~\ref{fig:ex_graph}.
-Had we applied the widening operator onto the whole graph, then we would
-have found out that variable $j_0$ is bound to $[-\infty, +\infty]$,
-because
-(i) it receives its interval directly from variable $k_t$, which is upper
-bounded by $+\infty$, and
-(ii) it is part of a negative cycle.
-On the other hand, because we only analyze $j$'s SCC after we have
-analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
+\textbf{Fixing futures.}
+The ranges found by the growth analysis tells us which variables have fixed
+bounds, independent on the intersections in the constraint system.
+Thus, we can use actual limits to replace intersections bounded by futures.
+Figure~\ref{fig:fix_intersects} shows the rules to perform these substitutions.
+In order to correctly replace a future $\fun{ft}(v)$ that limits a variable
+$v'$, we need to have already applied the growth analysis onto $v$.
+Had we considered only data dependence edges, then it would be possible
+that $N_v'$ be analyzed before $N_v$.
+However, because of control dependence edges, this case cannot happen.
+The control dependence edges ensure that any topological ordering of the
+constraint graph either places $N_v$ before $N_{v'}$, or places these nodes
+in the same strongly connected component.
+For instance, in Figure~\ref{fig:ex_graph}, variables $j_1$ and $i_t$ are in
+the same SCC only because of the control dependence edges.
 
-Figure~\ref{fig:ex_standard_eSSA}(b) shows our final solution for this example.
-This solution is very precise, in the sense that it is the maximum fixed
-point of the constraint system given in Figure~\ref{fig:eval_function}.
-However, the solution is still an over approximation of the dynamic behavior of
-the program in Figure~\ref{fig:ex_standard_eSSA}.
-For instance, we have found that variable $i$ could reach the upper value of
-99.
-In any actual run of the program, $i$ could be at most 50.
-Analysis on relational lattices, such as the polyhedron~\cite{Cousot78} or the
-Octagon~\cite{Mine06} domains, can infer such tighter bounds, as shown by
-Lakhdar-Chaouch {\em et al.}~\cite{Lakhdar11}.
-However, analyses on these higher dimensional domains are much more
-computationally expensive than analyses on the interval domain~\cite{Oh12}.
+\noindent
+\textbf{Narrowing Analysis.}
+The growth analysis associates very conservative bounds to each variable.
+Thus, the last step of our algorithm consists in narrowing these intervals.
+We accomplish this step via Cousot and Cousot's classic narrowing
+operator~\cite[p.248]{Cousot77}, which we show in
+Figure~\ref{fig:crop_analysis}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -776,6 +737,47 @@ Four snapshots of the last SCC of Figure~\ref{fig:ex_standard_eSSA}.
 (c) After fixing the intersections bound to futures.
 (d) After running the narrowing analysis.}
 \end{figure}
+
+% TODO: check if we say fix point or fixed point.
+\noindent
+\textbf{Example:}
+Continuing with our example, Figure~\ref{fig:ex_partition_grow_crop} shows
+the application of our algorithm on the last strong component of
+Figure~\ref{fig:ex_graph}.
+We are not guaranteed to find the least fixed point of a constraint system.
+However, in this example we did it.
+Figure~\ref{fig:ex_standard_eSSA}(b) shows our final solution for this example.
+This solution is very precise, in the sense that it is the least fixed
+point of the constraint system given in Figure~\ref{fig:eval_function}.
+However, the solution is still an over approximation of the dynamic behavior of
+the program in Figure~\ref{fig:ex1}(a).
+For instance, we have found that variable $i$ could reach the upper value of
+99.
+In any actual run of the program, $i$ could be at most 50.
+Analyses on relational lattices, such as the polyhedron~\cite{Cousot78} or the
+Octagon~\cite{Mine06} domains, can infer such tighter bounds, as shown by
+Lakhdar-Chaouch {\em et al.}~\cite{Lakhdar11}.
+However, analyses on these higher dimensional domains are much more
+computationally expensive than analyses on the interval domain~\cite{Oh12}.
+
+We emphasize that finding this tight solution was only possible because of
+the topological ordering of the constraint graph in Figure~\ref{fig:ex_graph}.
+Upon meeting the constraint graph's last SCC, shown in
+Figure~\ref{fig:ex_partition_grow_crop}, we had already determined that the
+interval $[0, 0]$ is bound to $i_0$ and that the interval $[0, 99]$ is bound to
+$j_0$, as we show in Figure~\ref{fig:ex_partition_grow_crop}(a).
+Had we applied the widening operator onto the whole graph, then we would
+have found out that variable $j_1$ is bound to $[-\infty, +\infty]$.
+This imprecision happens because, on one hand $j_1$'s interval is influenced
+by $k_t$'s, which is upper bounded by $+\infty$.
+On the other hand $j_1$ is part of a decreasing cycle of dependences formed by
+variables $j_t$ and $j_2$ in addition to itself.
+Therefore, if we had applied the widening phase over the entire program followed
+by a global narrowing phase, then we would not be able to recover some of
+widening's precision loss.
+However, because in this example we only analyze $j$'s SCC after we have
+analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Range Analysis Showdown}
@@ -793,12 +795,11 @@ Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
 run our algorithm and the size of the input programs.
 We show data for the 100 largest benchmarks in our test suite, in number
 of variable nodes in the constraint graph.
-We perform function inlining before running our analysis, to increase program
-sizes.
+We perform function inlining before running our analysis.
 Each point in the X line corresponds to a benchmark.
 We analyze the smallest benchmark in this set, \texttt{Prolangs-C/deriv2}, which
 has 1,131 variable nodes in the constraint graph, in 20ms.
-We take 15,91secs to analyze our largest benchmark, \texttt{403.gcc}, which,
+We take 15.91 sec to analyze our largest benchmark, \texttt{403.gcc}, which,
 after function inlining, has 1,266,273 assembly instructions, and a
 constraint graph with 679,652 variable nodes.
 For this data set, the coefficient of determination $(R^2)$ is 0.967, which
@@ -960,9 +961,9 @@ In some cases, as in \texttt{xalancbmk} the analysis on strong components is
 \includegraphics[width=\textwidth]{images/impactSCC}
 \end{center}
 \caption{\label{fig:impactSCC}
-(Left) Bars give time to run our analysis without building strong components
+(Left) Time to run our analysis without building strong components
 divided by time to run the analysis on strongly connected components.
-(Right) Bars give precision, in bitwidth reduction, that we obtain with strong
+(Right) Precision, in bitwidth reduction, that we obtain with strong
 components, divided by the precision that we obtain without them.
 }
 \end{figure}
@@ -1025,12 +1026,14 @@ In some cases, as in \texttt{xalancbmk}, this slowdown increases execution
 time by 71\%.
 Runtime increases because the e-SSA form programs are larger than the SSA
 form programs, as we show in Figure~\ref{fig:impactESSA}(Right).
+The increase in size is due to the extra instructions used to partition the
+live ranges of variables after conditionals.
 However, this growth is small: in none of the integer programs in SPEC
 CPU 2006 we verified an increase in code size of more than 9\%.
 But, if the e-SSA form slowdowns the analysis runtime, its gains in precision
 are remarkable, as seen in Figure~\ref{fig:precESSA}.
 These gains happen because the e-SSA format lets the analysis to use the
-results of comparisons to narrow the ranges of variables.
+results of conditional tests to narrow the ranges of variables.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1151,7 +1154,7 @@ percentage of reduction, tends to increase our measure of precision.
 \includegraphics[width=\textwidth]{images/wholeImpact}
 \end{center}
 \caption{\label{fig:wholeImpact}
-The impact of whole program analysis on precision. Each bar gives precision in
+The impact of whole program analysis on precision. Each bar shows precision in
 \%bitwidth reduction.}
 \end{figure}
 
@@ -1220,13 +1223,13 @@ An example where jump-set widening is more precise.}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Another way to improve the precision of growth analysis is to perform a few
 rounds of abstract interpretation on the constraint graph, and, in case the
-process does not reach a fix point, only then to apply the widening operator.
+process does not reach a fixed point, only then to apply the widening operator.
 Each round of abstract interpretation consists in evaluating all the
 constraints, and then updating the intervals that change from one evaluation to
 the other.
 For instance, in Figure~\ref{fig:jumpSet} one round of abstract interpretation,
 coupled with the simple widening operator, would be enough to reach the
-fix point of that constraint system.
+fixed point of that constraint system.
 We have experimented with 0 and 16 iterations before doing widening, and the
 overall result, for the programs in the SPEC CPU 2006 suite is given in
 Figure~\ref{fig:space}.
@@ -1339,8 +1342,8 @@ publicly available at \texttt{http://code.google.com/p/range-analysis/}.
 This repository contains instructions about how to deploy and use our
 implementation.
 We provide a gallery of examples, including source codes,
-CFGs and constraint graphs that we produce for meaningful programs at
-\texttt{http://code.google.com/p/range-analysis/wiki/gallery}.
+control flow graphs and constraint graphs that we produce for meaningful
+programs at \texttt{http://code.google.com/p/range-analysis/wiki/gallery}.
 
 \bibliographystyle{wileyj}
 \bibliography{../references}
