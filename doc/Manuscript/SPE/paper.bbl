@@ -30,9 +30,8 @@ Barik R, Grothoff C, Gupta R, Pandit V, Udupa R. Optimal bitwise register
   in Computer Science}, vol. 4382, Springer, 2006; 267--282.
 
 \bibitem{Tallam03}
-Tallam S, Gupta R. Bitwidth aware global register allocation. \emph{POPL}, ACM:
-  New York, NY, USA, 2003; 85--96,
-  \doi{http://doi.acm.org/10.1145/604131.604139}.
+Tallam S, Gupta R. Bitwidth aware global register allocation. \emph{POPL}, ACM,
+  2003; 85--96.
 
 \bibitem{Kong98}
 Kong T, Wilken KD. Precise register allocation for irregular architectures.
@@ -175,6 +174,64 @@ Cousot P, Cousot R, Feret J, Mauborgne L, Min{\'e} A, Rival X. Why does
 \bibitem{Jung05}
 Jung Y, Kim J, Shin J, Yi K. Taming false alarms from a domain-unaware c
   analyzer by a bayesian statistical post analysis. \emph{SAS}, 2005; 203--217.
+
+\bibitem{Choi91}
+Choi JD, Cytron R, Ferrante J. Automatic construction of sparse data flow
+  evaluation graphs. \emph{POPL}, 1991; 55--66.
+
+\bibitem{Johnson93}
+Johnson R, Pingali K. Dependence-based program analysis. \emph{PLDI}, ACM,
+  1993; 78--89.
+
+\bibitem{Ramalingan02}
+Ramalingam G. On sparse evaluation representations. \emph{Theoretical Computer
+  Science}  2002; \textbf{277}(1-2):119--147.
+
+\bibitem{Pingali95}
+Pingali K, Bilardi G. {APT}: A data structure for optimal control dependence
+  computation. \emph{PLDI}, ACM, 1995; 211--222.
+
+\bibitem{Pingali97}
+Pingali K, Bilardi G. Optimal control dependence computation and the roman
+  chariots problem. \emph{TOPLAS}, ACM, 1997; 462--491.
+
+\bibitem{Johnson94}
+Johnson R, Pearson D, Pingali K. The program tree structure. \emph{PLDI}, ACM,
+  1994; 171--185.
+
+\bibitem{Ottenstein90}
+Ottenstein KJ, Ballance RA, MacCabe AB. The program dependence web: a
+  representation supporting control-, data-, and demand-driven interpretation
+  of imperative languages. \emph{PLDI}, ACM, 1990; 257--271.
+
+\bibitem{Tu95}
+Tu P, Padua D. Efficient building and placing of gating functions. \emph{PLDI},
+  ACM, 1995; 47--55.
+
+\bibitem{Ananian99}
+Ananian S. The static single information form. Master's {T}hesis, {MIT}
+  September 1999.
+
+\bibitem{Singer06}
+Singer J. Static program analysis based on virtual register renaming. Ph{D}
+  {T}hesis, University of Cambridge 2006.
+
+\bibitem{Benoit09}
+Boissinot B, Darte A, Rastello F, de~Dinechin BD, Guillon C. Revisiting
+  out-of-{SSA} translation for correctness, code quality, and efficienty.
+  \emph{CGO}, IEEE, 2009; XX--XX.
+
+\bibitem{Plevyak96}
+Plevyak JB. Optimization of object-oriented and concurrent programs. Ph{D}
+  {T}hesis, University of Illinois at Urbana-Champaign 1996.
+
+\bibitem{George03}
+George L, Matthias B. Taming the ixp network processor. \emph{PLDI}, ACM, 2003;
+  26--37.
+
+\bibitem{Lo98}
+Lo R, Chow F, Kennedy R, Liu SM, Tu P. Register promotion by sparse partial
+  redundancy elimination of loads and stores. \emph{PLDI}, ACM, 1998; 26--37.
 
 \bibitem{Tavares11b}
 Tavares ALC, Boissinot B, Bigonha MAS, Bigonha R, Pereira FMQ, Rastello F. A

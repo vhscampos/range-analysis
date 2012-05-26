@@ -409,7 +409,10 @@ After splitting the live ranges according to the rules stated above, we might
 have to insert $\phi$-functions into the transformed program to re-convert it to
 SSA form.
 This last step avoids that two different names given to the same original
-variable be simultaneously alive at the program code.
+variable be simultaneously {\em alive} at the program code.
+A variable $v$ is alive at a program point $p$ if the program's control flow
+graph contains a path from $p$ to a site where $v$ is used, that does not
+go across any re-definition of $v$.
 Figure~\ref{fig:ex_standard_eSSA}(a) shows our running example changed into
 standard e-SSA form.
 We have not created variable names for $i_f$ and $j_f$, because neither
@@ -1283,9 +1286,11 @@ Thus, we believe that the unexpected behavior is due to runtime noise that
 outlives a sequence of 100 executions of each benchmark.
 
 
-\section{Related works}
+\section{Related work}
 \label{sec:rel}
 
+\noindent
+\textbf{The Scalability of Range Analysis. }
 % Early implementations of range analysis.
 Range analysis is an old ally of compiler writers.
 The notions of widening and narrowing were introduced by Cousot and Cousot in
@@ -1295,21 +1300,21 @@ by Patterson~\cite{Patterson95}, Stephenson {\em et al.}~\cite{Stephenson00},
 Mahlke {\em et al.}~\cite{Mahlke01} and many other researchers.
 Recently there have been many independent efforts to find exact, polynomial
 time algorithms to solve constraints on the interval
-lattice~\cite{Costan05,Gawlitza09,Lakhdar11,Su04,Su05}.
+lattice~\cite{Gawlitza09,Su05,Costan05,Lakhdar11,Su04}.
 However, these works are still very theoretical, and have not yet been used to
 analyze large programs.
 
 % Scalability: Astree and others.
 There have been many practical approaches to abstract interpretation,
-with special emphasis on range analysis~\cite{Bertrane10,Blanchet03,Cousot09,Gampe11,Jung05}.
+with special emphasis on range analysis~\cite{Gampe11,Blanchet03,Bertrane10,Cousot09,Jung05}.
 Cousot's group, for instance, has been able to globally analyze programs with
-thousands of lines of code, albeit they use domain specific tools.
+thousands of lines of code, albeit using domain specific tools.
 Astr\'{e}e, for example, analyzes programs that do not contain recursive calls.
 The work that is the closest to us is Oh {\em et al.}'s very recent abstract
 interpretation framework~\cite{Oh12}.
 Oh {\em et al.} discuss an implementation of range analysis on the interval
-lattice that scales up to a program with 1,363K LoC (ghostscript-9.00), but
-they do not provide results about its precision.
+lattice that scales up to a program with 1,363K LoC (ghostscript-9.00).
+Because their focus is speed, they do not provide results about precision.
 We could not find the benchmarks used in those experiments for a
 direct comparison -- the distribution of ghostscript-9.00 available in the
 LLVM test suite has 27K LoC.
@@ -1319,6 +1324,77 @@ Oh {\em et al.}'s implementation took orders of magnitude more time to go over
 programs of similar size.
 However, whereas they provide a framework to develop general sparse analyses, we
 only solve range analysis on the interval lattice.
+
+\noindent
+\textbf{Sparse Data-Flow Analyses. }
+In this paper we provide a {\em sparse} implementation of range analysis.
+Sparsity, in our context, means that we associate points in the lattice of
+interest -- intervals in our case -- directly to variables.
+Dense analyses map such information to pairs formed by variables and program
+points.
+The compiler related literature contains many descriptions of sparse
+data-flow analyses.
+Some among these analyses obtain sparsity by using specific program
+representations, like we did.
+Others rely on data-structures.
+In terms of data-structures, the first, and best known method proposed to
+support sparse data-flow analyses is Choi {\em et al.}'s {\em Sparse Evaluation
+Graph} (SEG)~\cite{Choi91}.
+The nodes of this graph represent program regions where information produced by
+the data-flow analysis might change.
+Choi {\em et al.}'s ideas have been further expanded, for example, by Johnson
+{\em et al.}'s {\em Quick Propagation Graphs}~\cite{Johnson93}, or Ramalingan's
+{\em Compact Evaluation Graphs}~\cite{Ramalingan02}.
+Building upon Choi's pioneering work, researchers have developed many
+efficient ways to build such graphs~\cite{Pingali95,Pingali97,Johnson94}.
+These data-structures have been shown to improve many data-flow analyses in
+terms of runtime and memory consumption.
+Nevertheless, the elegance of SEGs and its successors have not, so far, been
+enough to attract the attention of mainstream compiler writers.
+Compilers such as gcc, LLVM or Java Hotspot rely, instead, on several types of
+program representations to provide support to sparse data-flow analyses.
+
+Most eminent among these representations is the Static Single Assignment
+form~\cite{Cytron91}, which suits well forward flow analyses, such as reaching
+definitions.
+Since its debut, the SSA form has been expanded in different ways.
+For instance, the Gated SSA form allows the static association of logical
+predicates with data-flow paths~\cite{Ottenstein90,Tu95}.
+Scott Ananian has introduced in the late nineties the {\em Static Single
+Information} (SSI) form, a program representation that supports both forward and
+backward analyses~\cite{Ananian99}.
+This representation was later revisited by Jeremy Singer~\cite{Singer06} and,
+a few years later, by Boissinot {\em et al.}~\cite{Benoit09}.
+Singer provided new algorithms plus examples of applications that benefit from
+the SSI form, and Boissinot {\em et al.}, in an effort to clarify some
+misconceptions about this program representation, introduced the notions of
+{\em week} and {\em strong} SSA form.
+Another important representation, which supports data-flow analyses that
+acquire information from uses, is the \emph{Static Single Use} form (SSU).
+There exists many variants of
+SSU~\cite{Plevyak96,George03,Lo98}.
+For instance, the ``strict'' SSU form enforces that each definition reaches a
+single use, whereas SSI and other variations of SSU allow two consecutive uses
+of a variable on the same path.
+The program representation that we have used in this paper -- the {\em Extended
+Static Single Assignment} (e-SSA) form -- was introduced by Bodik
+{\em et al.}~\cite{Bodik00}.
+
+There are so many different program representations because they fit specific
+data-flow problems.
+Each representation, given a domain of application, provides the following
+property: the information associated with the live range of a variable is
+invariant along every program point where this variable is alive.
+There are two key aspects that distinguish one representation from the others:
+firstly, where the information about a variable is acquired, and secondly,
+how this information is propagated.
+The e-SSA form, for instance, supports flow analyses that obtain information
+both from variable definitions and conditional tests and propagate this
+information forwardly.
+Such analyses are also supported by the SSI form; hence, we could have used this
+other representation too.
+However, as we have shown in previous work, the e-SSA form is considerably
+more economical~\cite{Tavares11b}.
 
 \section{Final Considerations}
 \label{sec:con}
@@ -1331,7 +1407,7 @@ invite the reader to check a recent report of ours~\cite{Tavares11b}.
 In that paper we also show that the results that we obtain via the
 sparse analysis are equivalent to the results provided by a dense analysis.
 In other words, if the dense analysis tells us that variable $v$ is
-associated with the interval range $[l, u]$ at program point $i$, and $v'$
+associated with the interval $[l, u]$ at program point $i$, and $v'$
 is the new name of $v$, alive at $i$ in the e-SSA form program, then $v'$ is
 associated with the interval $[l, u]$ along its entire live range.
 Additionally, we have used a dynamic profiler, available in our webpage, to
@@ -1339,11 +1415,11 @@ empirically validate our results.
 
 Our implementation of the range analysis algorithm described in this paper is
 publicly available at \texttt{http://code.google.com/p/range-analysis/}.
-This repository contains instructions about how to deploy and use our
+This repository contains instructions to deploy and use our
 implementation.
 We provide a gallery of examples, including source codes,
 control flow graphs and constraint graphs that we produce for meaningful
-programs at \texttt{http://code.google.com/p/range-analysis/wiki/gallery}.
+programs at \\ \texttt{http://code.google.com/p/range-analysis/wiki/gallery}.
 
 \bibliographystyle{wileyj}
 \bibliography{../references}
