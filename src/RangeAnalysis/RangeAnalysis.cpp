@@ -2043,11 +2043,38 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw) {
 	}
 
 	// Handle the rest of cases
-	for (unsigned i = 1, e = sw->getNumCases(); i < e; ++i) {
-		BasicBlock *succ = sw->getSuccessor(i);
-		const ConstantInt *constant = sw->getCaseValue(i);
+//	for (unsigned i = 1, e = sw->getNumCases(); i < e; ++i) {
+//		BasicBlock *succ = sw->getSuccessor(i);
+//		const ConstantInt *constant = sw->getCaseValue(i);
 
-		APInt sigMin = constant->getValue();
+//		APInt sigMin = constant->getValue();
+//		APInt sigMax = sigMin;
+
+//		if (sigMin.getBitWidth() < MAX_BIT_INT) {
+//			sigMin = sigMin.sext(MAX_BIT_INT);
+//		}
+//		if (sigMax.getBitWidth() < MAX_BIT_INT) {
+//			sigMax = sigMax.sext(MAX_BIT_INT);
+//		}
+
+////		if (sigMax.slt(sigMin)) {
+////			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+////		}
+
+//		Range Values = Range(sigMin, sigMax);
+
+//		// Create the interval using the intersection in the branch.
+//		BasicInterval* BI = new BasicInterval(Values);
+
+//		BBsuccs.push_back(std::make_pair(BI, succ));
+//	}
+
+	SwitchInst::ConstCaseIt cit = sw->case_begin(), cend = sw->case_end();
+	++cit;
+	
+	for (; cit != cend; ++cit) {
+		const BasicBlock *succ = cit.getCaseSuccessor();
+		APInt sigMin = cit.getCaseValue()->getValue();
 		APInt sigMax = sigMin;
 
 		if (sigMin.getBitWidth() < MAX_BIT_INT) {
