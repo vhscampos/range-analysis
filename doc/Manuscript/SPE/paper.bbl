@@ -21,7 +21,7 @@ Bodik R, Gupta R, Sarkar V. {ABCD}: eliminating array bounds checks on demand.
 
 \bibitem{Gampe11}
 Gampe A, von Ronne J, Niedzielski D, Vasek J, Psarris L. Safe, multiphase
-  bounds check elimination in java. \emph{Software -- Practice and Experience}
+  bounds check elimination in java. \emph{Software: Practice and Experience}
   2011; \textbf{41}:753--788.
 
 \bibitem{Barik06}
@@ -44,6 +44,11 @@ Pereira FMQ, Palsberg J. Register allocation by puzzle solving. \emph{PLDI},
 \bibitem{Scholz02}
 Scholz B, Eckstein E. Register allocation for irregular architectures.
   \emph{LCTES/SCOPES}, ACM, 2002; 139--148.
+
+\bibitem{Yanqin11}
+Yang Y, Yan H, Shao Z, Guo M. Compiler-assisted dynamic scratch-pad memory
+  management with space overlapping for embedded systems. \emph{Software:
+  Practice and Experience}  2011; \textbf{41}(7):737--752.
 
 \bibitem{Patterson95}
 Patterson JRC. Accurate static branch prediction by value range propagation.

@@ -77,10 +77,10 @@ This analysis has many uses.
 For instance, it allows the optimizing compiler to remove from the program text
 redundant overflow tests~\cite{Sol11} and unnecessary array bound
 checks~\cite{Bodik00,Gampe11}.
-Furthermore, range analysis is essential not only to the bitwidth aware
-register allocator~\cite{Barik06,Tallam03}, but also to more traditional
-allocators that handle registers of different
-sizes~\cite{Kong98,Pereira08,Scholz02}.
+Furthermore, range analysis is essential to bitwidth aware register
+allocators~\cite{Barik06,Tallam03}, register allocators that handle registers of
+different sizes~\cite{Kong98,Pereira08,Scholz02}, and scratchpad cache
+allocators~\cite{Yanqin11}.
 Additionally, range analysis has also been used to statically predict the
 outcome of branches~\cite{Patterson95}, to detect buffer overflow
 vulnerabilities~\cite{Simon08,Wagner00}, to find the trip count of
@@ -90,7 +90,7 @@ and even to synthesize hardware~\cite{Cong05,Lhairech10,Mahlke01}.
 % The problem: few implementations, not extensive experimental reports.
 Given this great importance, it comes as no surprise that the compiler
 literature is rich in works describing in details algorithmic variations of
-range analyses~\cite{Gawlitza09,Mahlke01,Stephenson00,Su05}.
+range analyses~\cite{Mahlke01,Gawlitza09,Stephenson00,Su05}.
 On the other hand, none of these authors provide experimental evidence that
 their approaches are able to deal with very large programs.
 There are researchers who have implemented range analyses that scale up to
@@ -115,9 +115,9 @@ exponential time technique.
 The few publicly available implementations of range analyses that we are
 aware of, such as those in FLEX~\footnote{The MIT's FLEX/Harpoon compiler
 provides an implementation of Stephenson's algorithm~\cite{Stephenson00}, and
-is available at \texttt{http://flex.cscott.net/Harpoon/}.} and
+is available at \texttt{http://flex.cscott.net/Harpoon/}.},
 gcc~\footnote{Gcc's VRP pass (at \texttt{http://gcc.gnu.org/svn/gcc/trunk/gcc/tree-vrp.c}) implements a variant of Patterson's
-algorithm~\cite{Patterson95}.} only deal with comparisons between variables and
+algorithm~\cite{Patterson95}.} or Mozilla's IonMonkey~\footnote{\texttt{hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/src/ion/RangeAnalysis.cpp}} only deal with comparisons between variables and
 constants.
 Even theoretical works, such as Su and Wagner's~\cite{Su05} or Gawlitza
 {\em et al.}'s~\cite{Gawlitza09} suffer from this limitation.
@@ -416,7 +416,8 @@ go across any re-definition of $v$.
 Figure~\ref{fig:ex_standard_eSSA}(a) shows our running example changed into
 standard e-SSA form.
 We have not created variable names for $i_f$ and $j_f$, because neither
-$i_1$ nor $i_j$ are dominated by the target of the conditional's else case.
+$i_1$ nor $j_1$, the variables that have been renamed, are dominated by the
+target of the conditional's else case.
 In this example, new $\phi$-functions are not necessary: new variable
 names are not alive together with the original variables.
 The part (b) of this figure shows the solution that we get to this new
@@ -713,7 +714,7 @@ Figure~\ref{fig:fix_intersects} shows the rules to perform these substitutions.
 In order to correctly replace a future $\fun{ft}(v)$ that limits a variable
 $v'$, we need to have already applied the growth analysis onto $v$.
 Had we considered only data dependence edges, then it would be possible
-that $N_v'$ be analyzed before $N_v$.
+that $N_{v'}$ be analyzed before $N_v$.
 However, because of control dependence edges, this case cannot happen.
 The control dependence edges ensure that any topological ordering of the
 constraint graph either places $N_v$ before $N_{v'}$, or places these nodes
@@ -860,10 +861,13 @@ its upper and lower limits, given an execution of the target program.
 Figure~\ref{fig:precision} compares our results with those measured
 dynamically for the Stanford benchmark suite, which is publicly
 available~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}}.
+We chose Stanford because these benchmarks do not read data from external
+files; hence, imprecisions are due to library functions that we cannot
+analyze.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=\textwidth]{images/precUpperBound}
+\includegraphics[width=0.97\textwidth]{images/precUpperBound}
 \includegraphics[width=\textwidth]{images/precLowerBound}
 \end{center}
 \caption{\label{fig:precision}
@@ -900,9 +904,8 @@ The figure also shows that, on average, 37.39\% of our lower limits are
 imprecise, and 35.40\% of our upper limits are imprecise.
 This result is on pair with those obtained by more costly analysis, such as
 Stephenson {\em et al.}'s~\cite{Stephenson00}.
-However, whereas that approach have not been used with programs larger than
-the Stanford benchmark suite, we, as shown before, have been able to
-deal with remarkably larger programs.
+However, whereas that approach has only been tested on single functions,
+we have been able to deal with remarkably larger programs.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Design Space}
@@ -977,7 +980,7 @@ strong components increase our precision by 40\%.
 The gains in precision happen because, by completely resolving a component,
 we are able to propagate constant intervals to the next components, instead
 of propagating intervals that can grow in both directions.
-An an example, in Figure~\ref{fig:ex_partition_grow_crop} we pass the range
+As an example, in Figure~\ref{fig:ex_partition_grow_crop} we pass the range
 $[0, 99]$ from variable $k$ to the component that contains variable $j$.
 Had we run the analysis in the entire constraint graph, by the time we
 applied the growth analysis on $j$ we would still find $k$ bound to
@@ -1027,13 +1030,14 @@ As we see in Figure~\ref{fig:impactESSA}(Left), the e-SSA form slows down our
 analysis.
 In some cases, as in \texttt{xalancbmk}, this slowdown increases execution
 time by 71\%.
-Runtime increases because the e-SSA form programs are larger than the SSA
-form programs, as we show in Figure~\ref{fig:impactESSA}(Right).
-The increase in size is due to the extra instructions used to partition the
-live ranges of variables after conditionals.
+Runtime increases for two reasons.
+Firstly, the e-SSA form programs are larger than the SSA form programs, as we
+show in Figure~\ref{fig:impactESSA}(Right).
 However, this growth is small: in none of the integer programs in SPEC
 CPU 2006 we verified an increase in code size of more than 9\%.
-But, if the e-SSA form slowdowns the analysis runtime, its gains in precision
+Secondly, the e-SSA form program has futures; hence requiring the future
+resolution phase of our algorithm, which is not necessary in SSA form programs.
+Nevertheless, if the e-SSA form slowdowns the analysis runtime, its gains in precision
 are remarkable, as seen in Figure~\ref{fig:precESSA}.
 These gains happen because the e-SSA format lets the analysis to use the
 results of conditional tests to narrow the ranges of variables.
@@ -1080,12 +1084,12 @@ Figure~\ref{fig:wholeImpact} compares the precision of the intra and
 inter-procedural analyses for the five largest programs in three different
 categories of benchmarks: SPEC CPU 2006, the Stanford Suite~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}} and
 Bitwise~\cite{Stephenson00}.
-Our results for the SPEC programs were disappointingly: on the average for
+Our results for the SPEC programs were disappointing: on the average for
 the five largest programs, the intra-procedural version of our analysis saves
 5.23\% of bits per variable.
 The inter-procedural version increases this number to 8.89\%.
 A manual inspection of the SPEC programs reveals that this result is expected:
-these programs manipulate files, and their source codes do no provide enough
+these programs manipulate files, and their source codes do not provide enough
 explicit constants to power our analysis up.
 However, with numerical benchmarks we fare much better.
 On the average our inter-procedural algorithm reduces the bitwidth of the
@@ -1113,7 +1117,7 @@ Figure~\ref{fig:context} shows why the ability to make this distinction is
 important for precision.
 In Figure~\ref{fig:context}(a) we have two different calls of function
 \texttt{foo}.
-If we apply the trivial intra-procedural approach of Section~\ref{sub:whole},
+If we apply the trivial inter-procedural approach of Section~\ref{sub:whole},
 then we get the graph shown in Figure~\ref{fig:context}(b).
 In other words, if a function is called more than once, then its formal
 parameters will receive information from many actual parameters.
@@ -1148,7 +1152,7 @@ function inlining.
 However, proportionally function inlining leads to a smaller percentage of
 bitwidth reduction for many benchmarks.
 In the Stanford Collection, for instance, where most of the functions are
-called in only one location, inlining leads to worst precision results.
+called in only one location, inlining leads to worse precision results.
 On the other hand, for the SPEC programs, inlining, even in terms of
 percentage of reduction, tends to increase our measure of precision.
 
@@ -1157,13 +1161,13 @@ percentage of reduction, tends to increase our measure of precision.
 \includegraphics[width=\textwidth]{images/wholeImpact}
 \end{center}
 \caption{\label{fig:wholeImpact}
-The impact of whole program analysis on precision. Each bar shows precision in
-\%bitwidth reduction.}
+The impact of inter-procedural analysis on precision. Each bar shows precision
+in \%bitwidth reduction.}
 \end{figure}
 
 \noindent
 \textbf{Intra vs Inter-procedural runtimes.}
-Figure~\ref{fig:timeComp}(Right) compares three different execution modes.
+Figure~\ref{fig:timeComp}(Left) compares three different execution modes.
 Bars are normalized to the time to run the intra-procedural analysis
 without inlining.
 On the average, the intra-procedural mode is 28.92\% faster than the
@@ -1368,7 +1372,7 @@ a few years later, by Boissinot {\em et al.}~\cite{Benoit09}.
 Singer provided new algorithms plus examples of applications that benefit from
 the SSI form, and Boissinot {\em et al.}, in an effort to clarify some
 misconceptions about this program representation, introduced the notions of
-{\em week} and {\em strong} SSA form.
+{\em weak} and {\em strong} SSI form.
 Another important representation, which supports data-flow analyses that
 acquire information from uses, is the \emph{Static Single Use} form (SSU).
 There exists many variants of
