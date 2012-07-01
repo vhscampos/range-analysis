@@ -144,7 +144,7 @@ paper.
 Following Gawlitza {\em et al.}'s notation, we shall be performing arithmetic
 operations over the lattice
 $\cal{Z} = \mathbb{Z} \cup \{-\infty, +\infty\}$, where the ordering is
-naturally given by $-\infty < \ldots -1 < 0 < 1 \ldots +\infty$.
+naturally given by $-\infty < \ldots -1 < 0 < 1 \ldots < +\infty$.
 We let meet and join be the min and max operators respectively.
 For any $x > -\infty$ we define:
 
@@ -169,7 +169,7 @@ algorithm.
 We perform range analysis in a number of steps, some of which are optional.
 The optional parts improve the precision of the range analysis, at the expense of
 a longer running time.
-In Section~\ref{sec:design} we discuss in more details these tradeoffs.
+In Section~\ref{sec:design} we discuss in more detail these tradeoffs.
 
 \begin{figure}[t!]
 \begin{center}
@@ -380,7 +380,7 @@ Given the number of options, the design space of a range analysis algorithm
 is vast.
 In this section we try to cover some of the most important tradeoffs.
 All the numbers that we show have been obtained as the average of 15 runs in
-an Intel Duo CPU with a 3.00GHz clock, and 2.04GHz main memory.
+an Intel Core 2 Quad processor with 2.4 GHz, and 3.5 GB of main memory.
 Figure~\ref{fig:space} plots, for the integer programs in the SPEC CPU 2006
 benchmark suite, precision versus speed for different configurations of
 our implementation.
@@ -445,7 +445,7 @@ An an example, in Figure~\ref{fig:ex_partition_grow_crop} we pass the range
 $[0, 99]$ from variable $k$ to the component that contains variable $j$.
 Had we run the analysis in the entire constraint graph, by the time we
 applied the growth analysis on $j$ we would still find $k$ bound to
-$0, +\infty$.
+$[0, +\infty]$.
 
 
 \subsection{The choice of a program representation}
@@ -498,7 +498,7 @@ However, this growth is small: we did not verify any growth larger than 9\% in
 any integer program of SPEC CPU 2006.
 Second, the e-SSA form program has futures; hence requiring the future resolution
 phase of our algorithm, which is not necessary in SSA form programs.
-Nevertheless, if the e-SSA form slow downs the analysis runtime, its gains in
+Nevertheless, whereas the e-SSA form slows down the analysis runtime, its gains in
 precision are remarkable, as seen in Figure~\ref{fig:precESSA}.
 These gains happen because the e-SSA format lets the analysis to use the
 results of comparisons to narrow the ranges of variables.
@@ -550,8 +550,8 @@ the five largest programs, the intra-procedural version of our analysis saves
 5.23\% of bits per variable.
 The inter-procedural version increases this number to 8.89\%.
 A manual inspection of the SPEC programs reveals that this result is expected:
-these programs use may external library functions, which we cannot analyze, and
-their source codes do no provide enough explicit constants to power our analysis
+these programs use many external library functions, which we cannot analyze, and
+their source codes do not provide enough explicit constants to power our analysis
 up.
 However, with numerical benchmarks we fare much better.
 On average, our inter-procedural algorithm reduces the bitwidth of the
@@ -587,7 +587,7 @@ flow.
 However, in this case the multiple assignment of values to parameters
 makes the ranges of these parameters very large, whereas in reality they
 are not.
-As an example, in Figure~\ref{fig:context}(b), variable \texttt{k} ends up
+As an example, in Figure~\ref{fig:context}(b), variable $k$ ends up
 associated with the range $[0, 10^5]$, but in reality this variable contains
 an interval that is only 100 units long.
 A way to circumvent this source of imprecision is via function inlining,
@@ -616,7 +616,7 @@ function inlining.
 However, proportionally function inlining leads to a smaller percentage of
 bitwidth reduction for many benchmarks.
 In the Stanford Collection, for instance, where most of the functions are
-called in only one location, inlining leads to worst precision results.
+called in only one location, inlining leads to worse precision results.
 On the other hand, for the SPEC programs, inlining, even in terms of
 percentage of reduction, tends to increase our measure of precision.
 
