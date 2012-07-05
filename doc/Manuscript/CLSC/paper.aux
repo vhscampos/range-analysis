@@ -1,4 +1,16 @@
 \relax 
+\ifx\hyper@anchor\@undefined
+\global \let \oldcontentsline\contentsline
+\gdef \contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global \let \oldnewlabel\newlabel
+\gdef \newlabel#1#2{\newlabelxx{#1}#2}
+\gdef \newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\let \contentsline\oldcontentsline
+\let \newlabel\oldnewlabel}
+\else
+\global \let \hyper@last\relax 
+\fi
+
 \emailauthor{victorsc@dcc.ufmg.br}{Victor Hugo Sperle Campos}
 \emailauthor{douglas@dcc.ufmg.br}{Douglas do Couto Teixeira}
 \emailauthor{igor@dcc.ufmg.br}{Igor Rafael de Assis Costa}
@@ -16,7 +28,7 @@
 \citation{Lokuciejewski09}
 \citation{Cong05,Lhairech10,Mahlke01}
 \Newlabel{llp}{a}
-\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}}
 \citation{Mahlke01,Gawlitza09,Stephenson00,Su05}
 \citation{Patterson95,Blanchet03,Venet04}
 \citation{Oh12}
@@ -33,96 +45,96 @@
 \citation{Su05,Su04}
 \citation{Gawlitza09}
 \citation{Couto11}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{3}}
-\newlabel{sec:bck}{{2}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background}{3}{section.2}}
+\newlabel{sec:bck}{{2}{3}{Background\relax }{section.2}{}}
 \citation{Cytron91}
 \citation{Cytron91}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  A suite of constraints that produce an instance of the range analysis problem.}}{4}}
-\newlabel{fig:eval_function}{{1}{4}}
-\newlabel{def:rcp}{{3}{4}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces  A suite of constraints that produce an instance of the range analysis problem.}}{4}{figure.1}}
+\newlabel{fig:eval_function}{{1}{4}{\label {fig:eval_function} A suite of constraints that produce an instance of the range analysis problem}{figure.1}{}}
+\newlabel{def:rcp}{{3}{4}{Background\relax }{section.3}{}}
 \citation{Bodik00}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  (a) Example program. (b) Control Flow Graph in SSA form. (c) Constraints that we extract from the program. (d) Possible solution to the range analysis problem.}}{5}}
-\newlabel{fig:ex1}{{2}{5}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Our Design of a Range Analysis Algorithm}{5}}
-\newlabel{sec:algo}{{4}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces  (a) Example program. (b) Control Flow Graph in SSA form. (c) Constraints that we extract from the program. (d) Possible solution to the range analysis problem.}}{5}{figure.2}}
+\newlabel{fig:ex1}{{2}{5}{\label {fig:ex1} (a) Example program. (b) Control Flow Graph in SSA form. (c) Constraints that we extract from the program. (d) Possible solution to the range analysis problem}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Our Design of a Range Analysis Algorithm}{5}{section.4}}
+\newlabel{sec:algo}{{4}{5}{Our Design of a Range Analysis Algorithm\relax }{section.4}{}}
 \citation{Aho06}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces  Our implementation of range analysis. Rounded boxes are optional steps.}}{6}}
-\newlabel{fig:algorithm}{{3}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces  Our implementation of range analysis. Rounded boxes are optional steps.}}{6}{figure.3}}
+\newlabel{fig:algorithm}{{3}{6}{\label {fig:algorithm} Our implementation of range analysis. Rounded boxes are optional steps}{figure.3}{}}
 \citation{Warren02}
 \citation{Ferrante87}
 \citation{Ferrante87}
 \citation{Ferrante87}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces  (a) The control flow graph from Figure\nobreakspace  {}2\hbox {}(b) converted to standard e-SSA form. (b) A solution to the range analysis problem }}{7}}
-\newlabel{fig:ex_standard_eSSA}{{4}{7}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces  The dependence graph that we build to the program in Figure\nobreakspace  {}4\hbox {}.}}{8}}
-\newlabel{fig:ex_graph}{{5}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Finding Ranges in Strongly Connected Components}{8}}
-\newlabel{sub:micro}{{4.1}{8}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces  (a) The control flow graph from Figure\nobreakspace  {}\ref  {fig:ex1}(b) converted to standard e-SSA form. (b) A solution to the range analysis problem }}{7}{figure.4}}
+\newlabel{fig:ex_standard_eSSA}{{4}{7}{\label {fig:ex_standard_eSSA} (a) The control flow graph from Figure~\ref {fig:ex1}(b) converted to standard e-SSA form. (b) A solution to the range analysis problem \relax }{figure.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces  The dependence graph that we build to the program in Figure\nobreakspace  {}\ref  {fig:ex_standard_eSSA}.}}{8}{figure.5}}
+\newlabel{fig:ex_graph}{{5}{8}{\label {fig:ex_graph} The dependence graph that we build to the program in Figure~\ref {fig:ex_standard_eSSA}}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Finding Ranges in Strongly Connected Components}{8}{subsection.4.1}}
+\newlabel{sub:micro}{{4.1}{8}{Finding Ranges in Strongly Connected Components\relax }{subsection.4.1}{}}
 \citation{Cousot77}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces  (Left) The lattice of the growth analysis. (Right) Cousot and Cousot's widening operator. We evaluate the rules from left-to-right, top-to-bottom, and stop upon finding a pattern matching. Again: given an interval $\iota = [l, u]$, we let $\iota _{\delimiter "3223379 } = l$, and $\iota _{\delimiter "3222378 } = u$}}{9}}
-\newlabel{fig:growth_analysis}{{6}{9}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Rules to replace futures by actual bounds.}}{9}}
-\newlabel{fig:fix_intersects}{{7}{9}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces  (Left) The lattice of the growth analysis. (Right) Cousot and Cousot's widening operator. We evaluate the rules from left-to-right, top-to-bottom, and stop upon finding a pattern matching. Again: given an interval $\iota = [l, u]$, we let $\iota _{\delimiter "3223379 } = l$, and $\iota _{\delimiter "3222378 } = u$}}{9}{figure.6}}
+\newlabel{fig:growth_analysis}{{6}{9}{\label {fig:growth_analysis} (Left) The lattice of the growth analysis. (Right) Cousot and Cousot's widening operator. We evaluate the rules from left-to-right, top-to-bottom, and stop upon finding a pattern matching. Again: given an interval $\iota = [l, u]$, we let $\lb {\iota } = l$, and $\ub {\iota } = u$\relax }{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Rules to replace futures by actual bounds.}}{9}{figure.7}}
+\newlabel{fig:fix_intersects}{{7}{9}{\label {fig:fix_intersects}Rules to replace futures by actual bounds}{figure.7}{}}
 \citation{Cousot77}
 \citation{Cousot78}
 \citation{Mine06}
 \citation{Lakhdar11}
 \citation{Oh12}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Cousot and Cousot's narrowing operator.}}{10}}
-\newlabel{fig:crop_analysis}{{8}{10}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces  Four snapshots of the last SCC of Figure\nobreakspace  {}4\hbox {}. (a) After removing control dependence edges. (b) After running the growth analysis. (c) After fixing the intersections bound to futures. (d) After running the narrowing analysis.}}{10}}
-\newlabel{fig:ex_partition_grow_crop}{{9}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Range Analysis Showdown}{11}}
-\newlabel{sub:showdown}{{4.2}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Cousot and Cousot's narrowing operator.}}{10}{figure.8}}
+\newlabel{fig:crop_analysis}{{8}{10}{\label {fig:crop_analysis}Cousot and Cousot's narrowing operator}{figure.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces  Four snapshots of the last SCC of Figure\nobreakspace  {}\ref  {fig:ex_standard_eSSA}. (a) After removing control dependence edges. (b) After running the growth analysis. (c) After fixing the intersections bound to futures. (d) After running the narrowing analysis.}}{10}{figure.9}}
+\newlabel{fig:ex_partition_grow_crop}{{9}{10}{\label {fig:ex_partition_grow_crop} Four snapshots of the last SCC of Figure~\ref {fig:ex_standard_eSSA}. (a) After removing control dependence edges. (b) After running the growth analysis. (c) After fixing the intersections bound to futures. (d) After running the narrowing analysis}{figure.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Range Analysis Showdown}{11}{subsection.4.2}}
+\newlabel{sub:showdown}{{4.2}{11}{Range Analysis Showdown\relax }{subsection.4.2}{}}
 \citation{Lakhdar11}
 \citation{Lakhdar11}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces  Correlation between program size (number of var nodes in constraint graphs after inlining) and analysis runtime (ms). Coefficient of determination = 0.967. }}{12}}
-\newlabel{fig:TimeCorr}{{10}{12}}
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces  Comparison between program size (number of var nodes in constraint graphs) and memory consumption (KB). Coefficient of determination = 0.9947. }}{12}}
-\newlabel{fig:MemCorr}{{11}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces  Correlation between program size (number of var nodes in constraint graphs after inlining) and analysis runtime (ms). Coefficient of determination = 0.967. }}{12}{figure.10}}
+\newlabel{fig:TimeCorr}{{10}{12}{\label {fig:TimeCorr} Correlation between program size (number of var nodes in constraint graphs after inlining) and analysis runtime (ms). Coefficient of determination = 0.967. \relax }{figure.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces  Comparison between program size (number of var nodes in constraint graphs) and memory consumption (KB). Coefficient of determination = 0.9947. }}{12}{figure.11}}
+\newlabel{fig:MemCorr}{{11}{12}{\label {fig:MemCorr} Comparison between program size (number of var nodes in constraint graphs) and memory consumption (KB). Coefficient of determination = 0.9947. \relax }{figure.11}{}}
 \citation{Stephenson00}
-\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces  (Upper) Comparison between static range analysis and dynamic profiler for upper bounds. (Lower) Comparison between static range analysis and dynamic profiler for lower bounds. The numbers above the benchmark names give the number of variables in each program.}}{13}}
-\newlabel{fig:precision}{{12}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces  (Upper) Comparison between static range analysis and dynamic profiler for upper bounds. (Lower) Comparison between static range analysis and dynamic profiler for lower bounds. The numbers above the benchmark names give the number of variables in each program.}}{13}{figure.12}}
+\newlabel{fig:precision}{{12}{13}{\label {fig:precision} (Upper) Comparison between static range analysis and dynamic profiler for upper bounds. (Lower) Comparison between static range analysis and dynamic profiler for lower bounds. The numbers above the benchmark names give the number of variables in each program}{figure.12}{}}
 \citation{Nielson99}
-\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces  Design space exploration: precision (percentage of bitwidth reduction) versus speed (secs) for different configurations of our algorithm analyzing the SPEC CPU 2006 integer benchmarks.}}{14}}
-\newlabel{fig:space}{{13}{14}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Design Space}{14}}
-\newlabel{sec:design}{{5}{14}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Strongly Connected Components}{14}}
-\newlabel{sub:sccs}{{5.1}{14}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces  Design space exploration: precision (percentage of bitwidth reduction) versus speed (secs) for different configurations of our algorithm analyzing the SPEC CPU 2006 integer benchmarks.}}{14}{figure.13}}
+\newlabel{fig:space}{{13}{14}{\label {fig:space} Design space exploration: precision (percentage of bitwidth reduction) versus speed (secs) for different configurations of our algorithm analyzing the SPEC CPU 2006 integer benchmarks}{figure.13}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Design Space}{14}{section.5}}
+\newlabel{sec:design}{{5}{14}{Design Space\relax }{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Strongly Connected Components}{14}{subsection.5.1}}
+\newlabel{sub:sccs}{{5.1}{14}{Strongly Connected Components\relax }{subsection.5.1}{}}
 \citation{Cytron91}
 \citation{Bodik00}
 \citation{Rimsa11}
 \citation{Bodik00}
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces  (Left) Time to run our analysis without building strong components divided by time to run the analysis on strongly connected components. (Right) Precision, in bitwidth reduction, that we obtain with strong components, divided by the precision that we obtain without them. }}{15}}
-\newlabel{fig:impactSCC}{{14}{15}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}The choice of a program representation}{15}}
-\newlabel{sub:program_rep}{{5.2}{15}}
-\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces  (Left) Bars give the time to run analysis on e-SSA form programs divided by the time to run analysis on SSA form programs. (Right) Bars give the size of the e-SSA form program, in number of assembly instructions, divided by the size of the SSA form program.}}{16}}
-\newlabel{fig:impactESSA}{{15}{16}}
-\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces  The impact of the e-SSA transformation on precision for three different benchmark suites. Bars give the ratio of precision (in bitwidth reduction), obtained with e-SSA form conversion divided by precision without e-SSA form conversion.}}{16}}
-\newlabel{fig:precESSA}{{16}{16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces  (Left) Time to run our analysis without building strong components divided by time to run the analysis on strongly connected components. (Right) Precision, in bitwidth reduction, that we obtain with strong components, divided by the precision that we obtain without them. }}{15}{figure.14}}
+\newlabel{fig:impactSCC}{{14}{15}{\label {fig:impactSCC} (Left) Time to run our analysis without building strong components divided by time to run the analysis on strongly connected components. (Right) Precision, in bitwidth reduction, that we obtain with strong components, divided by the precision that we obtain without them. \relax }{figure.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}The choice of a program representation}{15}{subsection.5.2}}
+\newlabel{sub:program_rep}{{5.2}{15}{The choice of a program representation\relax }{subsection.5.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces  (Left) Bars give the time to run analysis on e-SSA form programs divided by the time to run analysis on SSA form programs. (Right) Bars give the size of the e-SSA form program, in number of assembly instructions, divided by the size of the SSA form program.}}{16}{figure.15}}
+\newlabel{fig:impactESSA}{{15}{16}{\label {fig:impactESSA} (Left) Bars give the time to run analysis on e-SSA form programs divided by the time to run analysis on SSA form programs. (Right) Bars give the size of the e-SSA form program, in number of assembly instructions, divided by the size of the SSA form program}{figure.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces  The impact of the e-SSA transformation on precision for three different benchmark suites. Bars give the ratio of precision (in bitwidth reduction), obtained with e-SSA form conversion divided by precision without e-SSA form conversion.}}{16}{figure.16}}
+\newlabel{fig:precESSA}{{16}{16}{\label {fig:precESSA} The impact of the e-SSA transformation on precision for three different benchmark suites. Bars give the ratio of precision (in bitwidth reduction), obtained with e-SSA form conversion divided by precision without e-SSA form conversion}{figure.16}{}}
 \citation{Stephenson00}
 \citation{Stephenson00}
 \citation{Stephenson00}
-\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces  Example where an intra-procedural implementation would lead to imprecise results. }}{17}}
-\newlabel{fig:intra}{{17}{17}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Intra versus Inter-procedural Analysis}{17}}
-\newlabel{sub:whole}{{5.3}{17}}
-\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces  Example where a context-sensitive implementation improves the results of range analysis. }}{18}}
-\newlabel{fig:context}{{18}{18}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Achieving Partial Context-Sensitiveness via Function Inlining}{18}}
-\newlabel{sub:context}{{5.4}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces  Example where an intra-procedural implementation would lead to imprecise results. }}{17}{figure.17}}
+\newlabel{fig:intra}{{17}{17}{\label {fig:intra} Example where an intra-procedural implementation would lead to imprecise results. \relax }{figure.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Intra versus Inter-procedural Analysis}{17}{subsection.5.3}}
+\newlabel{sub:whole}{{5.3}{17}{Intra versus Inter-procedural Analysis\relax }{subsection.5.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces  Example where a context-sensitive implementation improves the results of range analysis. }}{18}{figure.18}}
+\newlabel{fig:context}{{18}{18}{\label {fig:context} Example where a context-sensitive implementation improves the results of range analysis. \relax }{figure.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Achieving Partial Context-Sensitiveness via Function Inlining}{18}{subsection.5.4}}
+\newlabel{sub:context}{{5.4}{18}{Achieving Partial Context-Sensitiveness via Function Inlining\relax }{subsection.5.4}{}}
 \citation{Cousot77}
 \citation{Nielson99}
-\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces  The impact of inter-procedural analysis on precision. Each bar shows precision in \%bitwidth reduction.}}{19}}
-\newlabel{fig:wholeImpact}{{19}{19}}
-\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces  (Left) Runtime comparison between intra, inter and inter+inline versions of our algorithm. (Right) Runtime comparison between different widening operators. The bars are normalized to the time to run the intra-procedural analysis. }}{19}}
-\newlabel{fig:timeComp}{{20}{19}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Choosing a Widening Strategy}{19}}
-\newlabel{sub:widen}{{5.5}{19}}
-\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces  An example where jump-set widening is more precise.}}{20}}
-\newlabel{fig:jumpSet}{{21}{20}}
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces  The impact of inter-procedural analysis on precision. Each bar shows precision in \%bitwidth reduction.}}{19}{figure.19}}
+\newlabel{fig:wholeImpact}{{19}{19}{\label {fig:wholeImpact} The impact of inter-procedural analysis on precision. Each bar shows precision in \%bitwidth reduction}{figure.19}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces  (Left) Runtime comparison between intra, inter and inter+inline versions of our algorithm. (Right) Runtime comparison between different widening operators. The bars are normalized to the time to run the intra-procedural analysis. }}{19}{figure.20}}
+\newlabel{fig:timeComp}{{20}{19}{\label {fig:timeComp} (Left) Runtime comparison between intra, inter and inter+inline versions of our algorithm. (Right) Runtime comparison between different widening operators. The bars are normalized to the time to run the intra-procedural analysis. \relax }{figure.20}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Choosing a Widening Strategy}{19}{subsection.5.5}}
+\newlabel{sub:widen}{{5.5}{19}{Choosing a Widening Strategy\relax }{subsection.5.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces  An example where jump-set widening is more precise.}}{20}{figure.21}}
+\newlabel{fig:jumpSet}{{21}{20}{\label {fig:jumpSet} An example where jump-set widening is more precise}{figure.21}{}}
 \citation{Cousot77}
 \citation{Patterson95}
 \citation{Stephenson00}
@@ -134,10 +146,10 @@
 \citation{Johnson93}
 \citation{Ramalingan02}
 \citation{Pingali95,Pingali97,Johnson94}
-\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces  Variation in the precision of our analysis given the widening strategy. The size of each benchmark is given in number of variable nodes in the constraint graph. Precision is given in percentage of bitwidth reduction. Numbers in parenthesis are percentage of gain over 0 + Simple.}}{21}}
-\newlabel{fig:wideningPrec}{{22}{21}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Related work}{21}}
-\newlabel{sec:rel}{{6}{21}}
+\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces  Variation in the precision of our analysis given the widening strategy. The size of each benchmark is given in number of variable nodes in the constraint graph. Precision is given in percentage of bitwidth reduction. Numbers in parenthesis are percentage of gain over 0 + Simple.}}{21}{figure.22}}
+\newlabel{fig:wideningPrec}{{22}{21}{\label {fig:wideningPrec} Variation in the precision of our analysis given the widening strategy. The size of each benchmark is given in number of variable nodes in the constraint graph. Precision is given in percentage of bitwidth reduction. Numbers in parenthesis are percentage of gain over 0 + Simple}{figure.22}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Related work}{21}{section.6}}
+\newlabel{sec:rel}{{6}{21}{Related work\relax }{section.6}{}}
 \citation{Cytron91}
 \citation{Ottenstein90,Tu95}
 \citation{Ananian99}
@@ -157,8 +169,8 @@
 \bibcite{Barik06}{{5}{2006}{{Barik et~al.}}{{Barik, Grothoff, Gupta, Pandit and Udupa}}}
 \bibcite{Tallam03}{{6}{2003}{{Tallam and Gupta}}{{}}}
 \bibcite{Kong98}{{7}{1998}{{Kong and Wilken}}{{}}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Final Considerations}{23}}
-\newlabel{sec:con}{{7}{23}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Final Considerations}{23}{section.7}}
+\newlabel{sec:con}{{7}{23}{Final Considerations\relax }{section.7}{}}
 \bibcite{Pereira08}{{8}{2008}{{Pereira and Palsberg}}{{}}}
 \bibcite{Scholz02}{{9}{2002}{{Scholz and Eckstein}}{{}}}
 \bibcite{Yanqin11}{{10}{2011}{{Yang et~al.}}{{Yang, Yan, Shao and Guo}}}

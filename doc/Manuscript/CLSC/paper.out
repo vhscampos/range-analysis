@@ -1,0 +1,13 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}
+\BOOKMARK [1][-]{section.2}{Background}{}
+\BOOKMARK [1][-]{section.4}{Our Design of a Range Analysis Algorithm}{}
+\BOOKMARK [2][-]{subsection.4.1}{Finding Ranges in Strongly Connected Components}{section.4}
+\BOOKMARK [2][-]{subsection.4.2}{Range Analysis Showdown}{section.4}
+\BOOKMARK [1][-]{section.5}{Design Space}{}
+\BOOKMARK [2][-]{subsection.5.1}{Strongly Connected Components}{section.5}
+\BOOKMARK [2][-]{subsection.5.2}{The choice of a program representation}{section.5}
+\BOOKMARK [2][-]{subsection.5.3}{Intra versus Inter-procedural Analysis}{section.5}
+\BOOKMARK [2][-]{subsection.5.4}{Achieving Partial Context-Sensitiveness via Function Inlining}{section.5}
+\BOOKMARK [2][-]{subsection.5.5}{Choosing a Widening Strategy}{section.5}
+\BOOKMARK [1][-]{section.6}{Related work}{}
+\BOOKMARK [1][-]{section.7}{Final Considerations}{}

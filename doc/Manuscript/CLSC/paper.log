@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.4.27)  5 JUL 2012 15:46
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.4.27)  5 JUL 2012 15:56
 entering extended mode
  %&-line parsing enabled.
 **paper.tex
@@ -177,39 +177,170 @@ erence Rules
 \mpr@vlist=\box33
 \mpr@right=\box34
 )
-(./paper.aux)
+(/usr/share/texmf-texlive/tex/latex/hyperref/hyperref.sty
+Package: hyperref 2009/10/09 v6.79a Hypertext links for LaTeX
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/ifpdf.sty
+Package: ifpdf 2009/04/10 v2.0 Provides the ifpdf switch (HO)
+Package ifpdf Info: pdfTeX in pdf mode detected.
+)
+(/usr/share/texmf-texlive/tex/generic/oberdiek/ifvtex.sty
+Package: ifvtex 2008/11/04 v1.4 Switches for detecting VTeX and its modes (HO)
+Package ifvtex Info: VTeX not detected.
+)
+(/usr/share/texmf-texlive/tex/generic/ifxetex/ifxetex.sty
+Package: ifxetex 2009/01/23 v0.5 Provides ifxetex conditional
+)
+(/usr/share/texmf-texlive/tex/latex/oberdiek/hycolor.sty
+Package: hycolor 2009/10/02 v1.5 Code for color options of hyperref/bookmark (H
+O)
+
+(/usr/share/texmf-texlive/tex/latex/oberdiek/xcolor-patch.sty
+Package: xcolor-patch 2009/10/02 xcolor patch
+))
+\@linkdim=\dimen119
+\Hy@linkcounter=\count107
+\Hy@pagecounter=\count108
+
+(/usr/share/texmf-texlive/tex/latex/hyperref/pd1enc.def
+File: pd1enc.def 2009/10/09 v6.79a Hyperref: PDFDocEncoding definition (HO)
+)
+(/usr/share/texmf-texlive/tex/generic/oberdiek/etexcmds.sty
+Package: etexcmds 2007/12/12 v1.2 Prefix for e-TeX command names (HO)
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/infwarerr.sty
+Package: infwarerr 2007/09/09 v1.2 Providing info/warning/message (HO)
+)
+Package etexcmds Info: Could not find \expanded.
+(etexcmds)             That can mean that you are not using pdfTeX 1.50 or
+(etexcmds)             that some package has redefined \expanded.
+(etexcmds)             In the latter case, load this package earlier.
+)
+(/usr/share/texmf-texlive/tex/latex/latexconfig/hyperref.cfg
+File: hyperref.cfg 2002/06/06 v1.2 hyperref configuration of TeXLive
+)
+(/usr/share/texmf-texlive/tex/latex/oberdiek/kvoptions.sty
+Package: kvoptions 2009/08/13 v3.4 Keyval support for LaTeX options (HO)
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/kvsetkeys.sty
+Package: kvsetkeys 2009/07/30 v1.5 Key value parser with default handler suppor
+t (HO)
+))
+Package hyperref Info: Hyper figures OFF on input line 2975.
+Package hyperref Info: Link nesting OFF on input line 2980.
+Package hyperref Info: Hyper index ON on input line 2983.
+Package hyperref Info: Plain pages OFF on input line 2990.
+Package hyperref Info: Backreferencing OFF on input line 2995.
+
+Implicit mode ON; LaTeX internals redefined
+Package hyperref Info: Bookmarks ON on input line 3191.
+(/usr/share/texmf-texlive/tex/latex/ltxmisc/url.sty
+\Urlmuskip=\muskip11
+Package: url 2006/04/12  ver 3.3  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 3428.
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/bitset.sty
+Package: bitset 2007/09/28 v1.0 Data type bit set (HO)
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/intcalc.sty
+Package: intcalc 2007/09/27 v1.1 Expandable integer calculations (HO)
+)
+(/usr/share/texmf-texlive/tex/generic/oberdiek/bigintcalc.sty
+Package: bigintcalc 2007/11/11 v1.1 Expandable big integer calculations (HO)
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/pdftexcmds.sty
+Package: pdftexcmds 2009/09/23 v0.6 LuaTeX support for pdfTeX utility functions
+ (HO)
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/ifluatex.sty
+Package: ifluatex 2009/04/17 v1.2 Provides the ifluatex switch (HO)
+Package ifluatex Info: LuaTeX not detected.
+)
+(/usr/share/texmf-texlive/tex/generic/oberdiek/ltxcmds.sty
+Package: ltxcmds 2009/08/05 v1.0 Some LaTeX kernel commands for general use (HO
+)
+)
+Package pdftexcmds Info: LuaTeX not detected.
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+)))
+\Fld@menulength=\count109
+\Field@Width=\dimen120
+\Fld@charsize=\dimen121
+\Field@toks=\toks25
+Package hyperref Info: Hyper figures OFF on input line 4377.
+Package hyperref Info: Link nesting OFF on input line 4382.
+Package hyperref Info: Hyper index ON on input line 4385.
+Package hyperref Info: backreferencing OFF on input line 4392.
+Package hyperref Info: Link coloring OFF on input line 4397.
+Package hyperref Info: Link coloring with OCG OFF on input line 4402.
+Package hyperref Info: PDF/A mode OFF on input line 4407.
+
+(/usr/share/texmf-texlive/tex/generic/oberdiek/atbegshi.sty
+Package: atbegshi 2008/07/31 v1.9 At begin shipout hook (HO)
+)
+\Hy@abspage=\count110
+\c@Item=\count111
+\c@Hfootnote=\count112
+)
+*hyperref using default driver hpdftex*
+(/usr/share/texmf-texlive/tex/latex/hyperref/hpdftex.def
+File: hpdftex.def 2009/10/09 v6.79a Hyperref driver for pdfTeX
+\Fld@listcount=\count113
+) (./paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 27.
-LaTeX Font Info:    ... okay on input line 27.
- (/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 28.
+LaTeX Font Info:    ... okay on input line 28.
+
+(/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count107
-\scratchdimen=\dimen119
+\scratchcounter=\count114
+\scratchdimen=\dimen122
 \scratchbox=\box35
-\nofMPsegments=\count108
-\nofMParguments=\count109
-\everyMPshowfont=\toks25
-\MPscratchCnt=\count110
-\MPscratchDim=\dimen120
-\MPnumerator=\count111
-\everyMPtoPDFconversion=\toks26
+\nofMPsegments=\count115
+\nofMParguments=\count116
+\everyMPshowfont=\toks26
+\MPscratchCnt=\count117
+\MPscratchDim=\dimen123
+\MPnumerator=\count118
+\everyMPtoPDFconversion=\toks27
 )
-LaTeX Font Info:    Try loading font information for U+msa on input line 84.
+Package hyperref Info: Link coloring OFF on input line 28.
+ (/usr/share/texmf-texlive/tex/latex/hyperref/nameref.sty
+Package: nameref 2007/05/29 v2.31 Cross-referencing by name of section
+
+(/usr/share/texmf-texlive/tex/latex/oberdiek/refcount.sty
+Package: refcount 2008/08/11 v3.1 Data extraction from references (HO)
+)
+\c@section@level=\count119
+)
+LaTeX Info: Redefining \ref on input line 28.
+LaTeX Info: Redefining \pageref on input line 28.
+ (./paper.out)
+(./paper.out)
+\@outlinefile=\write4
+\openout4 = `paper.out'.
+
+\AtBeginShipoutBox=\box36
+LaTeX Font Info:    Try loading font information for U+msa on input line 85.
  (/usr/share/texmf-texlive/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2009/06/22 v3.00 AMS symbols A
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 84.
+LaTeX Font Info:    Try loading font information for U+msb on input line 85.
 
 (/usr/share/texmf-texlive/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2009/06/22 v3.00 AMS symbols B
@@ -217,120 +348,120 @@ File: umsb.fd 2009/06/22 v3.00 AMS symbols B
 
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-Overfull \hbox (10.30511pt too wide) in paragraph at lines 138--138
-[][]\OT1/cmtt/m/n/8 hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/src/
-ion/RangeAnalysis.cpp| 
+Overfull \hbox (10.30511pt too wide) in paragraph at lines 139--139
+[][][]\OT1/cmtt/m/n/8 hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/sr
+c/ion/RangeAnalysis.cpp| 
  []
 
 [2] [3]
-Overfull \hbox (53.59482pt too wide) in alignment at lines 277--313
+Overfull \hbox (53.59482pt too wide) in alignment at lines 278--314
  [][][] []
  []
 
-[4] <images/ex1.pdf, id=36, 550.05402pt x 215.80524pt>
+[4] <images/ex1.pdf, id=190, 550.05402pt x 215.80524pt>
 File: images/ex1.pdf Graphic file (type pdf)
  <use images/ex1.pdf>
-<images/algorithm.pdf, id=37, 544.03452pt x 145.54475pt>
+<images/algorithm.pdf, id=192, 544.03452pt x 145.54475pt>
 File: images/algorithm.pdf Graphic file (type pdf)
 
 <use images/algorithm.pdf> [5 <./images/ex1.pdf>] [6 <./images/algorithm.pdf>]
-<images/ex_standard_eSSA.pdf, id=101, 492.83824pt x 224.83899pt>
+<images/ex_standard_eSSA.pdf, id=268, 492.83824pt x 224.83899pt>
 File: images/ex_standard_eSSA.pdf Graphic file (type pdf)
 
 <use images/ex_standard_eSSA.pdf> [7 <./images/ex_standard_eSSA.pdf>]
-<images/ex_graph.pdf, id=141, 308.15227pt x 141.52675pt>
+<images/ex_graph.pdf, id=323, 308.15227pt x 141.52675pt>
 File: images/ex_graph.pdf Graphic file (type pdf)
 
 <use images/ex_graph.pdf> [8 <./images/ex_graph.pdf>]
-<images/growth_lattice.pdf, id=186, 95.85893pt x 101.38075pt>
+<images/growth_lattice.pdf, id=376, 95.85893pt x 101.38075pt>
 File: images/growth_lattice.pdf Graphic file (type pdf)
 
 <use images/growth_lattice.pdf>
-Overfull \hbox (38.95319pt too wide) in paragraph at lines 642--643
+Overfull \hbox (38.95319pt too wide) in paragraph at lines 643--644
 [][] 
  []
 
 
-Overfull \hbox (33.4022pt too wide) in alignment at lines 647--661
+Overfull \hbox (33.4022pt too wide) in alignment at lines 648--662
  [][][] []
  []
 
 [9 <./images/growth_lattice.pdf>]
-Overfull \hbox (1.1878pt too wide) in paragraph at lines 743--750
+Overfull \hbox (1.1878pt too wide) in paragraph at lines 744--751
 \OT1/cmr/bx/n/10 Narrowing Anal-y-sis. \OT1/cmr/m/n/10 The growth anal-y-sis as
 -so-ciates very con-ser-va-tive bounds
  []
 
-<images/ex_partition_grow_crop.pdf, id=222, 403.50548pt x 253.94977pt>
+<images/ex_partition_grow_crop.pdf, id=422, 403.50548pt x 253.94977pt>
 File: images/ex_partition_grow_crop.pdf Graphic file (type pdf)
 
 <use images/ex_partition_grow_crop.pdf> [10 <./images/ex_partition_grow_crop.pd
-f>] <images/TimeCorr.pdf, id=275, 746.79pt x 198.7425pt>
+f>] <images/TimeCorr.pdf, id=493, 746.79pt x 198.7425pt>
 File: images/TimeCorr.pdf Graphic file (type pdf)
 
 <use images/TimeCorr.pdf> [11]
-<images/MemCorr.pdf, id=279, 622.325pt x 171.64125pt>
+<images/MemCorr.pdf, id=504, 622.325pt x 171.64125pt>
 File: images/MemCorr.pdf Graphic file (type pdf)
  <use images/MemCorr.pdf>
-<images/precUpperBound.pdf, id=280, 680.5425pt x 183.68625pt>
+<images/precUpperBound.pdf, id=509, 680.5425pt x 183.68625pt>
 File: images/precUpperBound.pdf Graphic file (type pdf)
 
 <use images/precUpperBound.pdf>
-<images/precLowerBound.pdf, id=281, 566.11298pt x 168.62799pt>
+<images/precLowerBound.pdf, id=510, 566.11298pt x 168.62799pt>
 File: images/precLowerBound.pdf Graphic file (type pdf)
 
 <use images/precLowerBound.pdf> [12 <./images/TimeCorr.pdf> <./images/MemCorr.p
 df>] [13 <./images/precUpperBound.pdf> <./images/precLowerBound.pdf>]
-<images/space.pdf, id=357, 478.78876pt x 261.09747pt>
+<images/space.pdf, id=594, 478.78876pt x 261.09747pt>
 File: images/space.pdf Graphic file (type pdf)
  <use images/space.pdf>
 [14 <./images/space.pdf>]
-<images/impactSCC.pdf, id=387, 562.636pt x 165.954pt>
+<images/impactSCC.pdf, id=628, 562.636pt x 165.954pt>
 File: images/impactSCC.pdf Graphic file (type pdf)
 
 <use images/impactSCC.pdf> [15 <./images/impactSCC.pdf>]
-<images/impactESSA.pdf, id=573, 563.10577pt x 166.62552pt>
+<images/impactESSA.pdf, id=823, 563.10577pt x 166.62552pt>
 File: images/impactESSA.pdf Graphic file (type pdf)
 
 <use images/impactESSA.pdf>
-<images/precESSA.pdf, id=574, 556.33444pt x 173.65076pt>
+<images/precESSA.pdf, id=828, 556.33444pt x 173.65076pt>
 File: images/precESSA.pdf Graphic file (type pdf)
 
 <use images/precESSA.pdf> [16 <./images/impactESSA.pdf> <./images/precESSA.pdf>
-] <images/intra.pdf, id=811, 429.602pt x 172.64601pt>
+] <images/intra.pdf, id=1072, 429.602pt x 172.64601pt>
 File: images/intra.pdf Graphic file (type pdf)
  <use images/intra.pdf>
 [17 <./images/intra.pdf>]
-<images/context.pdf, id=861, 525.96703pt x 191.71826pt>
+<images/context.pdf, id=1136, 525.96703pt x 191.71826pt>
 File: images/context.pdf Graphic file (type pdf)
 
 <use images/context.pdf>
-<images/wholeImpact.pdf, id=862, 556.32745pt x 170.63649pt>
+<images/wholeImpact.pdf, id=1138, 556.32745pt x 170.63649pt>
 File: images/wholeImpact.pdf Graphic file (type pdf)
 
 <use images/wholeImpact.pdf> [18 <./images/context.pdf>]
-<images/timeIntraInterInline.pdf, id=895, 322.20375pt x 200.75pt>
+<images/timeIntraInterInline.pdf, id=1175, 322.20375pt x 200.75pt>
 File: images/timeIntraInterInline.pdf Graphic file (type pdf)
 
 <use images/timeIntraInterInline.pdf>
-<images/timeWideningOperators.pdf, id=896, 434.62375pt x 249.93375pt>
+<images/timeWideningOperators.pdf, id=1176, 434.62375pt x 249.93375pt>
 File: images/timeWideningOperators.pdf Graphic file (type pdf)
 
 <use images/timeWideningOperators.pdf> [19 <./images/wholeImpact.pdf> <./images
 /timeIntraInterInline.pdf> <./images/timeWideningOperators.pdf>]
-<images/jumpSet.pdf, id=977, 515.92848pt x 224.83899pt>
+<images/jumpSet.pdf, id=1270, 515.92848pt x 224.83899pt>
 File: images/jumpSet.pdf Graphic file (type pdf)
 
 <use images/jumpSet.pdf> [20 <./images/jumpSet.pdf>] [21] [22] (./paper.bbl
 [23] [24] [25] [26]) [27] (./paper.aux) ) 
 Here is how much of TeX's memory you used:
- 2885 strings out of 493848
- 35333 string characters out of 1152823
- 96642 words of memory out of 3000000
- 6116 multiletter control sequences out of 15000+50000
+ 6203 strings out of 493848
+ 85264 string characters out of 1152823
+ 169648 words of memory out of 3000000
+ 9229 multiletter control sequences out of 15000+50000
  13323 words of font info for 51 fonts, out of 3000000 for 9000
  714 hyphenation exceptions out of 8191
- 32i,27n,30p,426b,529s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 38i,27n,36p,436b,539s stack positions out of 5000i,500n,10000p,200000b,50000s
 </usr/share/texmf-texlive/fonts/type1/
 public/amsfonts/cm/cmbx10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsf
 onts/cm/cmbxti10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/c
@@ -354,9 +485,9 @@ sfonts/cm/cmti7.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cm
 ti8.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmtt10.pfb></u
 sr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmtt8.pfb></usr/share/tex
 mf-texlive/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on paper.pdf (27 pages, 1211866 bytes).
+Output written on paper.pdf (27 pages, 1267027 bytes).
 PDF statistics:
- 1121 PDF objects out of 1200 (max. 8388607)
- 0 named destinations out of 1000 (max. 500000)
- 101 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 1510 PDF objects out of 1728 (max. 8388607)
+ 129 named destinations out of 1000 (max. 500000)
+ 205 words of extra memory for PDF output out of 10000 (max. 10000000)
 
