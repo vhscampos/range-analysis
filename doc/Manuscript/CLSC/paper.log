@@ -1,0 +1,362 @@
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.4.27)  5 JUL 2012 15:06
+entering extended mode
+ %&-line parsing enabled.
+**paper.tex
+(./paper.tex
+LaTeX2e <2009/09/24>
+Babel <v3.8l> and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, farsi, arabic, croatian, bulgarian, ukrainian, russian, czech, slov
+ak, danish, dutch, finnish, french, basque, ngerman, german, german-x-2009-06-1
+9, ngerman-x-2009-06-19, ibycus, monogreek, greek, ancientgreek, hungarian, san
+skrit, italian, latin, latvian, lithuanian, mongolian2a, mongolian, bokmal, nyn
+orsk, romanian, irish, coptic, serbian, turkish, welsh, esperanto, uppersorbian
+, estonian, indonesian, interlingua, icelandic, kurmanji, slovenian, polish, po
+rtuguese, spanish, galician, catalan, swedish, ukenglish, pinyin, loaded.
+(./elsarticle.cls
+Document Class: elsarticle 2009/09/17, 1.20b: Elsevier Ltd
+\@bls=\dimen102
+(/usr/share/texmf-texlive/tex/latex/base/article.cls
+Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
+(/usr/share/texmf-texlive/tex/latex/base/size10.clo
+File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen103
+)
+(/usr/share/texmf-texlive/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf-texlive/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/usr/share/texmf-texlive/tex/latex/graphics/graphics.sty
+Package: graphics 2009/02/05 v1.0o Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/share/texmf-texlive/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/etc/texmf/tex/latex/config/graphics.cfg
+File: graphics.cfg 2009/08/28 v1.8 graphics configuration of TeX Live
+)
+Package graphics Info: Driver file: pdftex.def on input line 91.
+
+(/usr/share/texmf-texlive/tex/latex/pdftex-def/pdftex.def
+File: pdftex.def 2010/03/12 v0.04p Graphics/color for pdfTeX
+\Gread@gobject=\count87
+))
+\Gin@req@height=\dimen104
+\Gin@req@width=\dimen105
+)
+(/usr/share/texmf-texlive/tex/latex/psnfss/pifont.sty
+Package: pifont 2005/04/12 PSNFSS-v9.2a Pi font support (SPQR) 
+LaTeX Font Info:    Try loading font information for U+pzd on input line 63.
+
+(/usr/share/texmf-texlive/tex/latex/psnfss/upzd.fd
+File: upzd.fd 2001/06/04 font definitions for U/pzd.
+)
+LaTeX Font Info:    Try loading font information for U+psy on input line 64.
+
+(/usr/share/texmf-texlive/tex/latex/psnfss/upsy.fd
+File: upsy.fd 2001/06/04 font definitions for U/psy.
+))
+\c@tnote=\count88
+\c@fnote=\count89
+\c@cnote=\count90
+\c@ead=\count91
+\c@author=\count92
+\@eadauthor=\toks15
+\c@affn=\count93
+\absbox=\box26
+\keybox=\box27
+\Columnwidth=\dimen106
+\space@left=\dimen107
+\els@boxa=\box28
+\els@boxb=\box29
+\leftMargin=\dimen108
+\@enLab=\toks16
+\@sep=\skip43
+\@@sep=\skip44
+ (./paper.spl)
+(/usr/share/texmf-texlive/tex/latex/natbib/natbib.sty
+Package: natbib 2009/07/16 8.31 (PWD, AO)
+\bibhang=\skip45
+\bibsep=\skip46
+LaTeX Info: Redefining \cite on input line 694.
+\c@NAT@ctr=\count94
+)
+\splwrite=\write3
+\openout3 = `paper.spl'.
+
+\appnamewidth=\dimen109
+)
+(/usr/share/texmf-texlive/tex/latex/amsfonts/amssymb.sty
+Package: amssymb 2009/06/22 v3.00
+
+(/usr/share/texmf-texlive/tex/latex/amsfonts/amsfonts.sty
+Package: amsfonts 2009/06/22 v3.00 Basic AMSFonts support
+\@emptytoks=\toks17
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 96.
+))
+(/usr/share/texmf-texlive/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2000/07/18 v2.13 AMS math features
+\@mathmargin=\skip47
+
+For additional information on amsmath, use the `?' option.
+(/usr/share/texmf-texlive/tex/latex/amsmath/amstext.sty
+Package: amstext 2000/06/29 v2.01
+
+(/usr/share/texmf-texlive/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0
+\@emptytoks=\toks18
+\ex@=\dimen110
+))
+(/usr/share/texmf-texlive/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d
+\pmbraise@=\dimen111
+)
+(/usr/share/texmf-texlive/tex/latex/amsmath/amsopn.sty
+Package: amsopn 1999/12/14 v2.01 operator names
+)
+\inf@bad=\count95
+LaTeX Info: Redefining \frac on input line 211.
+\uproot@=\count96
+\leftroot@=\count97
+LaTeX Info: Redefining \overline on input line 307.
+\classnum@=\count98
+\DOTSCASE@=\count99
+LaTeX Info: Redefining \ldots on input line 379.
+LaTeX Info: Redefining \dots on input line 382.
+LaTeX Info: Redefining \cdots on input line 467.
+\Mathstrutbox@=\box30
+\strutbox@=\box31
+\big@size=\dimen112
+LaTeX Font Info:    Redeclaring font encoding OML on input line 567.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
+\macc@depth=\count100
+\c@MaxMatrixCols=\count101
+\dotsspace@=\muskip10
+\c@parentequation=\count102
+\dspbrk@lvl=\count103
+\tag@help=\toks19
+\row@=\count104
+\column@=\count105
+\maxfields@=\count106
+\andhelp@=\toks20
+\eqnshift@=\dimen113
+\alignsep@=\dimen114
+\tagshift@=\dimen115
+\tagwidth@=\dimen116
+\totwidth@=\dimen117
+\lineht@=\dimen118
+\@envbody=\toks21
+\multlinegap=\skip48
+\multlinetaggap=\skip49
+\mathdisplay@stack=\toks22
+LaTeX Info: Redefining \[ on input line 2666.
+LaTeX Info: Redefining \] on input line 2667.
+) (./mathpartir.sty
+Package: mathpartir 2005/12/20 version 1.2.0 Math Paragraph for Typesetting Inf
+erence Rules
+\mpr@andskip=\skip50
+\mpr@lista=\toks23
+\mpr@listb=\toks24
+\mpr@hlist=\box32
+\mpr@vlist=\box33
+\mpr@right=\box34
+)
+(./paper.aux)
+\openout1 = `paper.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 27.
+LaTeX Font Info:    ... okay on input line 27.
+ (/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count107
+\scratchdimen=\dimen119
+\scratchbox=\box35
+\nofMPsegments=\count108
+\nofMParguments=\count109
+\everyMPshowfont=\toks25
+\MPscratchCnt=\count110
+\MPscratchDim=\dimen120
+\MPnumerator=\count111
+\everyMPtoPDFconversion=\toks26
+)
+LaTeX Font Info:    Try loading font information for U+msa on input line 67.
+ (/usr/share/texmf-texlive/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2009/06/22 v3.00 AMS symbols A
+)
+LaTeX Font Info:    Try loading font information for U+msb on input line 67.
+
+(/usr/share/texmf-texlive/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2009/06/22 v3.00 AMS symbols B
+) [1
+
+
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
+Overfull \hbox (10.30511pt too wide) in paragraph at lines 121--121
+[][]\OT1/cmtt/m/n/8 hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/src/
+ion/RangeAnalysis.cpp| 
+ []
+
+[2] [3]
+Overfull \hbox (53.59482pt too wide) in alignment at lines 260--296
+ [][][] []
+ []
+
+[4] <images/ex1.pdf, id=35, 550.05402pt x 215.80524pt>
+File: images/ex1.pdf Graphic file (type pdf)
+ <use images/ex1.pdf>
+<images/algorithm.pdf, id=36, 544.03452pt x 145.54475pt>
+File: images/algorithm.pdf Graphic file (type pdf)
+
+<use images/algorithm.pdf> [5 <./images/ex1.pdf> <./images/algorithm.pdf>]
+[6] <images/ex_standard_eSSA.pdf, id=100, 492.83824pt x 224.83899pt>
+File: images/ex_standard_eSSA.pdf Graphic file (type pdf)
+
+<use images/ex_standard_eSSA.pdf>
+<images/ex_graph.pdf, id=101, 308.15227pt x 141.52675pt>
+File: images/ex_graph.pdf Graphic file (type pdf)
+
+<use images/ex_graph.pdf> [7 <./images/ex_standard_eSSA.pdf>] [8 <./images/ex_g
+raph.pdf>] <images/growth_lattice.pdf, id=185, 95.85893pt x 101.38075pt>
+File: images/growth_lattice.pdf Graphic file (type pdf)
+
+<use images/growth_lattice.pdf>
+Overfull \hbox (38.95319pt too wide) in paragraph at lines 625--626
+[][] 
+ []
+
+
+Overfull \hbox (33.4022pt too wide) in alignment at lines 630--644
+ [][][] []
+ []
+
+[9 <./images/growth_lattice.pdf>]
+Overfull \hbox (1.1878pt too wide) in paragraph at lines 726--733
+\OT1/cmr/bx/n/10 Narrowing Anal-y-sis. \OT1/cmr/m/n/10 The growth anal-y-sis as
+-so-ciates very con-ser-va-tive bounds
+ []
+
+<images/ex_partition_grow_crop.pdf, id=221, 403.50548pt x 253.94977pt>
+File: images/ex_partition_grow_crop.pdf Graphic file (type pdf)
+
+<use images/ex_partition_grow_crop.pdf> [10 <./images/ex_partition_grow_crop.pd
+f>] <images/TimeCorr.pdf, id=274, 746.79pt x 198.7425pt>
+File: images/TimeCorr.pdf Graphic file (type pdf)
+
+<use images/TimeCorr.pdf>
+<images/MemCorr.pdf, id=275, 622.325pt x 171.64125pt>
+File: images/MemCorr.pdf Graphic file (type pdf)
+ <use images/MemCorr.pdf>
+[11] <images/precUpperBound.pdf, id=279, 680.5425pt x 183.68625pt>
+File: images/precUpperBound.pdf Graphic file (type pdf)
+
+<use images/precUpperBound.pdf>
+<images/precLowerBound.pdf, id=280, 566.11298pt x 168.62799pt>
+File: images/precLowerBound.pdf Graphic file (type pdf)
+
+<use images/precLowerBound.pdf> [12 <./images/TimeCorr.pdf> <./images/MemCorr.p
+df>] [13 <./images/precUpperBound.pdf> <./images/precLowerBound.pdf>]
+<images/space.pdf, id=356, 478.78876pt x 261.09747pt>
+File: images/space.pdf Graphic file (type pdf)
+ <use images/space.pdf>
+[14 <./images/space.pdf>]
+<images/impactSCC.pdf, id=386, 562.636pt x 165.954pt>
+File: images/impactSCC.pdf Graphic file (type pdf)
+
+<use images/impactSCC.pdf>
+<images/impactESSA.pdf, id=387, 563.10577pt x 166.62552pt>
+File: images/impactESSA.pdf Graphic file (type pdf)
+
+<use images/impactESSA.pdf> [15 <./images/impactSCC.pdf>]
+<images/precESSA.pdf, id=573, 556.33444pt x 173.65076pt>
+File: images/precESSA.pdf Graphic file (type pdf)
+
+<use images/precESSA.pdf> [16 <./images/impactESSA.pdf> <./images/precESSA.pdf>
+] <images/intra.pdf, id=810, 429.602pt x 172.64601pt>
+File: images/intra.pdf Graphic file (type pdf)
+ <use images/intra.pdf>
+[17 <./images/intra.pdf>]
+<images/context.pdf, id=860, 525.96703pt x 191.71826pt>
+File: images/context.pdf Graphic file (type pdf)
+
+<use images/context.pdf>
+<images/wholeImpact.pdf, id=861, 556.32745pt x 170.63649pt>
+File: images/wholeImpact.pdf Graphic file (type pdf)
+
+<use images/wholeImpact.pdf> [18 <./images/context.pdf>]
+<images/timeIntraInterInline.pdf, id=894, 322.20375pt x 200.75pt>
+File: images/timeIntraInterInline.pdf Graphic file (type pdf)
+
+<use images/timeIntraInterInline.pdf>
+<images/timeWideningOperators.pdf, id=895, 434.62375pt x 249.93375pt>
+File: images/timeWideningOperators.pdf Graphic file (type pdf)
+
+<use images/timeWideningOperators.pdf>
+<images/jumpSet.pdf, id=896, 515.92848pt x 224.83899pt>
+File: images/jumpSet.pdf Graphic file (type pdf)
+
+<use images/jumpSet.pdf> [19 <./images/wholeImpact.pdf> <./images/timeIntraInte
+rInline.pdf> <./images/timeWideningOperators.pdf>] [20 <./images/jumpSet.pdf>]
+[21] [22] (./paper.bbl [23] [24] [25] [26]) [27] (./paper.aux) ) 
+Here is how much of TeX's memory you used:
+ 2881 strings out of 493848
+ 35303 string characters out of 1152823
+ 96309 words of memory out of 3000000
+ 6113 multiletter control sequences out of 15000+50000
+ 12974 words of font info for 50 fonts, out of 3000000 for 9000
+ 714 hyphenation exceptions out of 8191
+ 32i,27n,30p,426b,529s stack positions out of 5000i,500n,10000p,200000b,50000s
+</usr/share/tex
+mf-texlive/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texmf-texlive/
+fonts/type1/public/amsfonts/cm/cmbxti10.pfb></usr/share/texmf-texlive/fonts/typ
+e1/public/amsfonts/cm/cmcsc10.pfb></usr/share/texmf-texlive/fonts/type1/public/
+amsfonts/cm/cmex10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm
+/cmmi10.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmmi6.pfb>
+</usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/
+texmf-texlive/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texmf-texliv
+e/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texmf-texlive/fonts/type
+1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-texlive/fonts/type1/public/ams
+fonts/cm/cmr12.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr
+6.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/s
+hare/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texmf-te
+xlive/fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texmf-texlive/fonts/t
+ype1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-texlive/fonts/type1/public
+/amsfonts/cm/cmsy5.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm
+/cmsy6.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy7.pfb><
+/usr/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/share/t
+exmf-texlive/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/share/texmf-texliv
+e/fonts/type1/public/amsfonts/cm/cmti8.pfb></usr/share/texmf-texlive/fonts/type
+1/public/amsfonts/cm/cmtt10.pfb></usr/share/texmf-texlive/fonts/type1/public/am
+sfonts/cm/cmtt8.pfb></usr/share/texmf-texlive/fonts/type1/public/amsfonts/symbo
+ls/msbm10.pfb>
+Output written on paper.pdf (27 pages, 1201064 bytes).
+PDF statistics:
+ 1117 PDF objects out of 1200 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 101 words of extra memory for PDF output out of 10000 (max. 10000000)
+

@@ -1,0 +1,46 @@
+This is BibTeX, Version 0.99c (TeX Live 2009/Debian)
+The top-level auxiliary file: paper.aux
+The style file: model3-num-names.bst
+Database file #1: ../references.bib
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+You've used 54 entries,
+            3023 wiz_defined-function locations,
+            986 strings with 13631 characters,
+and the built_in function-call counts, 43843 in all, are:
+= -- 3372
+> -- 1338
+< -- 59
++ -- 720
+- -- 348
+* -- 4516
+:= -- 5374
+add.period$ -- 197
+call.type$ -- 54
+change.case$ -- 336
+chr.to.int$ -- 54
+cite$ -- 54
+duplicate$ -- 3652
+empty$ -- 3575
+format.name$ -- 526
+if$ -- 8898
+int.to.chr$ -- 1
+int.to.str$ -- 55
+missing$ -- 713
+newline$ -- 284
+num.names$ -- 162
+pop$ -- 1332
+preamble$ -- 1
+purify$ -- 270
+quote$ -- 0
+skip$ -- 1412
+stack$ -- 0
+substring$ -- 2688
+swap$ -- 2472
+text.length$ -- 35
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 316
+warning$ -- 0
+while$ -- 232
+width$ -- 0
+write$ -- 797

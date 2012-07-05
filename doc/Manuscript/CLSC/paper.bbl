@@ -1,0 +1,450 @@
+\begin{thebibliography}{54}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{URL }
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+\providecommand{\eprint}[2][]{\url{#2}}
+\providecommand{\BIBand}{and}
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\undefined \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Inproceedings
+\bibitem[{Cousot and Cousot(1977)}]{Cousot77}
+\bibinfo{author}{Cousot\xfnm[ P.]}, \bibinfo{author}{Cousot\xfnm[ R.]}.
+\newblock \bibinfo{title}{Abstract interpretation: a unified lattice model for
+  static analysis of programs by construction or approximation of fixpoints}.
+\newblock In: \bibinfo{booktitle}{POPL}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1977}, p. \bibinfo{pages}{238--252}.
+%Type = Inproceedings
+\bibitem[{Souza et~al.(2011)Souza, Guillon, Pereira and
+  da~Silva~Bigonha}]{Sol11}
+\bibinfo{author}{Souza\xfnm[ M.R.S.]}, \bibinfo{author}{Guillon\xfnm[ C.]},
+  \bibinfo{author}{Pereira\xfnm[ F.M.Q.]},
+  \bibinfo{author}{da~Silva~Bigonha\xfnm[ M.A.]}.
+\newblock \bibinfo{title}{Dynamic elimination of overflow tests in a trace
+  compiler}.
+\newblock In: \bibinfo{booktitle}{CC}. \bibinfo{year}{2011}, p.
+  \bibinfo{pages}{2--21}.
+%Type = Inproceedings
+\bibitem[{Bodik et~al.(2000)Bodik, Gupta and Sarkar}]{Bodik00}
+\bibinfo{author}{Bodik\xfnm[ R.]}, \bibinfo{author}{Gupta\xfnm[ R.]},
+  \bibinfo{author}{Sarkar\xfnm[ V.]}.
+\newblock \bibinfo{title}{{ABCD}: eliminating array bounds checks on demand}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2000}, p. \bibinfo{pages}{321--333}.
+%Type = Article
+\bibitem[{Gampe et~al.(2011)Gampe, von Ronne, Niedzielski, Vasek and
+  Psarris}]{Gampe11}
+\bibinfo{author}{Gampe\xfnm[ A.]}, \bibinfo{author}{von Ronne\xfnm[ J.]},
+  \bibinfo{author}{Niedzielski\xfnm[ D.]}, \bibinfo{author}{Vasek\xfnm[ J.]},
+  \bibinfo{author}{Psarris\xfnm[ L.]}.
+\newblock \bibinfo{title}{Safe, multiphase bounds check elimination in java}.
+\newblock \bibinfo{journal}{Software: Practice and Experience}
+  \bibinfo{year}{2011};\bibinfo{volume}{41}:\bibinfo{pages}{753--788}.
+%Type = Inproceedings
+\bibitem[{Barik et~al.(2006)Barik, Grothoff, Gupta, Pandit and Udupa}]{Barik06}
+\bibinfo{author}{Barik\xfnm[ R.]}, \bibinfo{author}{Grothoff\xfnm[ C.]},
+  \bibinfo{author}{Gupta\xfnm[ R.]}, \bibinfo{author}{Pandit\xfnm[ V.]},
+  \bibinfo{author}{Udupa\xfnm[ R.]}.
+\newblock \bibinfo{title}{Optimal bitwise register allocation using integer
+  linear programming.}
+\newblock In: \bibinfo{booktitle}{LCPC}; vol. \bibinfo{volume}{4382} of
+  \emph{\bibinfo{series}{Lecture Notes in Computer Science}}.
+  \bibinfo{publisher}{Springer}; \bibinfo{year}{2006}, p.
+  \bibinfo{pages}{267--282}.
+%Type = Inproceedings
+\bibitem[{Tallam and Gupta(2003)}]{Tallam03}
+\bibinfo{author}{Tallam\xfnm[ S.]}, \bibinfo{author}{Gupta\xfnm[ R.]}.
+\newblock \bibinfo{title}{Bitwidth aware global register allocation}.
+\newblock In: \bibinfo{booktitle}{POPL}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2003}, p. \bibinfo{pages}{85--96}.
+%Type = Inproceedings
+\bibitem[{Kong and Wilken(1998)}]{Kong98}
+\bibinfo{author}{Kong\xfnm[ T.]}, \bibinfo{author}{Wilken\xfnm[ K.D.]}.
+\newblock \bibinfo{title}{Precise register allocation for irregular
+  architectures}.
+\newblock In: \bibinfo{booktitle}{MICRO}. \bibinfo{publisher}{IEEE};
+  \bibinfo{year}{1998}, p. \bibinfo{pages}{297--307}.
+%Type = Inproceedings
+\bibitem[{Pereira and Palsberg(2008)}]{Pereira08}
+\bibinfo{author}{Pereira\xfnm[ F.M.Q.]}, \bibinfo{author}{Palsberg\xfnm[ J.]}.
+\newblock \bibinfo{title}{Register allocation by puzzle solving}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2008}, p. \bibinfo{pages}{216--226}.
+%Type = Inproceedings
+\bibitem[{Scholz and Eckstein(2002)}]{Scholz02}
+\bibinfo{author}{Scholz\xfnm[ B.]}, \bibinfo{author}{Eckstein\xfnm[ E.]}.
+\newblock \bibinfo{title}{Register allocation for irregular architectures}.
+\newblock In: \bibinfo{booktitle}{LCTES/SCOPES}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2002}, p. \bibinfo{pages}{139--148}.
+%Type = Article
+\bibitem[{Yang et~al.(2011)Yang, Yan, Shao and Guo}]{Yanqin11}
+\bibinfo{author}{Yang\xfnm[ Y.]}, \bibinfo{author}{Yan\xfnm[ H.]},
+  \bibinfo{author}{Shao\xfnm[ Z.]}, \bibinfo{author}{Guo\xfnm[ M.]}.
+\newblock \bibinfo{title}{Compiler-assisted dynamic scratch-pad memory
+  management with space overlapping for embedded systems}.
+\newblock \bibinfo{journal}{Software: Practice and Experience}
+  \bibinfo{year}{2011};\bibinfo{volume}{41}(\bibinfo{number}{7}):\bibinfo{page%
+s}{737--752}.
+%Type = Inproceedings
+\bibitem[{Patterson(1995)}]{Patterson95}
+\bibinfo{author}{Patterson\xfnm[ J.R.C.]}.
+\newblock \bibinfo{title}{Accurate static branch prediction by value range
+  propagation}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1995}, p. \bibinfo{pages}{67--78}.
+%Type = Book
+\bibitem[{Simon(2008)}]{Simon08}
+\bibinfo{author}{Simon\xfnm[ A.]}.
+\newblock \bibinfo{title}{Value-Range Analysis of C Programs: Towards Proving
+  the Absence of Buffer Overflow Vulnerabilities}.
+\newblock \bibinfo{publisher}{Springer}; \bibinfo{edition}{1th} ed.;
+  \bibinfo{year}{2008}.
+%Type = Inproceedings
+\bibitem[{Wagner et~al.(2000)Wagner, Foster, Brewer and Aiken}]{Wagner00}
+\bibinfo{author}{Wagner\xfnm[ D.]}, \bibinfo{author}{Foster\xfnm[ J.S.]},
+  \bibinfo{author}{Brewer\xfnm[ E.A.]}, \bibinfo{author}{Aiken\xfnm[ A.]}.
+\newblock \bibinfo{title}{A first step towards automated detection of buffer
+  overrun vulnerabilities}.
+\newblock In: \bibinfo{booktitle}{NDSS}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2000}, p. \bibinfo{pages}{3--17}.
+%Type = Inproceedings
+\bibitem[{Lokuciejewski et~al.(2009)Lokuciejewski, Cordes, Falk and
+  Marwedel}]{Lokuciejewski09}
+\bibinfo{author}{Lokuciejewski\xfnm[ P.]}, \bibinfo{author}{Cordes\xfnm[ D.]},
+  \bibinfo{author}{Falk\xfnm[ H.]}, \bibinfo{author}{Marwedel\xfnm[ P.]}.
+\newblock \bibinfo{title}{A fast and precise static loop analysis based on
+  abstract interpretation, program slicing and polytope models}.
+\newblock In: \bibinfo{booktitle}{CGO}. \bibinfo{publisher}{IEEE};
+  \bibinfo{year}{2009}, p. \bibinfo{pages}{136--146}.
+%Type = Article
+\bibitem[{Cong et~al.(2005)Cong, Fan, Han, Lin, Xu, Zhang et~al.}]{Cong05}
+\bibinfo{author}{Cong\xfnm[ J.]}, \bibinfo{author}{Fan\xfnm[ Y.]},
+  \bibinfo{author}{Han\xfnm[ G.]}, \bibinfo{author}{Lin\xfnm[ Y.]},
+  \bibinfo{author}{Xu\xfnm[ J.]}, \bibinfo{author}{Zhang\xfnm[ Z.]}, et~al.
+\newblock \bibinfo{title}{Bitwidth-aware scheduling and binding in high-level
+  synthesis}.
+\newblock \bibinfo{journal}{Design Automation Conference, 2005 Proceedings of
+  the ASP-DAC 2005 Asia and South Pacific} \bibinfo{year}{18-21 Jan.
+  2005};\bibinfo{volume}{2}:\bibinfo{pages}{856--861}.
+%Type = Inproceedings
+\bibitem[{Lhairech-Lebreton et~al.(2010)Lhairech-Lebreton, Coussy, Heller and
+  Martin}]{Lhairech10}
+\bibinfo{author}{Lhairech-Lebreton\xfnm[ G.]}, \bibinfo{author}{Coussy\xfnm[
+  P.]}, \bibinfo{author}{Heller\xfnm[ D.]}, \bibinfo{author}{Martin\xfnm[ E.]}.
+\newblock \bibinfo{title}{Bitwidth-aware high-level synthesis for designing
+  low-power dsp applications}.
+\newblock In: \bibinfo{booktitle}{ICECS}. \bibinfo{publisher}{IEEE};
+  \bibinfo{year}{2010}, p. \bibinfo{pages}{531--534}.
+%Type = Article
+\bibitem[{Mahlke et~al.(2001)Mahlke, Ravindran, Schlansker, Schreiber and
+  Sherwood}]{Mahlke01}
+\bibinfo{author}{Mahlke\xfnm[ S.]}, \bibinfo{author}{Ravindran\xfnm[ R.]},
+  \bibinfo{author}{Schlansker\xfnm[ M.]}, \bibinfo{author}{Schreiber\xfnm[
+  R.]}, \bibinfo{author}{Sherwood\xfnm[ T.]}.
+\newblock \bibinfo{title}{Bitwidth cognizant architecture synthesis of custom
+  hardware accelerators}.
+\newblock \bibinfo{journal}{Computer-Aided Design of Integrated Circuits and
+  Systems}
+  \bibinfo{year}{2001};\bibinfo{volume}{20}(\bibinfo{number}{11}):\bibinfo{pag%
+es}{1355--1371}.
+%Type = Article
+\bibitem[{Gawlitza et~al.(2009)Gawlitza, Leroux, Reineke, Seidl, Sutre and
+  Wilhelm}]{Gawlitza09}
+\bibinfo{author}{Gawlitza\xfnm[ T.]}, \bibinfo{author}{Leroux\xfnm[ J.]},
+  \bibinfo{author}{Reineke\xfnm[ J.]}, \bibinfo{author}{Seidl\xfnm[ H.]},
+  \bibinfo{author}{Sutre\xfnm[ G.]}, \bibinfo{author}{Wilhelm\xfnm[ R.]}.
+\newblock \bibinfo{title}{Polynomial precise interval analysis revisited}.
+\newblock \bibinfo{journal}{Efficient Algorithms}
+  \bibinfo{year}{2009};\bibinfo{volume}{1}:\bibinfo{pages}{422 -- 437}.
+%Type = Inproceedings
+\bibitem[{Stephenson et~al.(2000)Stephenson, Babb and
+  Amarasinghe}]{Stephenson00}
+\bibinfo{author}{Stephenson\xfnm[ M.]}, \bibinfo{author}{Babb\xfnm[ J.]},
+  \bibinfo{author}{Amarasinghe\xfnm[ S.]}.
+\newblock \bibinfo{title}{Bitwidth analysis with application to silicon
+  compilation}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2000}, p. \bibinfo{pages}{108--120}.
+%Type = Article
+\bibitem[{Su and Wagner(2005)}]{Su05}
+\bibinfo{author}{Su\xfnm[ Z.]}, \bibinfo{author}{Wagner\xfnm[ D.]}.
+\newblock \bibinfo{title}{A class of polynomially solvable range constraints
+  for interval analysis without widenings}.
+\newblock \bibinfo{journal}{Theoretical Computeter Science}
+  \bibinfo{year}{2005};\bibinfo{volume}{345}(\bibinfo{number}{1}):\bibinfo{pag%
+es}{122--138}.
+%Type = Inproceedings
+\bibitem[{Blanchet et~al.(2003)Blanchet, Cousot, Cousot, Feret, Mauborgne,
+  Min\'{e} et~al.}]{Blanchet03}
+\bibinfo{author}{Blanchet\xfnm[ B.]}, \bibinfo{author}{Cousot\xfnm[ P.]},
+  \bibinfo{author}{Cousot\xfnm[ R.]}, \bibinfo{author}{Feret\xfnm[ J.]},
+  \bibinfo{author}{Mauborgne\xfnm[ L.]}, \bibinfo{author}{Min\'{e}\xfnm[ A.]},
+  et~al.
+\newblock \bibinfo{title}{A static analyzer for large safety-critical
+  software}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2003}, p. \bibinfo{pages}{196--207}.
+%Type = Article
+\bibitem[{Venet and Brat(2004)}]{Venet04}
+\bibinfo{author}{Venet\xfnm[ A.]}, \bibinfo{author}{Brat\xfnm[ G.]}.
+\newblock \bibinfo{title}{Precise and efficient static array bound checking for
+  large embedded c programs}.
+\newblock \bibinfo{journal}{SIGPLAN Not}
+  \bibinfo{year}{2004};\bibinfo{volume}{39}:\bibinfo{pages}{231--242}.
+%Type = Inproceedings
+\bibitem[{Oh et~al.(2012)Oh, Heo, Lee, Lee and Yi}]{Oh12}
+\bibinfo{author}{Oh\xfnm[ H.]}, \bibinfo{author}{Heo\xfnm[ K.]},
+  \bibinfo{author}{Lee\xfnm[ W.]}, \bibinfo{author}{Lee\xfnm[ W.]},
+  \bibinfo{author}{Yi\xfnm[ K.]}.
+\newblock \bibinfo{title}{Design and implementation of sparse global analyses
+  for {C}-like languages}.
+\newblock In: \bibinfo{booktitle}{{PLDI}}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2012}, p. \bibinfo{pages}{229--238}.
+%Type = Book
+\bibitem[{Nielson et~al.(1999)Nielson, Nielson and Hankin}]{Nielson99}
+\bibinfo{author}{Nielson\xfnm[ F.]}, \bibinfo{author}{Nielson\xfnm[ H.R.]},
+  \bibinfo{author}{Hankin\xfnm[ C.]}.
+\newblock \bibinfo{title}{Principles of Program Analysis}.
+\newblock \bibinfo{publisher}{Springer}; \bibinfo{year}{1999}.
+%Type = Inproceedings
+\bibitem[{Lattner and Adve(2004)}]{Lattner04}
+\bibinfo{author}{Lattner\xfnm[ C.]}, \bibinfo{author}{Adve\xfnm[ V.S.]}.
+\newblock \bibinfo{title}{{LLVM}: A compilation framework for lifelong program
+  analysis {\&} transformation}.
+\newblock In: \bibinfo{booktitle}{CGO}. \bibinfo{publisher}{IEEE};
+  \bibinfo{year}{2004}, p. \bibinfo{pages}{75--88}.
+%Type = Inproceedings
+\bibitem[{Costan et~al.(2005)Costan, Gaubert, Goubault, Martel and
+  Putot}]{Costan05}
+\bibinfo{author}{Costan\xfnm[ A.]}, \bibinfo{author}{Gaubert\xfnm[ S.]},
+  \bibinfo{author}{Goubault\xfnm[ E.]}, \bibinfo{author}{Martel\xfnm[ M.]},
+  \bibinfo{author}{Putot\xfnm[ S.]}.
+\newblock \bibinfo{title}{A policy iteration algorithm for computing fixed
+  points in static analysis of programs}.
+\newblock In: \bibinfo{booktitle}{CAV}. \bibinfo{year}{2005}, p.
+  \bibinfo{pages}{462--475}.
+%Type = Inproceedings
+\bibitem[{Lakhdar-Chaouch et~al.(2011)Lakhdar-Chaouch, Jeannet and
+  Girault}]{Lakhdar11}
+\bibinfo{author}{Lakhdar-Chaouch\xfnm[ L.]}, \bibinfo{author}{Jeannet\xfnm[
+  B.]}, \bibinfo{author}{Girault\xfnm[ A.]}.
+\newblock \bibinfo{title}{Widening with thresholds for programs with complex
+  control graphs}.
+\newblock In: \bibinfo{booktitle}{ATVA}. \bibinfo{publisher}{Springer-Verlag};
+  \bibinfo{year}{2011}, p. \bibinfo{pages}{492--502}.
+%Type = Inproceedings
+\bibitem[{Su and Wagner(2004)}]{Su04}
+\bibinfo{author}{Su\xfnm[ Z.]}, \bibinfo{author}{Wagner\xfnm[ D.]}.
+\newblock \bibinfo{title}{A class of polynomially solvable range constraints
+  for interval analysis without widenings and narrowings}.
+\newblock In: \bibinfo{booktitle}{TACAS}. \bibinfo{year}{2004}, p.
+  \bibinfo{pages}{280--295}.
+%Type = Inproceedings
+\bibitem[{do~Couto~Teixeira and Pereira(2011)}]{Couto11}
+\bibinfo{author}{do~Couto~Teixeira\xfnm[ D.]}, \bibinfo{author}{Pereira\xfnm[
+  F.M.Q.]}.
+\newblock \bibinfo{title}{The design and implementation of a non-iterative
+  range analysis algorithm on a production compiler}.
+\newblock In: \bibinfo{booktitle}{SBLP}. \bibinfo{publisher}{SBC};
+  \bibinfo{year}{2011}, p. \bibinfo{pages}{45--59}.
+%Type = Article
+\bibitem[{Cytron et~al.(1991)Cytron, Ferrante, Rosen, Wegman and
+  Zadeck}]{Cytron91}
+\bibinfo{author}{Cytron\xfnm[ R.]}, \bibinfo{author}{Ferrante\xfnm[ J.]},
+  \bibinfo{author}{Rosen\xfnm[ B.K.]}, \bibinfo{author}{Wegman\xfnm[ M.N.]},
+  \bibinfo{author}{Zadeck\xfnm[ F.K.]}.
+\newblock \bibinfo{title}{Efficiently computing static single assignment form
+  and the control dependence graph}.
+\newblock \bibinfo{journal}{TOPLAS}
+  \bibinfo{year}{1991};\bibinfo{volume}{13}(\bibinfo{number}{4}):\bibinfo{page%
+s}{451--490}.
+%Type = Book
+\bibitem[{Aho et~al.(2006)Aho, Lam, Sethi and Ullman}]{Aho06}
+\bibinfo{author}{Aho\xfnm[ A.V.]}, \bibinfo{author}{Lam\xfnm[ M.S.]},
+  \bibinfo{author}{Sethi\xfnm[ R.]}, \bibinfo{author}{Ullman\xfnm[ J.D.]}.
+\newblock \bibinfo{title}{Compilers: Principles, Techniques, and Tools (2nd
+  Edition)}.
+\newblock \bibinfo{publisher}{{Addison Wesley}}; \bibinfo{year}{2006}.
+%Type = Book
+\bibitem[{Warren(2002)}]{Warren02}
+\bibinfo{author}{Warren\xfnm[ H.S.]}.
+\newblock \bibinfo{title}{Hacker's Delight}.
+\newblock \bibinfo{publisher}{Addison-Wesley Longman Publishing Co., Inc.};
+  \bibinfo{year}{2002}.
+%Type = Article
+\bibitem[{Ferrante et~al.(1987)Ferrante, Ottenstein and Warren}]{Ferrante87}
+\bibinfo{author}{Ferrante\xfnm[ J.]}, \bibinfo{author}{Ottenstein\xfnm[ K.J.]},
+  \bibinfo{author}{Warren\xfnm[ J.D.]}.
+\newblock \bibinfo{title}{{The program dependence graph and its use in
+  optimization}}.
+\newblock \bibinfo{journal}{TOPLAS}
+  \bibinfo{year}{1987};\bibinfo{volume}{9}(\bibinfo{number}{3}):\bibinfo{pages%
+}{319--349}.
+%Type = Inproceedings
+\bibitem[{Cousot and Halbwachs(1978)}]{Cousot78}
+\bibinfo{author}{Cousot\xfnm[ P.]}, \bibinfo{author}{Halbwachs\xfnm[ N.]}.
+\newblock \bibinfo{title}{Automatic discovery of linear restraints among
+  variables of a program}.
+\newblock In: \bibinfo{booktitle}{POPL}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1978}, p. \bibinfo{pages}{84--96}.
+%Type = Article
+\bibitem[{Min\'{e}(2006)}]{Mine06}
+\bibinfo{author}{Min\'{e}\xfnm[ A.]}.
+\newblock \bibinfo{title}{The octagon abstract domain}.
+\newblock \bibinfo{journal}{Higher Order Symbol Comput}
+  \bibinfo{year}{2006};\bibinfo{volume}{19}:\bibinfo{pages}{31--100}.
+%Type = Inproceedings
+\bibitem[{Rimsa et~al.(2011)Rimsa, D'Amorim and Pereira}]{Rimsa11}
+\bibinfo{author}{Rimsa\xfnm[ A.A.]}, \bibinfo{author}{D'Amorim\xfnm[ M.]},
+  \bibinfo{author}{Pereira\xfnm[ F.M.Q.]}.
+\newblock \bibinfo{title}{Tainted flow analysis on {e-SSA}-form programs}.
+\newblock In: \bibinfo{booktitle}{CC}. \bibinfo{publisher}{Springer};
+  \bibinfo{year}{2011}, p. \bibinfo{pages}{124--143}.
+%Type = Inproceedings
+\bibitem[{Bertrane et~al.(2010)Bertrane, Cousot, Cousot, Feret, Mauborgne,
+  Min{\'e} et~al.}]{Bertrane10}
+\bibinfo{author}{Bertrane\xfnm[ J.]}, \bibinfo{author}{Cousot\xfnm[ P.]},
+  \bibinfo{author}{Cousot\xfnm[ R.]}, \bibinfo{author}{Feret\xfnm[ J.]},
+  \bibinfo{author}{Mauborgne\xfnm[ L.]}, \bibinfo{author}{Min{\'e}\xfnm[ A.]},
+  et~al.
+\newblock \bibinfo{title}{Static analysis and verification of aerospace
+  software by abstract interpretation}.
+\newblock In: \bibinfo{booktitle}{I$@$A}. \bibinfo{publisher}{AIAA};
+  \bibinfo{year}{2010}, p. \bibinfo{pages}{1--38}.
+%Type = Article
+\bibitem[{Cousot et~al.(2009)Cousot, Cousot, Feret, Mauborgne, Min{\'e} and
+  Rival}]{Cousot09}
+\bibinfo{author}{Cousot\xfnm[ P.]}, \bibinfo{author}{Cousot\xfnm[ R.]},
+  \bibinfo{author}{Feret\xfnm[ J.]}, \bibinfo{author}{Mauborgne\xfnm[ L.]},
+  \bibinfo{author}{Min{\'e}\xfnm[ A.]}, \bibinfo{author}{Rival\xfnm[ X.]}.
+\newblock \bibinfo{title}{Why does astr\'{e}e scale up?}
+\newblock \bibinfo{journal}{Form Methods Syst Des}
+  \bibinfo{year}{2009};\bibinfo{volume}{35}(\bibinfo{number}{3}):\bibinfo{page%
+s}{229--264}.
+%Type = Inproceedings
+\bibitem[{Jung et~al.(2005)Jung, Kim, Shin and Yi}]{Jung05}
+\bibinfo{author}{Jung\xfnm[ Y.]}, \bibinfo{author}{Kim\xfnm[ J.]},
+  \bibinfo{author}{Shin\xfnm[ J.]}, \bibinfo{author}{Yi\xfnm[ K.]}.
+\newblock \bibinfo{title}{Taming false alarms from a domain-unaware c analyzer
+  by a bayesian statistical post analysis}.
+\newblock In: \bibinfo{booktitle}{SAS}. \bibinfo{year}{2005}, p.
+  \bibinfo{pages}{203--217}.
+%Type = Inproceedings
+\bibitem[{Choi et~al.(1991)Choi, Cytron and Ferrante}]{Choi91}
+\bibinfo{author}{Choi\xfnm[ J.D.]}, \bibinfo{author}{Cytron\xfnm[ R.]},
+  \bibinfo{author}{Ferrante\xfnm[ J.]}.
+\newblock \bibinfo{title}{Automatic construction of sparse data flow evaluation
+  graphs}.
+\newblock In: \bibinfo{booktitle}{POPL}. \bibinfo{year}{1991}, p.
+  \bibinfo{pages}{55--66}.
+%Type = Inproceedings
+\bibitem[{Johnson and Pingali(1993)}]{Johnson93}
+\bibinfo{author}{Johnson\xfnm[ R.]}, \bibinfo{author}{Pingali\xfnm[ K.]}.
+\newblock \bibinfo{title}{Dependence-based program analysis}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1993}, p. \bibinfo{pages}{78--89}.
+%Type = Article
+\bibitem[{Ramalingam(2002)}]{Ramalingan02}
+\bibinfo{author}{Ramalingam\xfnm[ G.]}.
+\newblock \bibinfo{title}{On sparse evaluation representations}.
+\newblock \bibinfo{journal}{Theoretical Computer Science}
+  \bibinfo{year}{2002};\bibinfo{volume}{277}(\bibinfo{number}{1-2}):\bibinfo{p%
+ages}{119--147}.
+%Type = Inproceedings
+\bibitem[{Pingali and Bilardi(1995)}]{Pingali95}
+\bibinfo{author}{Pingali\xfnm[ K.]}, \bibinfo{author}{Bilardi\xfnm[ G.]}.
+\newblock \bibinfo{title}{{APT}: A data structure for optimal control
+  dependence computation}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1995}, p. \bibinfo{pages}{211--222}.
+%Type = Inproceedings
+\bibitem[{Pingali and Bilardi(1997)}]{Pingali97}
+\bibinfo{author}{Pingali\xfnm[ K.]}, \bibinfo{author}{Bilardi\xfnm[ G.]}.
+\newblock \bibinfo{title}{Optimal control dependence computation and the roman
+  chariots problem}.
+\newblock In: \bibinfo{booktitle}{TOPLAS}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1997}, p. \bibinfo{pages}{462--491}.
+%Type = Inproceedings
+\bibitem[{Johnson et~al.(1994)Johnson, Pearson and Pingali}]{Johnson94}
+\bibinfo{author}{Johnson\xfnm[ R.]}, \bibinfo{author}{Pearson\xfnm[ D.]},
+  \bibinfo{author}{Pingali\xfnm[ K.]}.
+\newblock \bibinfo{title}{The program tree structure}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1994}, p. \bibinfo{pages}{171--185}.
+%Type = Inproceedings
+\bibitem[{Ottenstein et~al.(1990)Ottenstein, Ballance and
+  MacCabe}]{Ottenstein90}
+\bibinfo{author}{Ottenstein\xfnm[ K.J.]}, \bibinfo{author}{Ballance\xfnm[
+  R.A.]}, \bibinfo{author}{MacCabe\xfnm[ A.B.]}.
+\newblock \bibinfo{title}{The program dependence web: a representation
+  supporting control-, data-, and demand-driven interpretation of imperative
+  languages}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1990}, p. \bibinfo{pages}{257--271}.
+%Type = Inproceedings
+\bibitem[{Tu and Padua(1995)}]{Tu95}
+\bibinfo{author}{Tu\xfnm[ P.]}, \bibinfo{author}{Padua\xfnm[ D.]}.
+\newblock \bibinfo{title}{Efficient building and placing of gating functions}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1995}, p. \bibinfo{pages}{47--55}.
+%Type = Masterthesis
+\bibitem[{Ananian(1999)}]{Ananian99}
+\bibinfo{author}{Ananian\xfnm[ S.]}.
+\newblock \bibinfo{title}{The static single information form}.
+\newblock Master's thesis; {MIT}; \bibinfo{year}{1999}.
+%Type = Phdthesis
+\bibitem[{Singer(2006)}]{Singer06}
+\bibinfo{author}{Singer\xfnm[ J.]}.
+\newblock \bibinfo{title}{Static program analysis based on virtual register
+  renaming}.
+\newblock Ph.D. thesis; University of Cambridge; \bibinfo{year}{2006}.
+%Type = Inproceedings
+\bibitem[{Boissinot et~al.(2009)Boissinot, Darte, Rastello, de~Dinechin and
+  Guillon}]{Benoit09}
+\bibinfo{author}{Boissinot\xfnm[ B.]}, \bibinfo{author}{Darte\xfnm[ A.]},
+  \bibinfo{author}{Rastello\xfnm[ F.]}, \bibinfo{author}{de~Dinechin\xfnm[
+  B.D.]}, \bibinfo{author}{Guillon\xfnm[ C.]}.
+\newblock \bibinfo{title}{Revisiting out-of-{SSA} translation for correctness,
+  code quality, and efficienty}.
+\newblock In: \bibinfo{booktitle}{CGO}. \bibinfo{publisher}{IEEE};
+  \bibinfo{year}{2009}, p. \bibinfo{pages}{XX--XX}.
+%Type = Phdthesis
+\bibitem[{Plevyak(1996)}]{Plevyak96}
+\bibinfo{author}{Plevyak\xfnm[ J.B.]}.
+\newblock \bibinfo{title}{Optimization of object-oriented and concurrent
+  programs}.
+\newblock Ph.D. thesis; University of Illinois at Urbana-Champaign;
+  \bibinfo{year}{1996}.
+%Type = Inproceedings
+\bibitem[{George and Matthias(2003)}]{George03}
+\bibinfo{author}{George\xfnm[ L.]}, \bibinfo{author}{Matthias\xfnm[ B.]}.
+\newblock \bibinfo{title}{Taming the ixp network processor}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{2003}, p. \bibinfo{pages}{26--37}.
+%Type = Inproceedings
+\bibitem[{Lo et~al.(1998)Lo, Chow, Kennedy, Liu and Tu}]{Lo98}
+\bibinfo{author}{Lo\xfnm[ R.]}, \bibinfo{author}{Chow\xfnm[ F.]},
+  \bibinfo{author}{Kennedy\xfnm[ R.]}, \bibinfo{author}{Liu\xfnm[ S.M.]},
+  \bibinfo{author}{Tu\xfnm[ P.]}.
+\newblock \bibinfo{title}{Register promotion by sparse partial redundancy
+  elimination of loads and stores}.
+\newblock In: \bibinfo{booktitle}{PLDI}. \bibinfo{publisher}{ACM};
+  \bibinfo{year}{1998}, p. \bibinfo{pages}{26--37}.
+%Type = Article
+\bibitem[{Tavares et~al.(201X)Tavares, Boissinot, Bigonha, Bigonha, Pereira and
+  Rastello}]{Tavares11b}
+\bibinfo{author}{Tavares\xfnm[ A.L.C.]}, \bibinfo{author}{Boissinot\xfnm[ B.]},
+  \bibinfo{author}{Bigonha\xfnm[ M.A.S.]}, \bibinfo{author}{Bigonha\xfnm[ R.]},
+  \bibinfo{author}{Pereira\xfnm[ F.M.Q.]}, \bibinfo{author}{Rastello\xfnm[
+  F.]}.
+\newblock \bibinfo{title}{A program representation for sparse dataflow
+  analyses}.
+\newblock \bibinfo{journal}{Science of Computer Programming}
+  \bibinfo{year}{201X};\bibinfo{volume}{X}(\bibinfo{number}{X}):\bibinfo{pages%
+}{2--25}.
+\newblock \bibinfo{note}{Invited paper with publication expected for 2012}.
+
+\end{thebibliography}
