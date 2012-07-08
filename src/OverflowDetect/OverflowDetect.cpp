@@ -199,6 +199,9 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB
 
     Value* tmpValue;
 
+    BasicBlock *newBB, *newBB2;
+    BranchInst *branch;
+
 	switch(I->getOpcode()){
 
 		case Instruction::Add:
@@ -248,22 +251,49 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB
 
 		case Instruction::Mul:
 
-			//Kludge to verify if an overflow has just happened :
+			//How to verify if an overflow has just happened :
 			//	divide the result by one of the operands of the multiplication.
 			//  If the result of the division is not equal the other operand, there is an overflow
 			// 	(It can be an expensive test. If it gets too expensive, we can test it in terms of
-			//	 the most significant bit of the operators and of the result)
+			//	 the most significant bit of the operators and the most significant bit of the result)
+
+			//First verify if the operand op1 is zero (it would cause a divide-by-zero exception)
+			canCauseOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, op1, constZero);
+
+			// Move all remaining instructions of the basic block to a new one
+			// This new BB is where controw flow goes to when the assertion is correct
+			newBB = CurrentBB->splitBasicBlock(nextIt);
+
+			newBB2 = BasicBlock::Create(*context, "", CurrentBB->getParent(), newBB);
+
+			// Remove the unconditional branch created by splitBasicBlock, and insert a conditional
+			// branch that correctly connects to newBB and assertfail
+			branch = cast<BranchInst>(CurrentBB->getTerminator());
+			branch->eraseFromParent();
+
+			BranchInst::Create(newBB2, newBB, canCauseOverflow, CurrentBB);
+
+			branch = BranchInst::Create(newBB, newBB2);
+
 			if (isSigned){
 
-				tmpValue = BinaryOperator::Create(Instruction::SDiv, I, op1, "", nextInstruction);
-				hasOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, tmpValue, op2);
+				tmpValue = BinaryOperator::Create(Instruction::SDiv, I, op1, "", branch);
+				hasOverflow = new ICmpInst(branch, CmpInst::ICMP_NE, tmpValue, op2);
 
 			} else {
 
-				tmpValue = BinaryOperator::Create(Instruction::UDiv, I, op1, "", nextInstruction);
-				hasOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, tmpValue, op2);
+				tmpValue = BinaryOperator::Create(Instruction::UDiv, I, op1, "", branch);
+				hasOverflow = new ICmpInst(branch, CmpInst::ICMP_NE, tmpValue, op2);
 
 			}
+
+			// Remove the unconditional branch created by splitBasicBlock, and insert a conditional
+			// branch that correctly connects to newBB and assertfail
+			branch = cast<BranchInst>(newBB2->getTerminator());
+			branch->eraseFromParent();
+
+			BranchInst::Create(assertfail, newBB, hasOverflow, newBB2);
+
 			break;
 
 		case Instruction::Shl:
@@ -283,17 +313,21 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB
 
 	}
 
-	// Move all remaining instructions of the basic block to a new one
-	// This new BB is where controw flow goes to when the assertion is correct
-	BasicBlock *newBB = CurrentBB->splitBasicBlock(nextIt);
 
-	// Remove the unconditional branch created by splitBasicBlock, and insert a conditional
-	// branch that correctly connects to newBB and assertfail
-	BranchInst *branch = cast<BranchInst>(CurrentBB->getTerminator());
-	branch->eraseFromParent();
+	if (I->getOpcode() != Instruction::Mul) {
 
-	branch = BranchInst::Create(assertfail, newBB, hasOverflow, CurrentBB);
+		// Move all remaining instructions of the basic block to a new one
+		// This new BB is where controw flow goes to when the assertion is correct
+		newBB = CurrentBB->splitBasicBlock(nextIt);
 
+		// Remove the unconditional branch created by splitBasicBlock, and insert a conditional
+		// branch that correctly connects to newBB and assertfail
+		branch = cast<BranchInst>(CurrentBB->getTerminator());
+		branch->eraseFromParent();
+
+		branch = BranchInst::Create(assertfail, newBB, hasOverflow, CurrentBB);
+
+	}
 }
 
 void OverflowDetect::MarkAsNotOriginal(Instruction& inst)
