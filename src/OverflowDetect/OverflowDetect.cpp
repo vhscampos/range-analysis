@@ -19,8 +19,10 @@
 #include <list>
 #include <stdio.h>
 
+#include "../RangeAnalysis/RangeAnalysis.h"
+
 #define BIT_WIDTH 32
-#define DEBUG_TYPE "OverflowDetect"
+//#define DEBUG_TYPE "OverflowDetect"
 
 using namespace llvm;
 
@@ -40,6 +42,17 @@ namespace {
         virtual bool runOnModule(Module &M);
 
         Instruction* GetNextInstruction(Instruction& i);
+        
+        APInt Min, Max;
+		
+        bool isLimited(const Range &range) {
+        	return range.isRegular() && range.getLower().ne(Min) && range.getUpper().ne(Max);
+        }
+        
+		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+			AU.setPreservesAll();
+			AU.addRequired<InterProceduralRA<Cousot> >();
+		}
 
         Module* module;
         llvm::LLVMContext* context;
@@ -71,6 +84,12 @@ bool OverflowDetect::runOnModule(Module &M) {
 	this->module = &M;
 	this->context = &M.getContext();
 	this->constZero = NULL;
+	
+	InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
+	
+	this->Min = APInt::getSignedMinValue(ra.getBitWidth());
+	this->Max = APInt::getSignedMaxValue(ra.getBitWidth());
+
 
 	NrSignedInsts = 0;
 	NrUnsignedInsts = 0;
@@ -137,8 +156,10 @@ bool OverflowDetect::runOnModule(Module &M) {
 			for (BasicBlock::iterator Iit = BBit->begin(); Iit != BBit->end(); ++Iit) {
 				
 				Instruction* I = dyn_cast<Instruction>(Iit);
+				
+				Range r = ra.getRange(I);
 
-				if (isValidInst(I)&& ! IsNotOriginal(*I)){
+				if (isValidInst(I) && !IsNotOriginal(*I) && !isLimited(r)){
 					insertInstrumentation(I, dyn_cast<BasicBlock>(BBit), assertfail);
 				}					
 			}
@@ -346,4 +367,3 @@ Instruction* OverflowDetect::GetNextInstruction(Instruction& i)
 	it++;
 	return it;
 }
-
