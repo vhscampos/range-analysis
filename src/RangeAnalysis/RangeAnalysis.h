@@ -897,7 +897,7 @@ public:
 	static unsigned getMaxBitWidth(const Function& F);
 	static void updateMinMax(unsigned maxBitWidth);
 	
-	virtual unsigned getBitWidth();
+//	virtual unsigned getBitWidth();
 	virtual Range getRange(const Value *v) = 0;
 	virtual ~RangeAnalysis() { /*errs() << "\nRangeAnalysis";*/ }
 };
@@ -910,7 +910,7 @@ public:
 	~InterProceduralRA();
 	bool runOnModule(Module &M);
 	static unsigned getMaxBitWidth(Module &M);
-	virtual unsigned getBitWidth();
+//	virtual unsigned getBitWidth();
 	virtual Range getRange(const Value *v);
 private:
 	void MatchParametersAndReturnValues(Function &F, ConstraintGraph &G);
@@ -924,7 +924,7 @@ public:
 	~IntraProceduralRA();
 	void getAnalysisUsage(AnalysisUsage &AU) const;
 	bool runOnFunction(Function &F);
-	virtual unsigned getBitWidth();
+//	virtual unsigned getBitWidth();
 	virtual Range getRange(const Value *v);
 }; // end of class RangeAnalysis
 

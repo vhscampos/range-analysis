@@ -147,9 +147,9 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
 	Zero = APInt(MAX_BIT_INT, 0, true);
 }
 
-unsigned getBitWidth() {
-	return MAX_BIT_INT;
-}
+//unsigned RangeAnalysis::getBitWidth() {
+//	return MAX_BIT_INT;
+//}
 
 // ========================================================================== //
 // IntraProceduralRangeAnalysis
