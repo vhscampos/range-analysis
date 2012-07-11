@@ -24,10 +24,9 @@
 
 #ifdef RANGEANALYSIS
 #include "../RangeAnalysis/RangeAnalysis.h"
+#else
+#define DEBUG_TYPE "OverflowDetect"
 #endif
-
-#define BIT_WIDTH 64
-//#define DEBUG_TYPE "OverflowDetect"
 
 using namespace llvm;
 
@@ -48,9 +47,10 @@ namespace {
 
         Instruction* GetNextInstruction(Instruction& i);
         
+        // Range Analysis stuff
+        #ifdef RANGEANALYSIS
         APInt Min, Max;
-		
-		#ifdef RANGEANALYSIS
+        
         bool isLimited(const Range &range) {
         	return range.isRegular() && range.getLower().ne(Min) && range.getUpper().ne(Max);
         }
@@ -58,7 +58,9 @@ namespace {
         
 		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
 			AU.setPreservesAll();
+			#ifdef RANGEANALYIS
 			AU.addRequired<InterProceduralRA<Cousot> >();
+			#endif
 		}
 
         Module* module;
@@ -95,8 +97,8 @@ bool OverflowDetect::runOnModule(Module &M) {
 	#ifdef RANGEANALYSIS
 	InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
 	
-	this->Min = APInt::getSignedMinValue(BIT_WIDTH);
-	this->Max = APInt::getSignedMaxValue(BIT_WIDTH);
+	this->Min = ra.getMin();
+	this->Max = ra.getMax();
 	#endif
 
 

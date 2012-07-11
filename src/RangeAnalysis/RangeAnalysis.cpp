@@ -155,6 +155,18 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
 // IntraProceduralRangeAnalysis
 // ========================================================================== //
 template <class CGT>
+APInt IntraProceduralRA<CGT>::getMin()
+{
+	return Min;
+}
+
+template <class CGT>
+APInt IntraProceduralRA<CGT>::getMax()
+{
+	return Max;
+}
+
+template <class CGT>
 Range IntraProceduralRA<CGT>::getRange(const Value *v){
 	return CG->getRange(v);
 }
@@ -225,6 +237,19 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 // ========================================================================== //
 // InterProceduralRangeAnalysis
 // ========================================================================== //
+template <class CGT>
+APInt InterProceduralRA<CGT>::getMin()
+{
+	return Min;
+}
+
+template <class CGT>
+APInt InterProceduralRA<CGT>::getMax()
+{
+	return Max;
+}
+
+
 template <class CGT>
 Range InterProceduralRA<CGT>::getRange(const Value *v){
 	return CG->getRange(v);

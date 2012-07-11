@@ -33,6 +33,23 @@ bool vSSA::runOnFunction(Function &F) {
 void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 {
 	TerminatorInst *ti = BB->getTerminator();
+	// If the condition used in the terminator instruction is a Comparison instruction:
+	//for each operand of the CmpInst, create sigmas, depending on some conditions
+	/*
+	if(isa<BranchInst>(ti)){
+		BranchInst * bc = cast<BranchInst>(ti);
+		if(bc->isConditional()){
+			Value * cond = bc->getCondition();
+			CmpInst *comparison = dyn_cast<CmpInst>(cond);
+			for (User::const_op_iterator it = comparison->op_begin(), e = comparison->op_end(); it != e; ++it) {
+				Value *operand = *it;
+				if (isa<Instruction>(operand) || isa<Argument>(operand)) {
+					insertSigmas(ti, operand);
+				}
+			}
+		}
+	}
+	*/
 	
 	// CASE 1: Branch Instruction
 	BranchInst *bi = NULL;
@@ -131,7 +148,6 @@ void vSSA::insertSigmas(TerminatorInst *TI, Value *V)
 			if (firstSigma) {
 				// Insert vSSA_phi, if necessary
 				vssaphi_created = insertPhisForSigma(V, sigma);
-				insertSigmaAsOperandOfPhis(vssaphi_created, sigma);
 			}
 			else {
 				// If it was not the first sigma created for V, then the phis already have been created and are stored in the deque, so we need only to insert the sigma as operand of them
@@ -147,7 +163,7 @@ void vSSA::insertSigmas(TerminatorInst *TI, Value *V)
 	// Populate the phi functions created
 	populatePhis(vssaphi_created, V);
 	
-	// Insertion of vSSA_phi functions may require the creation of vSSA_phi functions too
+	// Insertion of vSSA_phi functions may require the creation of vSSA_phi functions too, so we call this function recursively
 	for (SmallVectorImpl<PHINode*>::iterator vit = vssaphi_created.begin(), vend = vssaphi_created.end(); vit != vend; ++vit) {
 		// Rename uses of V to phi
 		renameUsesToPhi(V, *vit);
@@ -244,8 +260,21 @@ SmallVector<PHINode*, 25> vSSA::insertPhisForSigma(Value *V, PHINode *sigma)
 	
 		// If the original Value, for which the sigma was created, dominates the basicblock in the frontier, and this BB dominates any use of the Value, a vSSA_PHI is needed
 		if (condition) {
+	
+//			// Need to discover from which BasicBlock the sigma value comes from
+//			// To do that, we need to find which predecessor of BB_infrontier is dominated by BB_next
+//			BasicBlock *predBB = NULL;
+//		
+//			for (pred_iterator PI = pred_begin(BB_infrontier), PE = pred_end(BB_infrontier); PI != PE; ++PI) {
+//				predBB = *PI;
+//			
+//				if (DT_->dominates(BB, predBB)) {
+//					break;
+//				}
+//			}
 			
 			// Create the vSSA_PHI, and put the phi node in the deques
+			//NumReservedValues is a hint for the number of incoming edges that this phi node will have (use 0 if you really have no idea).
 			PHINode *vssaphi = PHINode::Create(V->getType(), 0, Twine(vSSA_PHI), &(BB_infrontier->front()));
 		
 			phiscreated.push_back(vssaphi);
@@ -254,13 +283,11 @@ SmallVector<PHINode*, 25> vSSA::insertPhisForSigma(Value *V, PHINode *sigma)
 		}
 	}
 	
+	insertSigmaAsOperandOfPhis(phiscreated, sigma);
+	
 	return phiscreated;
 }
 
-/*
- *	The difference of this from the sigma version is that, whereas that one only creates phis and returns a vector of them,
- *	this one creates them, insert operands into them, renames uses, and finally tries to create new phis
- */
 void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 {
 	SmallVector<PHINode*, 25> phiscreated;
@@ -288,6 +315,18 @@ void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 	
 		// If the original Value, for which the phi was created, dominates the basicblock in the frontier, and this BB dominates any use of the Value, a vSSA_PHI is needed
 		if (condition) {
+	
+//			// Need to discover from which BasicBlock the sigma value comes from
+//			// To do that, we need to find which predecessor of BB_infrontier is dominated by BB_next
+//			BasicBlock *predBB = NULL;
+//		
+//			for (pred_iterator PI = pred_begin(BB_infrontier), PE = pred_end(BB_infrontier); PI != PE; ++PI) {
+//				predBB = *PI;
+//			
+//				if (DT_->dominates(BB, predBB)) {
+//					break;
+//				}
+//			}
 			
 			// Create the vSSA_PHI, and put the phi node in the deques
 			PHINode *vssaphi = PHINode::Create(V->getType(), 0, Twine(vSSA_PHI), &(BB_infrontier->front()));
@@ -295,21 +334,19 @@ void vSSA::insertPhisForPhi(Value *V, PHINode *phi)
 			phiscreated.push_back(vssaphi);
 			
 			++numphis;
+			
+			insertSigmaAsOperandOfPhis(phiscreated, phi);
+			populatePhis(phiscreated, V);
+			
+			phiscreated.clear();
+			
+			// Rename uses of V to phi
+			renameUsesToPhi(V, vssaphi);
+			
+			// Insertion of vSSA_phi functions may require the creation of vSSA_phi functions too, so we call this function recursively
+			insertPhisForPhi(V, vssaphi);
 		}
 	}
-	
-	insertSigmaAsOperandOfPhis(phiscreated, phi);
-	populatePhis(phiscreated, V);
-	
-	// Insertion of vSSA_phi functions may require the creation of vSSA_phi functions too, so we call this function recursively
-	for (SmallVectorImpl<PHINode*>::iterator vit = phiscreated.begin(), vend = phiscreated.end(); vit != vend; ++vit) {
-		// Rename uses of V to phi
-		renameUsesToPhi(V, *vit);
-		
-		insertPhisForPhi(V, *vit);
-	}
-	
-	phiscreated.clear();
 }
 
 /*
@@ -433,7 +470,7 @@ void vSSA::renameUsesToPhi(Value *V, PHINode *phi)
 	for (SmallVectorImpl<PHINode*>::iterator vit = sigmasRenamed.begin(), vend = sigmasRenamed.end(); vit != vend; ++vit) {
 		renameUsesToSigma(phi, *vit);
 		SmallVector<PHINode*, 25> vssaphis_created = insertPhisForSigma(phi, *vit);
-		insertSigmaAsOperandOfPhis(vssaphis_created, *vit);
+		//insertSigmaAsOperandOfPhis(vssaphis_created, *vit);
 		populatePhis(vssaphis_created, (*vit)->getIncomingValue(0));
 	}
 	
