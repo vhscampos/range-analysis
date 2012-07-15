@@ -20,7 +20,7 @@
 #include <stdio.h>
 
 // Use range analysis to avoid unnecessary overflow tests
-#define RANGEANALYSIS
+//#define RANGEANALYSIS
 
 #ifdef RANGEANALYSIS
 #include "../RangeAnalysis/RangeAnalysis.h"
@@ -38,7 +38,9 @@ namespace {
 
         void printValueInfo(const Value *V);
 		void MarkAsNotOriginal(Instruction& inst);
-		void insertInstrumentation(Instruction* I, BasicBlock* CurrentBB, BasicBlock *assertfail);
+		void InsertGlobalDeclarations();
+		BasicBlock* NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock);
+		void insertInstrumentation(Instruction* I);
         void PrintInstructionIdentifier(std::string M, std::string F, const Value *V);
 
         bool IsNotOriginal(Instruction& inst);
@@ -67,6 +69,7 @@ namespace {
         llvm::LLVMContext* context;
         Constant* constZero;
 
+        Value* GVstderr, *FPrintF, *messagePtr;
 	};
 }
 
@@ -77,6 +80,98 @@ STATISTIC(NrUnsignedInsts, "Number of unsigned instructions instrumented");
 STATISTIC(NrInstsNotInstrumented, "Number of valid instructions not instrumented");
 
 static RegisterPass<OverflowDetect> X("overflow-detect", "OverflowDetect Instrumentation Pass");
+
+/*
+ * Creates a Basic Block that will be executed when an overflow occurs.
+ * It receives an argument that tells what is the next basic block to be executed.
+ */
+BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock){
+
+	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
+	BranchInst* branch = BranchInst::Create(NextBlock, result);
+
+	Value* stderr = new LoadInst(GVstderr, "loadstderr", branch);
+
+	std::vector<Value*> args;
+	args.push_back(stderr);
+	args.push_back(messagePtr);
+	CallInst::Create(FPrintF, args, "", branch);
+
+	return result;
+}
+
+/*
+ * Inserts global variable and function declarations, needed during the instrumentation.
+ */
+void OverflowDetect::InsertGlobalDeclarations(){
+
+	//Create a global variable with the fprintf Message
+	Constant* stringConstant = llvm::ConstantArray::get(*context, "Overflow Occurred!\n", true);
+	GlobalVariable* messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
+	                                                llvm::GlobalValue::InternalLinkage,
+	                                                stringConstant, "OverflowMessage");
+
+	//Get the int8ptr to our message
+    constZero = ConstantInt::get(Type::getInt32Ty(*context), 0);
+	Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
+	messagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+	//Create the types to get the stderr
+	StructType* IO_FILE_ty = StructType::create(*context, "struct._IO_FILE");
+	PointerType* IO_FILE_PTR_ty = PointerType::getUnqual(IO_FILE_ty);
+
+	StructType* IO_marker_ty = StructType::create(*context, "struct._IO_marker");
+	PointerType* IO_marker_ptr_ty = PointerType::getUnqual(IO_marker_ty);
+
+	std::vector<Type*> Elements;
+	Elements.push_back(Type::getInt32Ty(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(IO_marker_ptr_ty);
+	Elements.push_back(IO_FILE_PTR_ty);
+	Elements.push_back(Type::getInt32Ty(*context));
+	Elements.push_back(Type::getInt32Ty(*context));
+	Elements.push_back(Type::getInt32Ty(*context));
+	Elements.push_back(Type::getInt16Ty(*context));
+	Elements.push_back(Type::getInt8Ty(*context));
+	Elements.push_back(ArrayType::get(Type::getInt8Ty(*context), 1));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt64Ty(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt8PtrTy(*context));
+	Elements.push_back(Type::getInt32Ty(*context));
+	Elements.push_back(Type::getInt32Ty(*context));
+	Elements.push_back(ArrayType::get(Type::getInt8Ty(*context), 40));
+	IO_FILE_ty->setBody(Elements, false);
+
+	std::vector<Type*> Elements2;
+	Elements2.push_back(IO_marker_ptr_ty);
+	Elements2.push_back(IO_FILE_PTR_ty);
+	Elements2.push_back(Type::getInt32Ty(*context));;
+	IO_marker_ty->setBody(Elements2, false);
+
+	//Insert the declaration of the stderr global external variable
+	GVstderr = new GlobalVariable(*module,IO_FILE_PTR_ty,false,GlobalValue::ExternalLinkage, NULL, "stderr");
+
+	//get or insert the fprintf declaration
+    std::vector<Type*> Params;
+    Params.push_back(IO_FILE_PTR_ty);
+    Params.push_back(PointerType::getUnqual(Type::getInt8Ty(*context)));
+    // Get the fprintf() function (takes an IO_FILE* and an i8* followed by variadic parameters)
+    FPrintF = module->getOrInsertFunction("fprintf",FunctionType::get(Type::getVoidTy(*context), Params, true));
+
+}
 
 /*
  * 	In order to be valid, an instruction must be of intBITWIDTH type, and its operands as well
@@ -106,33 +201,8 @@ bool OverflowDetect::runOnModule(Module &M) {
 	NrUnsignedInsts = 0;
 	NrInstsNotInstrumented = 0;
 
-
-	// Get void function type
-	FunctionType *AbortFTy = FunctionType::get(Type::getVoidTy(*context), false);
-
-	// Pointer to abort function
-	Function *AbortF = NULL;
-
-
-	/*
-	 *	Initialization of 'abort' function
-	 */
-
-	// Before declaring the abort function, we need to check whether it is already declared or not
-	Module::iterator Fit, Fend;
-	bool alreadyDeclared = false;
-
-	for (Fit = M.begin(), Fend = M.end(); Fit != Fend; ++Fit)
-		if (Fit->getName().equals("abort")) {
-			alreadyDeclared = true;
-			AbortF = Fit;
-			break;
-		}
-
-	if (!alreadyDeclared) {
-		AbortF = Function::Create(AbortFTy, GlobalValue::ExternalLinkage, "abort", &M);
-	}
-
+	//Insert the global declarations (fPrintf, stderr, etc...)
+	InsertGlobalDeclarations();
 
 	// Iterate through functions
 	for (Module::iterator Fit = M.begin(), Fend = M.end(); Fit != Fend; ++Fit) {
@@ -142,26 +212,9 @@ bool OverflowDetect::runOnModule(Module &M) {
 		if (Fit->begin() == Fit->end())
 			continue;
 
-		// Create the basic block which the controw flow goes to when the assertion fail
-		BasicBlock *assertfail = BasicBlock::Create(*context, "assert fail", dyn_cast<Function>(Fit));
-
-		// Call to abort function
-		CallInst *abort = CallInst::Create(AbortF, Twine(), assertfail);
-
-		// Add atributes to the abort call instruction: no return and no unwind
-		abort->addAttribute(~0, Attribute::NoReturn);
-		abort->addAttribute(~0, Attribute::NoUnwind);
-
-		// Unreachable instruction
-		new UnreachableInst(*context, assertfail);
-
         
 		// Iterate through basic blocks		
 		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; ++BBit) {
-
-			// If the basic block is the assertfail, continue (probably assertfail is the last BB in the list, so actually this may end the loop)
-			if (cast<BasicBlock>(BBit) == assertfail)
-				continue;
 
 			// Iterate through instructions
 			for (BasicBlock::iterator Iit = BBit->begin(); Iit != BBit->end(); ++Iit) {
@@ -172,10 +225,10 @@ bool OverflowDetect::runOnModule(Module &M) {
 					#ifdef RANGEANALYSIS
 					Range r = ra.getRange(I);
 					if (!isLimited(r)) {
-						insertInstrumentation(I, dyn_cast<BasicBlock>(BBit), assertfail);
+						insertInstrumentation(I);
 					}
 					#else
-					insertInstrumentation(I, dyn_cast<BasicBlock>(BBit), assertfail);
+					insertInstrumentation(I);
 					#endif
 				}					
 			}
@@ -187,7 +240,7 @@ bool OverflowDetect::runOnModule(Module &M) {
 }
 
 
-void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB, BasicBlock *assertfail){
+void OverflowDetect::insertInstrumentation(Instruction* I){
 
 	// Fetch the boundaries of the variable
 
@@ -299,16 +352,17 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB
 
 			// Move all remaining instructions of the basic block to a new one
 			// This new BB is where controw flow goes to when the assertion is correct
-			newBB = CurrentBB->splitBasicBlock(nextIt);
+			newBB = I->getParent()->splitBasicBlock(nextIt);
 
-			newBB2 = BasicBlock::Create(*context, "", CurrentBB->getParent(), newBB);
+			//This new BB is the BB that contains the overflow check
+			newBB2 = BasicBlock::Create(*context, "", I->getParent()->getParent(), newBB);
 
 			// Remove the unconditional branch created by splitBasicBlock, and insert a conditional
-			// branch that correctly connects to newBB and assertfail
-			branch = cast<BranchInst>(CurrentBB->getTerminator());
+			// branch that correctly connects to newBB and newBB2
+			branch = cast<BranchInst>(I->getParent()->getTerminator());
 			branch->eraseFromParent();
 
-			BranchInst::Create(newBB2, newBB, canCauseOverflow, CurrentBB);
+			BranchInst::Create(newBB2, newBB, canCauseOverflow, I->getParent());
 
 			branch = BranchInst::Create(newBB, newBB2);
 
@@ -329,7 +383,7 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB
 			branch = cast<BranchInst>(newBB2->getTerminator());
 			branch->eraseFromParent();
 
-			BranchInst::Create(assertfail, newBB, hasOverflow, newBB2);
+			BranchInst::Create(NewOverflowOccurrenceBlock(I, newBB), newBB, hasOverflow, newBB2);
 
 			break;
 
@@ -355,14 +409,14 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* CurrentBB
 
 		// Move all remaining instructions of the basic block to a new one
 		// This new BB is where controw flow goes to when the assertion is correct
-		newBB = CurrentBB->splitBasicBlock(nextIt);
+		newBB = I->getParent()->splitBasicBlock(nextIt);
 
 		// Remove the unconditional branch created by splitBasicBlock, and insert a conditional
 		// branch that correctly connects to newBB and assertfail
-		branch = cast<BranchInst>(CurrentBB->getTerminator());
+		branch = cast<BranchInst>(I->getParent()->getTerminator());
 		branch->eraseFromParent();
 
-		branch = BranchInst::Create(assertfail, newBB, hasOverflow, CurrentBB);
+		branch = BranchInst::Create(NewOverflowOccurrenceBlock(I, newBB), newBB, hasOverflow, I->getParent());
 
 	}
 }
