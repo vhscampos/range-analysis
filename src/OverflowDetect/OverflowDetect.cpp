@@ -116,53 +116,66 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
 	messagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
 
-	//Create the types to get the stderr
-	StructType* IO_FILE_ty = StructType::create(*context, "struct._IO_FILE");
-	PointerType* IO_FILE_PTR_ty = PointerType::getUnqual(IO_FILE_ty);
-
-	StructType* IO_marker_ty = StructType::create(*context, "struct._IO_marker");
-	PointerType* IO_marker_ptr_ty = PointerType::getUnqual(IO_marker_ty);
-
-	std::vector<Type*> Elements;
-	Elements.push_back(Type::getInt32Ty(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(IO_marker_ptr_ty);
-	Elements.push_back(IO_FILE_PTR_ty);
-	Elements.push_back(Type::getInt32Ty(*context));
-	Elements.push_back(Type::getInt32Ty(*context));
-	Elements.push_back(Type::getInt32Ty(*context));
-	Elements.push_back(Type::getInt16Ty(*context));
-	Elements.push_back(Type::getInt8Ty(*context));
-	Elements.push_back(ArrayType::get(Type::getInt8Ty(*context), 1));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt64Ty(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt8PtrTy(*context));
-	Elements.push_back(Type::getInt32Ty(*context));
-	Elements.push_back(Type::getInt32Ty(*context));
-	Elements.push_back(ArrayType::get(Type::getInt8Ty(*context), 40));
-	IO_FILE_ty->setBody(Elements, false);
-
-	std::vector<Type*> Elements2;
-	Elements2.push_back(IO_marker_ptr_ty);
-	Elements2.push_back(IO_FILE_PTR_ty);
-	Elements2.push_back(Type::getInt32Ty(*context));;
-	IO_marker_ty->setBody(Elements2, false);
+	Type* IO_FILE_PTR_ty;
 
 	//Insert the declaration of the stderr global external variable
-	GVstderr = new GlobalVariable(*module,IO_FILE_PTR_ty,false,GlobalValue::ExternalLinkage, NULL, "stderr");
+	GVstderr = module->getGlobalVariable("stderr");
+
+	if (GVstderr == NULL) {
+
+		//Create the types to get the stderr
+		StructType* IO_FILE_ty = StructType::create(*context, "struct._IO_FILE");
+		IO_FILE_PTR_ty = PointerType::getUnqual(IO_FILE_ty);
+
+		StructType* IO_marker_ty = StructType::create(*context, "struct._IO_marker");
+		PointerType* IO_marker_ptr_ty = PointerType::getUnqual(IO_marker_ty);
+
+		std::vector<Type*> Elements;
+		Elements.push_back(Type::getInt32Ty(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(IO_marker_ptr_ty);
+		Elements.push_back(IO_FILE_PTR_ty);
+		Elements.push_back(Type::getInt32Ty(*context));
+		Elements.push_back(Type::getInt32Ty(*context));
+		Elements.push_back(Type::getInt32Ty(*context));
+		Elements.push_back(Type::getInt16Ty(*context));
+		Elements.push_back(Type::getInt8Ty(*context));
+		Elements.push_back(ArrayType::get(Type::getInt8Ty(*context), 1));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt64Ty(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt8PtrTy(*context));
+		Elements.push_back(Type::getInt32Ty(*context));
+		Elements.push_back(Type::getInt32Ty(*context));
+		Elements.push_back(ArrayType::get(Type::getInt8Ty(*context), 40));
+		IO_FILE_ty->setBody(Elements, false);
+
+		std::vector<Type*> Elements2;
+		Elements2.push_back(IO_marker_ptr_ty);
+		Elements2.push_back(IO_FILE_PTR_ty);
+		Elements2.push_back(Type::getInt32Ty(*context));;
+		IO_marker_ty->setBody(Elements2, false);
+
+		GVstderr = new GlobalVariable(*module,IO_FILE_PTR_ty,false,GlobalValue::ExternalLinkage, NULL, "stderr");
+	} else {
+		//Get the type of the stderr
+		IO_FILE_PTR_ty = GVstderr->getType();
+
+		//Get the type of the dereference of stderr
+		IO_FILE_PTR_ty = IO_FILE_PTR_ty->getContainedType(0);
+	}
 
 	//get or insert the fprintf declaration
     std::vector<Type*> Params;
