@@ -13,10 +13,12 @@
 #include "llvm/LLVMContext.h"
 #include "llvm/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Analysis/DebugInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 #include <list>
+#include <map>
 #include <stdio.h>
 
 // Use range analysis to avoid unnecessary overflow tests
@@ -40,7 +42,11 @@ namespace {
 		void MarkAsNotOriginal(Instruction& inst);
 		void InsertGlobalDeclarations();
 		BasicBlock* NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock);
+
 		void insertInstrumentation(Instruction* I);
+		Constant* getSourceFile(Instruction* I);
+		Constant* getLineNumber(Instruction* I);
+
         void PrintInstructionIdentifier(std::string M, std::string F, const Value *V);
 
         bool IsNotOriginal(Instruction& inst);
@@ -59,7 +65,10 @@ namespace {
         #endif
         
 		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-			AU.setPreservesAll();
+
+			//This pass DOES NOT preserve all. It changes the CFG and includes new functions and variables to the source.
+			//AU.setPreservesAll();
+
 			#ifdef RANGEANALYIS
 			AU.addRequired<InterProceduralRA<Cousot> >();
 			#endif
@@ -70,6 +79,8 @@ namespace {
         Constant* constZero;
 
         Value* GVstderr, *FPrintF, *messagePtr;
+
+        std::map<std::string,Constant*> SourceFiles;
 	};
 }
 
@@ -81,11 +92,58 @@ STATISTIC(NrInstsNotInstrumented, "Number of valid instructions not instrumented
 
 static RegisterPass<OverflowDetect> X("overflow-detect", "OverflowDetect Instrumentation Pass");
 
+
+Constant* OverflowDetect::getSourceFile(Instruction* I){
+
+	StringRef File;
+	if (MDNode *N = I->getMetadata("dbg")) {
+	    DILocation Loc(N);
+	    File = Loc.getFilename();
+	} else {
+		File = "Unknown Source File";
+	}
+
+	if (SourceFiles.count(File)) {
+		return SourceFiles.find(File)->second;
+	} else {
+
+		//Create a global variable with the File string
+		Constant* stringConstant = llvm::ConstantArray::get(*context, File, true);
+		GlobalVariable* sourceFileStr = new GlobalVariable(*module, stringConstant->getType(), true,
+		                                                llvm::GlobalValue::InternalLinkage,
+		                                                stringConstant, "SourceFile");
+
+		//Get the int8ptr to our message
+		Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(sourceFileStr, constZero);
+		Constant* sourceFilePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+		SourceFiles[File] = sourceFilePtr;
+
+		return sourceFilePtr;
+	}
+}
+
+Constant* OverflowDetect::getLineNumber(Instruction* I){
+
+	if (MDNode *N = I->getMetadata("dbg")) {
+	    DILocation Loc(N);
+	    unsigned Line = Loc.getLineNumber();
+	    return ConstantInt::get(Type::getInt32Ty(*context), Line);
+	}	else {
+		return constZero;
+	}
+
+}
+
+
 /*
  * Creates a Basic Block that will be executed when an overflow occurs.
  * It receives an argument that tells what is the next basic block to be executed.
  */
 BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock){
+
+	Constant* SourceFile = getSourceFile(I);
+	Constant* LineNumber = getLineNumber(I);
 
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);
@@ -95,6 +153,8 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 	std::vector<Value*> args;
 	args.push_back(stderr);
 	args.push_back(messagePtr);
+	args.push_back(SourceFile);
+	args.push_back(LineNumber);
 	CallInst::Create(FPrintF, args, "", branch);
 
 	return result;
@@ -106,7 +166,7 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 void OverflowDetect::InsertGlobalDeclarations(){
 
 	//Create a global variable with the fprintf Message
-	Constant* stringConstant = llvm::ConstantArray::get(*context, "Overflow Occurred!\n", true);
+	Constant* stringConstant = llvm::ConstantArray::get(*context, "Overflow occurred in %s, line %d.\n", true);
 	GlobalVariable* messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "OverflowMessage");
@@ -177,10 +237,14 @@ void OverflowDetect::InsertGlobalDeclarations(){
 		IO_FILE_PTR_ty = IO_FILE_PTR_ty->getContainedType(0);
 	}
 
-	//get or insert the fprintf declaration
+
+	//Create list of our fprintf argument types
     std::vector<Type*> Params;
-    Params.push_back(IO_FILE_PTR_ty);
-    Params.push_back(PointerType::getUnqual(Type::getInt8Ty(*context)));
+    Params.push_back(IO_FILE_PTR_ty);										//stderr
+    Params.push_back(PointerType::getUnqual(Type::getInt8Ty(*context)));	//message
+    Params.push_back(PointerType::getUnqual(Type::getInt8Ty(*context)));	//file name
+    Params.push_back(Type::getInt32Ty(*context));							//line number
+
     // Get the fprintf() function (takes an IO_FILE* and an i8* followed by variadic parameters)
     FPrintF = module->getOrInsertFunction("fprintf",FunctionType::get(Type::getVoidTy(*context), Params, true));
 
@@ -201,6 +265,7 @@ bool OverflowDetect::runOnModule(Module &M) {
 	this->module = &M;
 	this->context = &M.getContext();
 	this->constZero = NULL;
+	SourceFiles.clear();
 	
 	#ifdef RANGEANALYSIS
 	InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
