@@ -80,6 +80,8 @@ namespace {
 
         Value* GVstderr, *FPrintF, *messagePtr;
 
+
+
         std::map<std::string,Constant*> SourceFiles;
 	};
 }
@@ -113,6 +115,8 @@ Constant* OverflowDetect::getSourceFile(Instruction* I){
 		                                                llvm::GlobalValue::InternalLinkage,
 		                                                stringConstant, "SourceFile");
 
+		constZero = ConstantInt::get(Type::getInt32Ty(*context), 0);
+
 		//Get the int8ptr to our message
 		Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(sourceFileStr, constZero);
 		Constant* sourceFilePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
@@ -130,7 +134,7 @@ Constant* OverflowDetect::getLineNumber(Instruction* I){
 	    unsigned Line = Loc.getLineNumber();
 	    return ConstantInt::get(Type::getInt32Ty(*context), Line);
 	}	else {
-		return constZero;
+		return ConstantInt::get(Type::getInt32Ty(*context), 0);
 	}
 
 }
@@ -148,10 +152,10 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);
 
-	Value* stderr = new LoadInst(GVstderr, "loadstderr", branch);
+	Value* vStderr = new LoadInst(GVstderr, "loadstderr", branch);
 
 	std::vector<Value*> args;
-	args.push_back(stderr);
+	args.push_back(vStderr);
 	args.push_back(messagePtr);
 	args.push_back(SourceFile);
 	args.push_back(LineNumber);
@@ -230,7 +234,8 @@ void OverflowDetect::InsertGlobalDeclarations(){
 
 		GVstderr = new GlobalVariable(*module,IO_FILE_PTR_ty,false,GlobalValue::ExternalLinkage, NULL, "stderr");
 	} else {
-		//Get the type of the stderr
+
+        //Get the type of the stderr
 		IO_FILE_PTR_ty = GVstderr->getType();
 
 		//Get the type of the dereference of stderr
@@ -274,7 +279,6 @@ bool OverflowDetect::runOnModule(Module &M) {
 	this->Max = ra.getMax();
 	#endif
 
-
 	NrSignedInsts = 0;
 	NrUnsignedInsts = 0;
 	NrInstsNotInstrumented = 0;
@@ -290,7 +294,6 @@ bool OverflowDetect::runOnModule(Module &M) {
 		if (Fit->begin() == Fit->end())
 			continue;
 
-        
 		// Iterate through basic blocks		
 		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; ++BBit) {
 
