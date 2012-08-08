@@ -1878,6 +1878,9 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	case Instruction::Load:
 	case Instruction::Trunc:
 	case Instruction::ZExt:
+#ifdef OVERFLOWHANDLER
+	case Instruction::Add:
+#endif
 	case Instruction::SExt:
 		source = addVarNode(I->getOperand(0));
 		break;
@@ -1885,9 +1888,102 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 		return;
 	}
 
+	UnaryOp* UOp = NULL;
+	
+#ifndef OVERFLOWHANDLER
 	// Create the operation using the intersect to constrain sink's interval.
-	UnaryOp* UOp = new UnaryOp(new BasicInterval(), sink, I, source,
+	UOp = new UnaryOp(new BasicInterval(), sink, I, source,
 			I->getOpcode());
+#else
+	// I can only be an Add instruction if he is a newdef overflow instruction
+	if (I->getOpcode() == Instruction::Add) {
+		BasicBlock::const_iterator it(I);
+		--it;
+		
+		APInt constant;
+		APInt lower = Min, upper = Max;
+		APInt candidates[2];
+		Range result;
+		
+		switch (it->getOpcode()) {
+			case Instruction::Add:
+				constant = cast<ConstantInt>(it->getOperand(1))->getValue();
+				if (constant.getBitWidth() < MAX_BIT_INT) {
+					constant = constant.sext(MAX_BIT_INT);
+				}
+				
+				if (constant.isStrictlyPositive()) {
+					upper -= constant;
+				}
+				else {
+					lower -= constant;
+				}
+				
+				UOp = new UnaryOp(new BasicInterval(lower, upper), sink, I, source, I->getOpcode());
+				break;
+				
+			case Instruction::Sub:
+				constant = cast<ConstantInt>(it->getOperand(1))->getValue();
+				if (constant.getBitWidth() < MAX_BIT_INT) {
+					constant = constant.sext(MAX_BIT_INT);
+				}
+				
+				if (constant.isStrictlyPositive()) {
+					lower += constant;
+				}
+				else {
+					upper += constant;
+				}
+				
+				UOp = new UnaryOp(new BasicInterval(lower, upper), sink, I, source, I->getOpcode());
+				break;
+			
+			case Instruction::Mul:
+				constant = cast<ConstantInt>(it->getOperand(1))->getValue();
+				if (constant.getBitWidth() < MAX_BIT_INT) {
+					constant = constant.sext(MAX_BIT_INT);
+				}
+				
+				candidates[0] = lower.sdiv(constant);
+				candidates[1] = upper.sdiv(constant);
+
+				//Lower bound is the min value from the vector, while upper bound is the max value
+				if (candidates[1].slt(candidates[0])) {
+					const APInt swap = candidates[0];
+					candidates[0] = candidates[1];
+					candidates[1] = swap;
+				}
+				
+				UOp = new UnaryOp(new BasicInterval(candidates[0], candidates[1]), sink, I, source, I->getOpcode());
+				break;
+			
+			case Instruction::Trunc:
+				const TruncInst *trunc = cast<TruncInst>(it);
+				unsigned numbits = trunc->getType()->getPrimitiveSizeInBits();
+				
+				APInt minvalue = APInt::getSignedMinValue(numbits);
+				if (minvalue.getBitWidth() < MAX_BIT_INT) {
+					minvalue = minvalue.sext(MAX_BIT_INT);
+				}
+				
+				APInt maxvalue = APInt::getSignedMaxValue(numbits);
+				if (maxvalue.getBitWidth() < MAX_BIT_INT) {
+					maxvalue = maxvalue.sext(MAX_BIT_INT);
+				}
+				
+				Range truncInterval(minvalue, maxvalue, Regular);
+				
+				UOp = new UnaryOp(new BasicInterval(truncInterval), sink, I, source, I->getOpcode());
+				break;
+		}
+	}
+	else {
+		// Create the operation using the intersect to constrain sink's interval.
+		UOp = new UnaryOp(new BasicInterval(), sink, I, source,
+		I->getOpcode());
+	}
+#endif
+
 	this->oprs.insert(UOp);
 
 	// Insert this definition in defmap
@@ -2016,6 +2112,13 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma) {
 }
 
 void ConstraintGraph::buildOperations(const Instruction* I) {
+
+#ifdef OVERFLOWHANDLER
+	if (I->getName().endswith("_newdef")) {
+		addUnaryOp(I);
+		return;
+	}
+#endif
 
 	// Handle binary instructions.
 	if (I->isBinaryOp()) {

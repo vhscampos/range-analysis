@@ -67,6 +67,8 @@
 // Uncomment the line below to activate jump-set
 #define JUMPSET
 
+//#define OVERFLOWHANDLER
+
 //Used to limit the number of iterations of fixed meet operator.
 // This update runs before widening and is necessary to improve the result of
 // some particular cases
