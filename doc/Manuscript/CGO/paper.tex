@@ -90,14 +90,14 @@ As an example, in 19XX, XX happened because of an integer overflow~\cite{TODO}.
 % And we need to cite 
 
 % Why there is still the need to devise efficient methods to eliminate them.
-A considerable amount of work has been done in the dynamic detection of
-integer overflows~\cite{TODO}.
+There exist recent research about the dynamic detection of
+integer overflows~\cite{Brumley07,Dietz12}.
 This approach consists in instrumenting the program in such a way that the
 transformed binary is overflow aware.
 Thus, if an overflow happens, then the instrumented program can take some
 action, such as logging that event, or terminating the program.
 There has been also some work aiming at reducing the instrumentation overhead
-via static analysis~\cite{TODO}.
+via static analysis~\cite{Molnar09,Zhang09}.
 However, many authors, such as XX {\em et al.}~\cite[p.xx]{TODO} and
 XX {\em et al.}~\cite[p.x]{TODO}, leave instrumentation pruning as future
 work.
@@ -326,6 +326,21 @@ The constraint graph that we build to the program in
 Figure~\ref{fig:ex_eSSA_cgo}(b).}
 \end{figure}
 
+\noindent
+\textbf{Propagating Ranges in Topological Order. }
+After building the constraint graph, we find its strongly connected components.
+We collapse these components in super nodes, and then proceed to propagate
+ranges along the resulting digraph.
+This approach is essential for scalability, because all the complexity of our
+algorithm lies in the resolution of strong components.
+As we have showed elsewhere~\cite{Victor12}, the vast majority of the strongly
+connected components are singletons.
+For instance, 99.11\% of the SCCs in SPEC CPU 2006 gcc (\texttt{403.gcc}) have
+only one node.
+Moreover, the composite components usually contain a small number of nodes.
+As an example, the largest component in \texttt{403.gcc}, has 2,131 nodes,
+even though gcc's constraint graph has over one million nodes.
+This large SCC exists due to a long chain of mutually recursive function calls.
 
 \subsection{Splitting Live Ranges after Uses of Variables}
 \label{sub:splitting}
@@ -341,6 +356,15 @@ Figure~\ref{fig:ex_eSSA_cgo}(b).}
 \section{Related Work}
 \label{sec:rel}
 
+Zhang {\em et al.}~\cite{Zhang09} have designed a static analysis to sanitize
+programs against integer overflow based vulnerabilities.
+They instrument integer operations in paths from a source to a sink.
+In Zhang {\em et al.}'s context, sources are functions that read values from
+users, and sinks are memory allocation operations.
+Thus, contrary to our work, Zhang {\em et al.}'s only need to instrument
+about 10\% of the integer operations in the program.
+However, they do not use any form of range analysis to limit the number of
+checks inserted in the transformed code.
 
 \section{Final Remarks}
 \label{sec:rem}
