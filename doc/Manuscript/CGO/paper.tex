@@ -273,7 +273,7 @@ Our analysis is sparse~\cite{Choi91}; thus, we associate one, and only one,
 constraint with each integer variable defined in the program.
 A possible solution to the range analysis problem, as obtained via the
 techniques that we will introduce in Section~\ref{sub:algo}, is given in
-Figure~\ref{fig:ex1}(d).
+Figure~\ref{fig:ex_eSSA_cgo}(d).
 
 \begin{figure}[t!]
 \begin{center}
@@ -286,8 +286,8 @@ Figure~\ref{fig:ex1}(d).
 (d) Possible solution to the range analysis problem.}
 \end{figure}
 
-\subsection{Widening, Future Resolution and Narrowing}
-\label{sub:algo}
+\subsection{Range Propagation}
+\label{sub:prop}
 
 % The macro algorithm
 The range analysis algorithm that we propose in this paper works in a number
@@ -316,6 +316,13 @@ If constraint $C \in \varset{C}$ defines variable $\varset{V} \in V$, then we
 create an edge from $C$ to $V$.
 Figure~\ref{fig:ex_graph} shows the constraint graph that we build for the
 program in Figure~\ref{fig:ex_eSSA_cgo}(b).
+If $V$ is used by $C$ as the input of a future, then the edge from
+$V$ to $C$ represents what Ferrante {\em et al.} call a {\em control
+dependence}~\cite[p.323]{Ferrante87}.
+We use dashed lines to represent these edges.
+All the other edges denote {\em data dependences}~\cite[p.322]{Ferrante87}.
+As we will show later, control dependence edges increase the precision of our
+algorithm to solve future bounds.
 
 \begin{figure}[t!]
 \begin{center}
@@ -333,14 +340,174 @@ We collapse these components in super nodes, and then proceed to propagate
 ranges along the resulting digraph.
 This approach is essential for scalability, because all the complexity of our
 algorithm lies in the resolution of strong components.
-As we have showed elsewhere~\cite{Victor12}, the vast majority of the strongly
-connected components are singletons.
+Our tests show that the vast majority of the strongly connected components are
+singletons.
 For instance, 99.11\% of the SCCs in SPEC CPU 2006 gcc (\texttt{403.gcc}) have
 only one node.
 Moreover, the composite components usually contain a small number of nodes.
 As an example, the largest component in \texttt{403.gcc}, has 2,131 nodes,
 even though gcc's constraint graph has over one million nodes.
 This large SCC exists due to a long chain of mutually recursive function calls.
+
+\subsection{A Three-Phases Approach to Solve Strong Components}
+\label{sub:micro}
+
+We determine the ranges for each strongly connected component in a three phases
+approach.
+For each SCC, first we determine the growth pattern of each variable via a
+widening phase.
+In the second step, once we know in which directions the values stored in each
+variable might grow, we replace futures by actual bounds.
+Finally, we have a narrowing phase that uses conditional tests to improve the
+precision of our results.
+
+\noindent
+\textbf{Widening: } we start solving constraints by determining how each program
+variable might grow.
+For instance, if a variable is only updated by sums with positive numbers, then
+we say that it only grows up.
+If, instead, a variable is only updated by sums with negative numbers, then it
+grows down.
+Some variables can also grow in both directions.
+We discover these growth patterns by abstractly interpreting the constraints that
+constitute the strongly connected component.
+We ensure termination via a widening operator.
+Our implementation uses {\em jump-set widening}, which is typically used in
+range analysis~\cite[p.228]{Nielson99}.
+This operator is a generalization of Cousot and Cousot's original widening
+operator~\cite{Cousot77}, which we describe below:
+%
+\begin{equation*}
+I[Y] =
+\begin{cases}
+\mbox{if} \ I[Y] = [\bot, \bot] \ \mbox{then} \ e(Y) \\
+\mbox{elif} \ \lb{e(Y)} < \lb{I[Y]}  \ \mbox{and} \ \ub{e(Y)} > \ub{I[Y]} \ \mbox{then} \ [-\infty, \infty] \\
+\mbox{elif} \ \lb{e(Y)} < \lb{I[Y]} \ \mbox{then} \ [-\infty, \ub{I[Y]}] \\
+\mbox{elif} \ \ub{e(Y)} > \ub{I[Y]} \ \mbox{then} \ [\lb{I[Y]}, \infty]
+\end{cases}
+\end{equation*}
+%
+We let $\lb{[l, u]} = l$ and $\ub{[l, u]} = u$.
+The map $I$ and the abstract evaluation function $e$ are determined as in
+Figure~\ref{fig:eval_function}.
+We have a different implementation of $e$ for each operation that the
+target programming language provides.
+Our current LLVM implementation has 18 different instances of $e$, including
+signed and unsigned addition, subtraction, multiplication and division, plus
+truncation, the bitwise integer operators and $\phi$-functions.
+
+If we use the widening operator above, then the abstract state of any constraint
+variable can only change three times, e.g., $[\bot, \bot] \rightarrow [c_1, c_2]
+\rightarrow [c_1, \infty] \rightarrow [-\infty, \infty]$, or
+$[\bot, \bot] \rightarrow [c_1, c_2] \rightarrow [-\infty, c_2]
+\rightarrow [-\infty, \infty]$.
+Therefore, we can determine the growth behavior of each constraint variable in
+a strong component in linear time on the number of constraints in that
+component.
+Figure~\ref{fig:ex_partition_grow_crop}(b) shows the abstract state of the
+variables in the largest SCC of the graph in Figure~\ref{fig:ex_graph}.
+As we see in the figure, this step of our algorithm has been able to determine
+that variables \texttt{i}$_1$, \texttt{i}$_2$ and \texttt{i}$_t$ can only
+increase, and that variables \texttt{j}$_1$, \texttt{j}$_2$ and \texttt{j}$_t$
+can only decrease.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=0.9\columnwidth]{images/ex_partition_grow_crop}
+\end{center}
+\caption{\label{fig:ex_partition_grow_crop}
+Four snapshots of the last SCC of Figure~\ref{fig:ex_graph}.
+(a) After removing control dependence edges.
+(b) After running the growth analysis.
+(c) After fixing the intersections bound to futures.
+(d) After running the narrowing analysis.}
+\end{figure}
+
+\noindent
+\textbf{Future resolution: }
+The next phase of the algorithm to determine intervals inside a strong
+component consists in replacing futures by actual bounds, a task that we
+accomplish by using the rules below:
+%
+\begin{eqnarray*}
+\begin{array}{c}
+\inferrule{Y = X \sqcap [l, \fun{ft}(V) + c] \\ \ub{I[V]} = u}
+{Y = X \sqcap [l, u + c]} \mbox{\hspace{0.3cm}} u, c \in \mathbb{Z} \cup \{-\infty, \infty\}
+\\
+\\
+\inferrule{Y = X \sqcap [\fun{ft}(V) + c, u] \\ \lb{I[V]} = l}
+{Y = X \sqcap [l + c, u]} \mbox{\hspace{0.3cm}} l, c \in \mathbb{Z} \cup \{-\infty, \infty\}
+\end{array}
+\end{eqnarray*}
+%
+In order to correctly replace a future $\fun{ft}(V)$ that limits a constraint
+variable $V'$, we need to have already applied the growth analysis onto $V$.
+Had we considered only data dependence edges, then it would be possible
+that $V'$ be analyzed before $V$.
+However, because of control dependence edges, this case cannot happen.
+The control dependence edges ensure that any topological ordering of the
+constraint graph either places $V$ before $V'$, or places these nodes
+in the same strongly connected component.
+For instance, in Figure~\ref{fig:ex_graph}, variables $j_1$ and $i_t$ are in
+the same SCC only because of the control dependence edges.
+Figure~\ref{fig:ex_partition_grow_crop}(c) shows the result of resolving
+futures in our running example.
+The information that we acquire from the growth analysis is essential in this
+phase.
+For instance, the growth analysis has found out that the value stored in variable
+\texttt{i}$_i$ can only increase.
+Given that this variable is assigned the initial value zero, we can replace
+$\fun{ft}(I_1)$ with this value.
+
+\noindent
+\textbf{Narrowing: } the last step that we apply on the strongly connected
+component is the narrowing phase.
+In this step we use values extracted from conditional tests to restrict the
+bounds of the constraint variables.
+We use the narrowing operator firstly proposed by Cousot and
+Cousot~\cite{Cousot77}, which we show below:
+%
+\begin{equation*}
+I[Y] =
+\begin{cases}
+\mbox{if} \ \lb{I[Y]} = -\infty  \ \mbox{and} \ \lb{e(Y)} > -\infty \ \mbox{then} \ [\lb{e(Y)}, \ub{I[Y]}] \\
+\mbox{elif} \ \ub{I[Y]} = \infty \ \mbox{and} \ \ub{e(Y)} < \infty \ \mbox{then}
+\ [\lb{I[Y]}, \ub{e(Y)}] \\
+\mbox{elif} \ \lb{I[Y]} > \lb{e(Y)} \ \mbox{then} \ [\lb{e(Y)}, \ub{I[Y]}] \\
+\mbox{elif} \ \ub{I[Y]} < \ub{e(Y)} \ \mbox{then} \ [\lb{I[Y]}, \ub{e(Y)}]
+\end{cases}
+\end{equation*}
+%
+Figure~\ref{fig:ex_partition_grow_crop}(d) show the result of our narrowing
+operator in our running example.
+Ranges initially improve due to the two conditional tests in the program.
+Firstly, we have that $I[I_t] = I[I_1] \sqcap [-\infty, 98]$, which gives us
+that $I[I_t] = [0, 98]$.
+We also have that $I[J_t] = I[J_1] \sqcap [0, \infty]$, giving
+$I[J_t] = [0, 99]$.
+From these new intervals, we can narrow the ranges bound to the other constraint
+variables.
+
+The combination of widening, futures and narrowing, plus use of strong components
+gives us, in this example, a very precise solution.
+We emphasize that finding this tight solution was only possible because of
+the topological ordering of the constraint graph in Figure~\ref{fig:ex_graph}.
+Upon meeting the constraint graph's last SCC, shown in
+Figure~\ref{fig:ex_partition_grow_crop}, we had already determined that the
+interval $[0, 0]$ is bound to $i_0$ and that the interval $[0, 99]$ is bound to
+$j_0$, as we show in Figure~\ref{fig:ex_partition_grow_crop}(a).
+Had we applied the widening operator onto the whole graph, then we would
+have found out that variable $j_1$ is bound to $[-\infty, +\infty]$.
+This imprecision happens because, on one hand $j_1$'s interval is influenced
+by $k_t$'s, which is upper bounded by $+\infty$.
+On the other hand $j_1$ is part of a decreasing cycle of dependences formed by
+variables $j_t$ and $j_2$ in addition to itself.
+Therefore, if we had applied the widening phase over the entire program followed
+by a global narrowing phase, then we would not be able to recover some of
+widening's precision loss.
+However, because in this example we only analyze $j$'s SCC after we have
+analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
+
 
 \subsection{Splitting Live Ranges after Uses of Variables}
 \label{sub:splitting}
