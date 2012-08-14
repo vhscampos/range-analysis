@@ -36,7 +36,7 @@ static cl::opt<bool, false>
 InsertAborts("insert-ovf-aborts", cl::desc("Abort the instrumented program when an overflow occurs."), cl::NotHidden);
 
 //Declaration of this argument is in uSSA.cpp. Public function is in uSSA.h
-static bool TruncInstrumentation = getTruncInstrumentation();
+bool TruncInstrumentation = getTruncInstrumentation();
 
 using namespace llvm;
 
