@@ -572,12 +572,25 @@ a program in face of an overflow.
 The rationale behind u-SSA is as follows: we know that past an instruction such
 as $v = u + c, c \in \mathbb{Z}$ at a program point $p$, variable $u$ must be
 less than $\mathit{MaxInt} - c$.
-If that were not the case, an overflow would have happened and the
+If that were not the case, then an overflow would have happened and the
 program would have terminated.
 Therefore, we split the live range of $u$ past its use point $p$, producing the
 sequence $v = u + c; u' = u$, and renaming every use of $u$ that is dominated
 by $p$ to $u'$.
 We then associate $u$ with the constraint $I[U'] \sqsubseteq I[U] \sqcap [-\infty, \mathit{MaxInt} - c]$.
+Figure~\ref{fig:ex_ir} compares the u-SSA form with the SSA and e-SSA
+intermediate program representations.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/ex_ir}
+\end{center}
+\caption{\label{fig:ex_ir}
+(a) Example program.
+(b) SSA form~\cite{Cytron91}.
+(c) e-SSA form~\cite{Bodik00}.
+(d) u-SSA form.}
+\end{figure}
 
 \section{The Dynamic Instrumentation Library}
 \label{sec:dyn}
