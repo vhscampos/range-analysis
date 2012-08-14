@@ -1,12 +1,20 @@
-#define DEBUG_TYPE "joao"
+#define DEBUG_TYPE "uSSA"
 
-#include "joao.h"
+#include "uSSA.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 static const std::string newdefstr = "_newdef";
 
-void joao::getAnalysisUsage(AnalysisUsage &AU) const {
+static cl::opt<bool, false>
+TruncInstrumentation("insert-trunc-checks", cl::desc("Insert overflow checks in the trunc instructions."), cl::NotHidden);
+
+bool getTruncInstrumentation(){
+	return TruncInstrumentation;
+}
+
+void uSSA::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.addRequiredTransitive<DominanceFrontier>();
 	AU.addRequiredTransitive<DominatorTree>();
 	
@@ -14,7 +22,7 @@ void joao::getAnalysisUsage(AnalysisUsage &AU) const {
 	AU.setPreservesCFG();
 }
 
-bool joao::runOnFunction(Function &F) {
+bool uSSA::runOnFunction(Function &F) {
 	DT_ = &getAnalysis<DominatorTree>();
 	DF_ = &getAnalysis<DominanceFrontier>();
 	
@@ -26,7 +34,7 @@ bool joao::runOnFunction(Function &F) {
 	return false;
 }
 
-void joao::createNewDefs(BasicBlock *BB)
+void uSSA::createNewDefs(BasicBlock *BB)
 {
 	for (BasicBlock::iterator BBit = BB->begin(), BBend = BB->end(); BBit != BBend; ++BBit) {
 		Instruction *I = BBit;
@@ -58,27 +66,29 @@ void joao::createNewDefs(BasicBlock *BB)
 				break;
 			
 			case Instruction::Trunc:
-				// Here we don't have a constant, only an interval due to the truncation number of bits
-				// Check if first operand is non-constant
-				op = I->getOperand(0);
 				
-				if (!isa<ConstantInt>(op)) {
-					std::string newname = op->getName().str() + newdefstr;
+				if (TruncInstrumentation){
+					// Here we don't have a constant, only an interval due to the truncation number of bits
+					// Check if first operand is non-constant
+					op = I->getOperand(0);
 					
-					BinaryOperator *newdef = BinaryOperator::Create(Instruction::Add, op, ConstantInt::get(op->getType(), 0), Twine(newname), next);
-					
-					renameNewDefs(newdef);
-					
-					// Skip the instruction that has just been created
-					++BBit;
+					if (!isa<ConstantInt>(op)) {
+						std::string newname = op->getName().str() + newdefstr;
+
+						BinaryOperator *newdef = BinaryOperator::Create(Instruction::Add, op, ConstantInt::get(op->getType(), 0), Twine(newname), next);
+
+						renameNewDefs(newdef);
+
+						// Skip the instruction that has just been created
+						++BBit;
+					}
 				}
-				
 				break;
 		}
 	}
 }
 
-void joao::renameNewDefs(Instruction *newdef)
+void uSSA::renameNewDefs(Instruction *newdef)
 {
 	// This vector of Instruction* points to the uses of V.
 	// This auxiliary vector of pointers is used because the use_iterators are invalidated when we do the renaming
@@ -125,5 +135,5 @@ void joao::renameNewDefs(Instruction *newdef)
 	}
 }
 
-char joao::ID = 0;
-static RegisterPass<joao> X("joao", "joao");
+char uSSA::ID = 0;
+static RegisterPass<uSSA> X("ussa", "u-SSA");

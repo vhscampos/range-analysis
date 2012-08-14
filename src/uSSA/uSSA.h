@@ -21,10 +21,10 @@
 
 namespace llvm {
 
-class joao : public FunctionPass {
+class uSSA : public FunctionPass {
 public:
 	static char ID; // Pass identification, replacement for typeid.
-	joao() : FunctionPass(ID) {}
+	uSSA() : FunctionPass(ID) {}
 	void getAnalysisUsage(AnalysisUsage &AU) const;
 	bool runOnFunction(Function&);
 	
@@ -36,5 +36,7 @@ private:
 	DominatorTree *DT_;
 	DominanceFrontier *DF_;
 };
+
+bool getTruncInstrumentation();
 
 }

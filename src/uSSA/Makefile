@@ -4,7 +4,7 @@
 LEVEL = ../../..
 
 # Name of the library to build
-LIBRARYNAME = joao
+LIBRARYNAME = uSSA
 
 # Make the shared library become a loadable module so the tools can 
 # dlopen/dlsym on the resulting library.

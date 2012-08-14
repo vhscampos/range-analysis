@@ -3,6 +3,7 @@
 // This file implements the LLVM "Range Analysis Instrumentation" pass 
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Type.h"
 #include "llvm/Constants.h"
 #include "llvm/Operator.h"
 #include "llvm/DerivedTypes.h"
@@ -16,19 +17,26 @@
 #include "llvm/Analysis/DebugInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
+#include "../uSSA/uSSA.h"
 #include <vector>
 #include <list>
 #include <map>
 #include <stdio.h>
 
-// Use range analysis to avoid unnecessary overflow tests
-//#define RANGEANALYSIS
 
-#ifdef RANGEANALYSIS
 #include "../RangeAnalysis/RangeAnalysis.h"
-#else
-#define DEBUG_TYPE "OverflowDetect"
-#endif
+
+typedef enum { OvUnknown, OvCanHappen, OvWillHappen, OvWillNotHappen } OvfPrediction;
+
+static cl::opt<bool, false>
+UseRaPrunning("use-ra-prunning", cl::desc("Use range analysis to avoid inserting unnecessary checks."), cl::NotHidden);
+
+static cl::opt<bool, false>
+InsertAborts("insert-ovf-aborts", cl::desc("Abort the instrumented program when an overflow occurs."), cl::NotHidden);
+
+//Declaration of this argument is in uSSA.cpp. Public function is in uSSA.h
+static bool TruncInstrumentation = getTruncInstrumentation();
 
 using namespace llvm;
 
@@ -41,9 +49,9 @@ namespace {
         void printValueInfo(const Value *V);
 		void MarkAsNotOriginal(Instruction& inst);
 		void InsertGlobalDeclarations();
-		BasicBlock* NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock);
+		BasicBlock* NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock, Value *messagePtr);
 
-		void insertInstrumentation(Instruction* I);
+		void insertInstrumentation(Instruction* I, BasicBlock* AbortBB);
 		Constant* getSourceFile(Instruction* I);
 		Constant* getLineNumber(Instruction* I);
 
@@ -56,31 +64,29 @@ namespace {
         Instruction* GetNextInstruction(Instruction& i);
         
         // Range Analysis stuff
-        #ifdef RANGEANALYSIS
         APInt Min, Max;
         
         bool isLimited(const Range &range) {
         	return range.isRegular() && range.getLower().ne(Min) && range.getUpper().ne(Max);
         }
-        #endif
         
+        OvfPrediction ovfStaticAnalysis(Instruction* I, InterProceduralRA<Cousot> *ra);
+
 		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
 
-			//This pass DOES NOT preserve all. It changes the CFG and includes new functions and variables to the source.
-			//AU.setPreservesAll();
+			if (UseRaPrunning)
+				AU.addRequired<InterProceduralRA<Cousot> >();
 
-			#ifdef RANGEANALYIS
-			AU.addRequired<InterProceduralRA<Cousot> >();
-			#endif
 		}
 
         Module* module;
         llvm::LLVMContext* context;
         Constant* constZero;
 
-        Value* GVstderr, *FPrintF, *messagePtr;
+        Value* GVstderr, *FPrintF, *overflowMessagePtr, *truncErrorMessagePtr;
 
-
+        // Pointer to abort function
+        Function *AbortF;
 
         std::map<std::string,Constant*> SourceFiles;
 	};
@@ -88,11 +94,100 @@ namespace {
 
 char OverflowDetect::ID = 0;
 
+STATISTIC(NrInsts, "Number of instructions");
 STATISTIC(NrSignedInsts, "Number of signed instructions instrumented");
 STATISTIC(NrUnsignedInsts, "Number of unsigned instructions instrumented");
-STATISTIC(NrInstsNotInstrumented, "Number of valid instructions not instrumented");
+STATISTIC(NrOvfStaticallyDetected, "Number of statically detected overflows");
+STATISTIC(NrPossibleOvfStaticallyDetected, "Number of possible overflows statically detected");
 
 static RegisterPass<OverflowDetect> X("overflow-detect", "OverflowDetect Instrumentation Pass");
+
+static bool isSignedInst(Value* V){
+	Instruction* I = dyn_cast<Instruction>(V);
+
+	if (I == NULL) return false;
+
+	if (dyn_cast<FPToSIInst>(V)) return true;
+
+	switch(I->getOpcode()){
+
+		case Instruction::SDiv:
+		case Instruction::SRem:
+		case Instruction::AShr:
+		case Instruction::SExt:
+			return true;
+			break;
+
+		case Instruction::Add:
+		case Instruction::Sub:
+		case Instruction::Mul:
+		case Instruction::Shl:
+			return dyn_cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+			break;
+
+		case Instruction::Trunc:
+			return isSignedInst(I->getOperand(0));
+			break;
+
+		default:
+			return false;
+	}
+
+
+}
+
+OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralRA<Cousot> *ra){
+
+	if (!UseRaPrunning) return OvUnknown;
+
+	Range r;
+	if (I->getOpcode() == Instruction::Trunc)
+		r = ra->getRange(I->getOperand(0));
+	else
+		r = ra->getRange(I);
+
+	if (!isLimited(r)) {
+		return OvUnknown;
+
+	} else {
+
+		unsigned numBits = I->getType()->getPrimitiveSizeInBits();
+
+		errs() << numBits << "\n";
+
+		if (isSignedInst(I)) {
+
+			APInt MinValue = APInt::getSignedMinValue(numBits);
+			APInt MaxValue = APInt::getSignedMaxValue(numBits);
+
+			if (MinValue.sgt(r.getUpper()) || MaxValue.slt(r.getLower())) {
+				NrOvfStaticallyDetected++;
+				return OvWillHappen;
+			}
+			else if (MinValue.sgt(r.getLower()) || MaxValue.slt(r.getUpper())) {
+				NrPossibleOvfStaticallyDetected++;
+				return OvCanHappen;
+			}
+			else return OvWillNotHappen;
+
+		} else {
+			APInt MinValue = APInt::getMinValue(numBits);
+			APInt MaxValue = APInt::getMaxValue(numBits);
+
+			if (MinValue.ugt(r.getUpper()) || MaxValue.ult(r.getLower())){
+				NrOvfStaticallyDetected++;
+				return OvWillHappen;
+			}
+			else if (MinValue.ugt(r.getLower()) || MaxValue.ult(r.getUpper())){
+				NrPossibleOvfStaticallyDetected++;
+				return OvCanHappen;
+			}
+			else return OvWillNotHappen;
+		}
+
+	}
+
+}
 
 
 Constant* OverflowDetect::getSourceFile(Instruction* I){
@@ -144,7 +239,7 @@ Constant* OverflowDetect::getLineNumber(Instruction* I){
  * Creates a Basic Block that will be executed when an overflow occurs.
  * It receives an argument that tells what is the next basic block to be executed.
  */
-BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock){
+BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock, Value *messagePtr){
 
 	Constant* SourceFile = getSourceFile(I);
 	Constant* LineNumber = getLineNumber(I);
@@ -178,7 +273,17 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	//Get the int8ptr to our message
     constZero = ConstantInt::get(Type::getInt32Ty(*context), 0);
 	Constant* constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
-	messagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+	overflowMessagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+
+	stringConstant = llvm::ConstantArray::get(*context, "Truncation with data loss occurred in %s, line %d.\n", true);
+	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
+	                                                llvm::GlobalValue::InternalLinkage,
+	                                                stringConstant, "TruncErrorMessage");
+
+	//Get the int8ptr to our message
+	constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
+	truncErrorMessagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
 
 	Type* IO_FILE_PTR_ty;
 
@@ -253,6 +358,32 @@ void OverflowDetect::InsertGlobalDeclarations(){
     // Get the fprintf() function (takes an IO_FILE* and an i8* followed by variadic parameters)
     FPrintF = module->getOrInsertFunction("fprintf",FunctionType::get(Type::getVoidTy(*context), Params, true));
 
+    if (InsertAborts){
+		// Get void function type
+		FunctionType *AbortFTy = FunctionType::get(Type::getVoidTy(*context), false);
+
+		/*
+		 *      Initialization of 'abort' function
+		 */
+
+		// Before declaring the abort function, we need to check whether it is already declared or not
+		Module::iterator Fit, Fend;
+		bool alreadyDeclared = false;
+
+		for (Fit = module->begin(), Fend =  module->end(); Fit != Fend; ++Fit){
+			if (Fit->getName().equals("abort")) {
+					alreadyDeclared = true;
+					AbortF = Fit;
+					break;
+			}
+		}
+
+		if (!alreadyDeclared) {
+				AbortF = Function::Create(AbortFTy, GlobalValue::ExternalLinkage, "abort", module);
+		}
+    }
+
+
 }
 
 /*
@@ -260,9 +391,12 @@ void OverflowDetect::InsertGlobalDeclarations(){
  */
 bool OverflowDetect::isValidInst(Instruction *I)
 {
-	OverflowingBinaryOperator *bin = dyn_cast<OverflowingBinaryOperator>(I);
-
-	return bin && bin->getType()->isIntegerTy() && bin->getOperand(0)->getType()->isIntegerTy() && bin->getOperand(1)->getType()->isIntegerTy();
+	if (dyn_cast<OverflowingBinaryOperator>(I))
+		return I->getType()->isIntegerTy() && I->getOperand(0)->getType()->isIntegerTy() && I->getOperand(1)->getType()->isIntegerTy();
+	else if (dyn_cast<TruncInst>(I))
+		return TruncInstrumentation && I->getType()->isIntegerTy() && I->getOperand(0)->getType()->isIntegerTy();
+	else
+		return false;
 }
 
 bool OverflowDetect::runOnModule(Module &M) {
@@ -272,16 +406,18 @@ bool OverflowDetect::runOnModule(Module &M) {
 	this->constZero = NULL;
 	SourceFiles.clear();
 	
-	#ifdef RANGEANALYSIS
-	InterProceduralRA<Cousot> &ra = getAnalysis<InterProceduralRA<Cousot> >();
-	
-	this->Min = ra.getMin();
-	this->Max = ra.getMax();
-	#endif
+	InterProceduralRA<Cousot> *ra;
+
+	if (UseRaPrunning) {
+		ra = &getAnalysis<InterProceduralRA<Cousot> >();
+
+		this->Min = ra->getMin();
+		this->Max = ra->getMax();
+	}
 
 	NrSignedInsts = 0;
 	NrUnsignedInsts = 0;
-	NrInstsNotInstrumented = 0;
+
 
 	//Insert the global declarations (fPrintf, stderr, etc...)
 	InsertGlobalDeclarations();
@@ -293,7 +429,23 @@ bool OverflowDetect::runOnModule(Module &M) {
 		// Empty functions include externally linked ones (i.e. abort, printf, scanf, ...)
 		if (Fit->begin() == Fit->end())
 			continue;
-
+		
+		BasicBlock *AbortBB = NULL;
+		if (InsertAborts){
+			// Create the basic block which the controw flow goes to when the assertion fail
+			AbortBB = BasicBlock::Create(*context, "assert fail", dyn_cast<Function>(Fit));
+	
+			// Call to abort function
+			CallInst *abort = CallInst::Create(AbortF, Twine(), AbortBB);
+	
+			// Add atributes to the abort call instruction: no return and no unwind
+			abort->addAttribute(~0, Attribute::NoReturn);
+			abort->addAttribute(~0, Attribute::NoUnwind);
+	
+			// Unreachable instruction
+			new UnreachableInst(*context, AbortBB);
+		}
+		
 		// Iterate through basic blocks		
 		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; ++BBit) {
 
@@ -302,15 +454,13 @@ bool OverflowDetect::runOnModule(Module &M) {
 				
 				Instruction* I = dyn_cast<Instruction>(Iit);
 
+				NrInsts++;
+
 				if (isValidInst(I) && !IsNotOriginal(*I)){
-					#ifdef RANGEANALYSIS
-					Range r = ra.getRange(I);
-					if (!isLimited(r)) {
-						insertInstrumentation(I);
-					}
-					#else
-					insertInstrumentation(I);
-					#endif
+
+					if (ovfStaticAnalysis(I, ra) != OvWillNotHappen)
+						insertInstrumentation(I, AbortBB);
+
 				}					
 			}
 		}
@@ -321,33 +471,7 @@ bool OverflowDetect::runOnModule(Module &M) {
 }
 
 
-void OverflowDetect::insertInstrumentation(Instruction* I){
-
-	// Fetch the boundaries of the variable
-
-	OverflowingBinaryOperator *op = dyn_cast<OverflowingBinaryOperator>(I);
-
-	bool isSigned;
-
-	if (op->hasNoUnsignedWrap()){				//nuw flag
-		isSigned = false;
-		NrUnsignedInsts++;
-	} else if (op->hasNoSignedWrap()) {			//nsw flag
-		isSigned = true;
-		NrSignedInsts++;
-	} else {
-		NrInstsNotInstrumented++;
-		return;
-	}
-
-//	constZero = ConstantInt::get(IntegerType::get(*context, op->getType()->getPrimitiveSizeInBits()), 0);
-	constZero = ConstantInt::get(op->getType(), 0);
-
-	Value* hasOverflow = NULL;
-
-    BinaryOperator* bin = dyn_cast<BinaryOperator>(I);
-    Value* op1 = bin->getOperand(0);
-    Value* op2 = bin->getOperand(1);
+void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB){
 
 	// Create comparison instructions, according to the may-overflow instruction.
 	// They are inserted just after the instruction I
@@ -366,19 +490,42 @@ void OverflowDetect::insertInstrumentation(Instruction* I){
     ICmpInst *negativeResult;
     ICmpInst *positiveResult;
 
-    Value* canCauseOverflow;
+    BasicBlock *newBB, *newBB2, *NextBB;
+    BranchInst *branch;
 
+	bool isBinaryOperator = (dyn_cast<BinaryOperator>(I) != NULL);
+	bool isSigned = isSignedInst(I);
+
+	if (isSigned) {
+		NrSignedInsts++;
+	} else {
+		NrUnsignedInsts++;
+	}
+
+
+	Value* op1;
+	Value* op2;
+	Value* hasIntegerBug = NULL;
+    Value* canCauseOverflow;
     Value* tmpValue;
 
-    BasicBlock *newBB, *newBB2;
-    BranchInst *branch;
+    constZero = ConstantInt::get(I->getType(), 0);
+
+	if (isBinaryOperator){
+		op1 = I->getOperand(0);
+		op2 = I->getOperand(1);
+	} else {
+		op1 = I->getOperand(0);
+	}
+
+	Value* messagePtr = overflowMessagePtr;
 
 	switch(I->getOpcode()){
 
 		case Instruction::Add:
 
 			if (isSigned){
-				//How to do an overflow with a signed Add instruction:
+				//How to do an integer bug with a signed Add instruction:
 				//		add two big positive numbers and get a negative number as result
 				positiveOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGT, op1, constZero);
 				positiveOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGT, op2, constZero);
@@ -387,20 +534,20 @@ void OverflowDetect::insertInstrumentation(Instruction* I){
 				negativeResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, constZero);
 
 				// AND the results
-				hasOverflow = BinaryOperator::Create(Instruction::And, canCauseOverflow, negativeResult, "", nextInstruction);
+				hasIntegerBug = BinaryOperator::Create(Instruction::And, canCauseOverflow, negativeResult, "", nextInstruction);
 			} else {
-				//How to do an overflow with a unsigned Add instruction:
+				//How to do an integer bug with a unsigned Add instruction:
 				//		add two numbers and get a result smaller than one of the operands
 				lessThanOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, dyn_cast<Value>(I), op1);
 				lessThanOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, dyn_cast<Value>(I), op2);
-				hasOverflow = BinaryOperator::Create(Instruction::Or, lessThanOp1, lessThanOp2, "", nextInstruction);
+				hasIntegerBug = BinaryOperator::Create(Instruction::Or, lessThanOp1, lessThanOp2, "", nextInstruction);
 			}
 			break;
 
 		case Instruction::Sub:
 
 			if (isSigned) {
-				//How to do an overflow with a signed Sub instruction:
+				//How to do an integer bug with a signed Sub instruction:
 				//		subtract a positive number from a negative number and get a positive number as result
 				negativeOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, op1, constZero);
 				positiveOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGT, op2, constZero);
@@ -409,20 +556,20 @@ void OverflowDetect::insertInstrumentation(Instruction* I){
 				positiveResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, constZero);
 
 				// AND the results
-				hasOverflow = BinaryOperator::Create(Instruction::And, canCauseOverflow, positiveResult, "", nextInstruction);
+				hasIntegerBug = BinaryOperator::Create(Instruction::And, canCauseOverflow, positiveResult, "", nextInstruction);
 			} else {
 
-				//How to do an overflow with an unsigned Sub instruction:
+				//How to do an integer bug with an unsigned Sub instruction:
 				//		subtract a number from a smaller number. It should result a negative number, but Unsigned numbers
 				//		don't store negative numbers. There is our overflow.
-				hasOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, op1, op2);
+				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, op1, op2);
 
 			}
 			break;
 
 		case Instruction::Mul:
 
-			//How to verify if an overflow has just happened :
+			//How to verify if an integer bug has just happened :
 			//	divide the result by one of the operands of the multiplication.
 			//  If the result of the division is not equal the other operand, there is an overflow
 			// 	(It can be an expensive test. If it gets too expensive, we can test it in terms of
@@ -450,12 +597,12 @@ void OverflowDetect::insertInstrumentation(Instruction* I){
 			if (isSigned){
 
 				tmpValue = BinaryOperator::Create(Instruction::SDiv, I, op1, "", branch);
-				hasOverflow = new ICmpInst(branch, CmpInst::ICMP_NE, tmpValue, op2);
+				hasIntegerBug = new ICmpInst(branch, CmpInst::ICMP_NE, tmpValue, op2);
 
 			} else {
 
 				tmpValue = BinaryOperator::Create(Instruction::UDiv, I, op1, "", branch);
-				hasOverflow = new ICmpInst(branch, CmpInst::ICMP_NE, tmpValue, op2);
+				hasIntegerBug = new ICmpInst(branch, CmpInst::ICMP_NE, tmpValue, op2);
 
 			}
 
@@ -464,21 +611,42 @@ void OverflowDetect::insertInstrumentation(Instruction* I){
 			branch = cast<BranchInst>(newBB2->getTerminator());
 			branch->eraseFromParent();
 
-			BranchInst::Create(NewOverflowOccurrenceBlock(I, newBB), newBB, hasOverflow, newBB2);
+			NextBB = InsertAborts ? AbortBB : newBB;
+
+			BranchInst::Create(NewOverflowOccurrenceBlock(I, NextBB, messagePtr), newBB, hasIntegerBug, newBB2);
 
 			break;
 
 		case Instruction::Shl:
 
 			//The result of a Shift Left must be greater than the first operand.
-			//	Case the result is less than the first operand, there is an overflow
+			//	Case the result is less than the first operand, there is an integer bug
 			if (isSigned){
 
-				hasOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, op1);
+				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, op1);
 
 			} else {
 
-				hasOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, I, op1);
+				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, I, op1);
+
+			}
+			break;
+
+		case Instruction::Trunc:
+			/*
+			 * How to check an integer bug in a trunc instruction:
+			 * 		Cast the truncated value back to its original type and check if the value remains equal
+			 */
+			messagePtr = truncErrorMessagePtr;
+			if (isSigned){
+
+				tmpValue = new SExtInst(I, op1->getType(), "", nextInstruction);
+				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, tmpValue, op1);
+
+			} else {
+
+				tmpValue = CastInst::CreateZExtOrBitCast(I, op1->getType(), "", nextInstruction);
+				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, tmpValue, op1);
 
 			}
 			break;
@@ -497,7 +665,9 @@ void OverflowDetect::insertInstrumentation(Instruction* I){
 		branch = cast<BranchInst>(I->getParent()->getTerminator());
 		branch->eraseFromParent();
 
-		branch = BranchInst::Create(NewOverflowOccurrenceBlock(I, newBB), newBB, hasOverflow, I->getParent());
+		NextBB = InsertAborts ? AbortBB : newBB;
+
+		branch = BranchInst::Create(NewOverflowOccurrenceBlock(I, NextBB, messagePtr), newBB, hasIntegerBug, I->getParent());
 
 	}
 }
