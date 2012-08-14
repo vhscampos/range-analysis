@@ -26,7 +26,7 @@
 \copyrightyear{2013}
 \copyrightdata{[to be supplied]} 
 
-\titlebanner{Dinamica EGO}        % These are ignored unless
+\titlebanner{Code Generation and Optimization}        % These are ignored unless
 \preprintfooter{Dinamica EGO}   % 'preprint' option specified.
 
 \title{An Algorithm to Prune Integer Overflow Tests}
@@ -184,7 +184,7 @@ $\varset{Z}^2$, which is defined as follows:
 %
 This interval lattice is partially ordered by the subset relation, which we
 denote by ``$\sqsubseteq$".
-The meet operator ``$\sqcap$" is defined by:
+Range intersection, ``$\sqcap$", is defined by:
 \[
 [a_1, a_2] \sqcap [b_1, b_2] =
 \begin{cases}
@@ -192,7 +192,10 @@ The meet operator ``$\sqcap$" is defined by:
 [a_1, a_2] \sqcap [b_1, b_2] = \emptyset, \ \mbox{otherwise}
 \end{cases}
 \]
-
+And range union, ``$\sqcup$", is given by:
+\[
+[a_1, a_2] \sqcup [b_1, b_2] = [\mbox{min}(a_1, b_1), \mbox{max}(a_2, b_2)]
+\]
 
 Given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
 $\ub{\iota} = u$.
@@ -230,7 +233,7 @@ e(Y) = [l, u]
 Y = \phi (X_1, X_2)
 &
 \inferrule{I[X_1]=[l_1, u_1] \\ I[X_2]=[l_2, u_2]}
-{e(Y) = [l_1, u_1] \sqcap [l_2, u_2]}
+{e(Y) = [l_1, u_1] \sqcup [l_2, u_2]}
 \\
 \\
 Y = X_1 + X_2
@@ -254,7 +257,7 @@ Y = aX + b
 Y = X \sqcap [l', u']
 &
 \inferrule{I[X]=[l, u]}
-{e(Y) \leftarrow [\mbox{max}(l, l'), \mbox{min}(u, u')]}
+{e(Y) \leftarrow [l, u] \sqcap [l', u']}
 \end{array}
 \end{eqnarray*}
 \caption{\label{fig:eval_function}
@@ -509,8 +512,72 @@ However, because in this example we only analyze $j$'s SCC after we have
 analyzed $k$'s, $k$ only contribute the constant range $[0, 99]$ to $j_0$.
 
 
-\subsection{Splitting Live Ranges after Uses of Variables}
+\subsection{Live Range Splitting Strategies}
 \label{sub:splitting}
+
+A dense dataflow analysis associates information, i.e., a point in a lattice,
+with each pair formed by a variable plus a program point.
+If this information is invariant along every program point where the variable
+is alive, then we can associate the information with the variable itself.
+In this case, we say that the dataflow analysis is {\em sparse}~\cite{Choi91}.
+A dense dataflow analysis can be transformed into a sparse one via a suitable
+intermediate representation.
+A compiler builds this intermediate representation by splitting the live ranges
+of variables at the program points where the information associated with these
+variables might change.
+To split the live range of a variable $v$, at a program point $p$, we insert
+a copy $v' = v$ at $p$, and rename every use of $v$ that is dominated by $p$.
+In this paper we have experimented with two different live range splitting
+alternatives.
+
+The first strategy is the {\em Extended Static Single Assignment} (e-SSA) form,
+proposed by Bodik {\em et al.}~\cite{Bodik00}.
+We build the e-SSA representation by splitting live ranges at definition sites
+-- hence it subsumes the SSA form -- and at conditional tests.
+The program in Figure~\ref{fig:ex_eSSA_cgo}(b) is in e-SSA form.
+Let $(v < c)?$ be a conditional test, and let $l_t$ and $l_f$ be labels in
+the program, such that $l_t$ is the target of the test if the condition is true,
+and $l_f$ is the target when the condition is false.
+We split the live range of $v$ at any of these points if at least one of two
+conditions is true:
+(i) $l_f$ or $l_t$ dominate any use of $v$;
+(ii) there exist a use of $v$ at the dominance frontier of $l_f$ or $l_t$.
+For the notions of dominance and dominance-frontier, see Aho
+{\em et al.}~\cite[p.656]{Aho06}.
+To split the live range of $v$ at $l_f$ we insert at this
+program point a copy $v_f = v \sqcap [c, +\infty]$, where $v_f$ is a fresh name.
+We then rename every use of $v$ that is dominated by $l_f$ to $v_f$.
+Dually, if we must split at $l_t$, then we create at this point a copy
+$v_t = v \sqcap [-\infty, c-1]$, and rename variables accordingly.
+If the conditional uses two variables, e.g., $(v_1 < v_2)?$, then we create
+intersections bound to {\em futures}.
+We insert, at $l_f$, $v_{1f} = v_1 \sqcap [\fun{ft}(v_2), +\infty]$,
+and $v_{2f} = v_2 \sqcap [-\infty, \fun{ft}(v_1)]$.
+Similarly, at $l_t$ we insert
+$v_{1v} = v_1 \sqcap [-\infty, \fun{ft}(v_2) - 1]$
+and $v_{2f} = v_2 \sqcap [\fun{ft}(v_1) + 1, +\infty]$.
+Notice that a variable $v$ can never be associated with a future bound to
+itself, e.g., $\fun{ft}(v)$.
+This invariant holds because whenever the e-SSA conversion associates a variable
+$u$ with $\fun{ft}(v)$, then $u$ is a fresh name created to split the live range
+of $v$, given that $v$ was used in a conditional.
+
+The second intermediate representation consists in splitting live ranges at
+(i) definition sites -- it subsumes SSA, (ii) at conditional tests -- it
+subsumes e-SSA, and at some use sites.
+This representation, which we henceforth call u-SSA, is only valid if we
+assume that integer overflows cannot happen.
+We can provide this guarantee by using our dynamic instrumentation to terminate
+a program in face of an overflow.
+The rationale behind u-SSA is as follows: we know that past an instruction such
+as $v = u + c, c \in \mathbb{Z}$ at a program point $p$, variable $u$ must be
+less than $\mathit{MaxInt} - c$.
+If that were not the case, an overflow would have happened and the
+program would have terminated.
+Therefore, we split the live range of $u$ past its use point $p$, producing the
+sequence $v = u + c; u' = u$, and renaming every use of $u$ that is dominated
+by $p$ to $u'$.
+We then associate $u$ with the constraint $I[U'] \sqsubseteq I[U] \sqcap [-\infty, \mathit{MaxInt} - c]$.
 
 \section{The Dynamic Instrumentation Library}
 \label{sec:dyn}
