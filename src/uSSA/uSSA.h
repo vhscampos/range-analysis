@@ -37,6 +37,6 @@ private:
 	DominanceFrontier *DF_;
 };
 
-bool getTruncInstrumentation();
-
 }
+
+bool getTruncInstrumentation();

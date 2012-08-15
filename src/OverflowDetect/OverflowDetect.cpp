@@ -418,7 +418,9 @@ bool OverflowDetect::runOnModule(Module &M) {
 
 	NrSignedInsts = 0;
 	NrUnsignedInsts = 0;
-
+	NrInsts = 0;
+	NrOvfStaticallyDetected = 0;
+	NrPossibleOvfStaticallyDetected = 0;
 
 	//Insert the global declarations (fPrintf, stderr, etc...)
 	InsertGlobalDeclarations();
