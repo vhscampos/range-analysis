@@ -24,8 +24,9 @@
 #include <map>
 #include <stdio.h>
 
-
 #include "../RangeAnalysis/RangeAnalysis.h"
+
+using namespace llvm;
 
 typedef enum { OvUnknown, OvCanHappen, OvWillHappen, OvWillNotHappen } OvfPrediction;
 
@@ -38,7 +39,7 @@ InsertAborts("insert-ovf-aborts", cl::desc("Abort the instrumented program when 
 //Declaration of this argument is in uSSA.cpp. Public function is in uSSA.h
 bool TruncInstrumentation = getTruncInstrumentation();
 
-using namespace llvm;
+
 
 namespace {
 
