@@ -83,25 +83,26 @@ For instance, programers might rely on this behavior to implement hash functions
 and random number generators.
 On the other hand, there exist also situations in which this behavior might
 lead a program to produce unexpected results.
-As an example, in 19XX, XX happened because of an integer overflow~\cite{TODO}.
-% TODO: we need to do some research to improve this paragraph:
-% - We need to explain better the wrapping-arithmetics, and we need to cite it
+As an example, in 1996, the Ariane 5 rocket was lost due to an arithmetic
+overflow -- a bug that resulted in a loss of more than U\$370 million
+dollars~\cite{Dowson97}.
+% TODO We need to explain better the wrapping-arithmetics, and we need to cite it
 % properly. What could be a good (official) citation?
 % And we need to cite 
 
 % Why there is still the need to devise efficient methods to eliminate them.
-There exist recent research about the dynamic detection of
-integer overflows~\cite{Brumley07,Dietz12}.
-This approach consists in instrumenting the program in such a way that the
-transformed binary is overflow aware.
+Programming languages such as Ada or Lisp can be customized to throw exceptions
+whenever integer overflows are detected.
+Furthermore, there exist recent work proposing to instrument binaries derived
+from C, C++ and Java programs to detect the occurrence of overflows
+dynamically~\cite{Brumley07,Dietz12}.
 Thus, if an overflow happens, then the instrumented program can take some
-action, such as logging that event, or terminating the program.
-There has been also some work aiming at reducing the instrumentation overhead
-via static analysis~\cite{Molnar09,Zhang09}.
-However, many authors, such as XX {\em et al.}~\cite[p.xx]{TODO} and
-XX {\em et al.}~\cite[p.x]{TODO}, leave instrumentation pruning as future
-work.
-The goal of this paper is to bring this future back to the present.
+action, such as to log the event, or to terminate the program.
+However, this safety comes with a price: arithmetic operations need to be
+surveilled, and the runtime checks cost time.
+Zhang {\em et al.}~\cite{Zhang09} have proposed to eliminate some of this
+overhead via a tainted flow analysis.
+We have a similar goal, yet, our approach is substantially different.
 
 % Our contribution: range analysis.
 In this paper we discuss a simple and efficient range analysis algorithm that
@@ -148,12 +149,58 @@ By comparing the ranges that we determine statically with the results found by
 a profiler, we see that more than 50\% of the bounds that we found are within a
 factor of 50\% of the values that variables actually assume.
 
-\section{Background}
-\label{sec:bck}
+\subsection{The Danger that Integer Overflows Represent}
+\label{sub:danger}
 
 % A brief overview about integer overflows.
+The $n$-bits two's complement arithmetics wraps around at multiples of
+$2^n$.
+As an example the representation of $16 \times 16$ in 8-bits two's complement
+is $0$, because $0 \equiv (16\times16) \mod 2^8$.
+Programmers can use this well-defined behavior in benign ways.
+For instance, the wrapping arithmetics provides a cheap $\mod 2^n$ operator,
+which is used in the implementation of hash-functions or random number
+generators.
+However, integer overflows can also be the sources of bugs that are hard to
+identify.
+As pointed by Dietz {\em et al.}~\cite{Dietz12}, integer overflows are the
+sources of vulnerabilities in widely used software, such as OpenSSH and
+Firefox.
+These vulnerabilities could give an adversary the opportunity to execute
+arbitrary code in the compromised application.
 
-% Harmless and malefic overflows.
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/ex_buffer_overflow}
+\end{center}
+\caption{\label{fig:ex_buffer_overflow}
+An example of an exploitable integer overflow vulnerability.}
+\end{figure}
+
+% An example of vulnerability.
+Figure~\ref{fig:ex_buffer_overflow} illustrates an example of integer
+overflow vulnerability.
+This vulnerability allows an adversary to perform a buffer overrun attack
+on a program that is apparently guarded against this type of exploit.
+For simplicity, we will use the C datatype \texttt{char}, which represents
+8-bit long numbers.
+Examples of actual vulnerabilities, with larger primitive types, are given
+by Brumley {\em et al.}~\cite{Brumley07}, Dietz {\em et al.}~\cite{Dietz12}, and
+Zhang {\em et al.}~\cite{Zhang09}.
+The function \texttt{read\_matrix} reads a matrix of bytes from a file.
+This matrix is stored as a linear sequence of bytes in a vector \texttt{out}.
+The first and second bytes in the file, e.g., \texttt{w} and \texttt{h},
+determine the number of rows and columns in the matrix.
+If the \texttt{char} datatype could represent arbitrarily long numbers, than this
+function would be safe against buffer overruns, because it would only write data
+on allocated memory.
+However, if, for instance, we have that \texttt{w}$= 16$ and \texttt{h}$= 16$,
+then \texttt{s}$= 0$, as pointed before.
+In this case, a buffer of length zero would be allocated, and all the data
+stored in the file would overwrite memory in the stack of activation records.
+By carefully crafting an input file, and adversary can, in this way, overwrite
+the return address of \texttt{read\_matrix}, diverting program's execution to
+one of \texttt{libc}'s function, such as \texttt{telnet}, for instance.
 
 \section{Range Analysis}
 \label{sec:range}
@@ -578,8 +625,6 @@ Therefore, we split the live range of $u$ past its use point $p$, producing the
 sequence $v = u + c; u' = u$, and renaming every use of $u$ that is dominated
 by $p$ to $u'$.
 We then associate $u$ with the constraint $I[U'] \sqsubseteq I[U] \sqcap [-\infty, \mathit{MaxInt} - c]$.
-Figure~\ref{fig:ex_ir} compares the u-SSA form with the SSA and e-SSA
-intermediate program representations.
 
 \begin{figure}[t!]
 \begin{center}
@@ -592,6 +637,28 @@ intermediate program representations.
 (d) u-SSA form.}
 \end{figure}
 
+Figure~\ref{fig:ex_ir} compares the u-SSA form with the SSA and e-SSA
+intermediate program representations.
+We use the notation $v = \bullet$ to denote a definition of variable $v$, and
+$\bullet = v$ to denote a use of that variable.
+Figure~\ref{fig:ex_ir}(b) shows the example program converted to the SSA format.
+The different definitions of variable $u$ have been renamed, and a
+$\phi$-function re-combines these definitions into a single name.
+The SSA form sparsifies a dataflow analysis that only extracts information from
+the definition sites of variables, such as constant propagation.
+Figure~\ref{fig:ex_ir}(c) shows the same program in e-SSA form.
+This time we have renamed variable $v$ right after the conditional test where
+this variable is used.
+The e-SSA form serves dataflow analyses that acquire information from definition
+sites and conditional tests.
+Examples of these analyses include array bounds checking
+elimination~\cite{Bodik00} and traditional implementations of range
+analyses~\cite{Gough94,Patterson95}.
+Finally, Figure~\ref{fig:ex_ir}(d) shows our example in u-SSA form.
+The live range of variable $v_1$ has been divided right after its use.
+This representation is useful to analyses that learn information from the way
+that variables are used, and propagate this information forwardly.
+
 \section{The Dynamic Instrumentation Library}
 \label{sec:dyn}
 
@@ -603,6 +670,19 @@ intermediate program representations.
 \section{Related Work}
 \label{sec:rel}
 
+\noindent
+\paragraph{Dynamic Detection of Integer Overflows: }
+Brumley \em{et al.}~\cite{Brumley07} have developed a tool, RICH, to detect
+integer integer overflows.
+Their approach consists in instrumenting every integer operation that might cause
+to an overflow, underflow, or data loss.
+Different from our method, RICH uses specific features of the x86 architecture
+to reduce the instrumentation overhead.
+Moreover, no static analysis is used to avoid unnecessary assertions, although
+this improvement is cited as future work.
+
+\paragraph{Static Detection of Integer Overflows: }
+\noindent
 Zhang {\em et al.}~\cite{Zhang09} have designed a static analysis to sanitize
 programs against integer overflow based vulnerabilities.
 They instrument integer operations in paths from a source to a sink.
@@ -612,6 +692,18 @@ Thus, contrary to our work, Zhang {\em et al.}'s only need to instrument
 about 10\% of the integer operations in the program.
 However, they do not use any form of range analysis to limit the number of
 checks inserted in the transformed code.
+Wang {\em et a.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}Õs work are essentially different: they use symbolic execution, whereas we rely on
+range analysis.
+Furthermore, contrary to them, we do not try to detected statically the
+possibility of an integer overflow happening.
+Contrary to us, they do not transform the program to prevent or detect such event dynamically.
+Still in the field of symbolic execution, Molnar
+{\em et al.}~\cite{Molnar09} have implemented a tool, SmartFuzz, that analyzes
+Linux x86 binaries to find integer overflow bugs.
+They prove the existence of bugs by generating test cases for them.
+
+\noindent
+\paragraph{Intermediate Program Representations: }
 
 \section{Final Remarks}
 \label{sec:rem}
