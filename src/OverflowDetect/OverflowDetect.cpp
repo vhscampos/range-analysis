@@ -36,6 +36,10 @@ UseRaPrunning("use-ra-prunning", cl::desc("Use range analysis to avoid inserting
 static cl::opt<bool, false>
 InsertAborts("insert-ovf-aborts", cl::desc("Abort the instrumented program when an overflow occurs."), cl::NotHidden);
 
+static cl::opt<bool, false>
+InsertFprintfs("insert-stderr-fprintfs", cl::desc("Insert fprintf calls when overflow occurs."), cl::NotHidden, cl::init(true));
+
+
 //Declaration of this argument is in uSSA.cpp. Public function is in uSSA.h
 bool TruncInstrumentation = getTruncInstrumentation();
 
@@ -248,14 +252,16 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);
 
-	Value* vStderr = new LoadInst(GVstderr, "loadstderr", branch);
+	if (InsertFprintfs){
+		Value* vStderr = new LoadInst(GVstderr, "loadstderr", branch);
 
-	std::vector<Value*> args;
-	args.push_back(vStderr);
-	args.push_back(messagePtr);
-	args.push_back(SourceFile);
-	args.push_back(LineNumber);
-	CallInst::Create(FPrintF, args, "", branch);
+		std::vector<Value*> args;
+		args.push_back(vStderr);
+		args.push_back(messagePtr);
+		args.push_back(SourceFile);
+		args.push_back(LineNumber);
+		CallInst::Create(FPrintF, args, "", branch);
+	}
 
 	return result;
 }
