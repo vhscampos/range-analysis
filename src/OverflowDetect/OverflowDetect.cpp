@@ -158,22 +158,26 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 
 		unsigned numBits = I->getType()->getPrimitiveSizeInBits();
 
-		errs() << numBits << "\n";
-
 		if (isSignedInst(I)) {
 
 			APInt MinValue = APInt::getSignedMinValue(numBits);
 			APInt MaxValue = APInt::getSignedMaxValue(numBits);
 
-			if (MinValue.sgt(r.getUpper()) || MaxValue.slt(r.getLower())) {
-				NrOvfStaticallyDetected++;
-				return OvWillHappen;
+			//FIXME: Convert all the numbers to the same bitWidth
+			//If the bitWidths are different, so I can't compare them using APInt.
+			if (MinValue.getBitWidth() != r.getUpper().getBitWidth() || MinValue.getBitWidth() != r.getLower().getBitWidth() ) {
+				return OvUnknown;
+			} else {
+				if (MinValue.sgt(r.getUpper()) || MaxValue.slt(r.getLower())) {
+					NrOvfStaticallyDetected++;
+					return OvWillHappen;
+				}
+				else if (MinValue.sgt(r.getLower()) || MaxValue.slt(r.getUpper())) {
+					NrPossibleOvfStaticallyDetected++;
+					return OvCanHappen;
+				}
+				else return OvWillNotHappen;
 			}
-			else if (MinValue.sgt(r.getLower()) || MaxValue.slt(r.getUpper())) {
-				NrPossibleOvfStaticallyDetected++;
-				return OvCanHappen;
-			}
-			else return OvWillNotHappen;
 
 		} else {
 			APInt MinValue = APInt::getMinValue(numBits);
