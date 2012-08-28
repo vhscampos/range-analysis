@@ -55,7 +55,8 @@ void uSSA::createNewDefs(BasicBlock *BB)
 				if (!isa<ConstantInt>(op) && ci && (ci->getValue() != 0)) {
 					std::string newname = op->getName().str() + newdefstr;
 					
-					BinaryOperator *newdef = BinaryOperator::Create(Instruction::Add, op, ConstantInt::get(op->getType(), 0), Twine(newname), next);
+					BinaryOperator *newdef = BinaryOperator::Create(Instruction::Add, op, ConstantInt::get(op->getType(), 0), Twine(newname), next);					
+					newdef->setMetadata("new-inst", MDNode::get(BB->getParent()->getContext(), llvm::ArrayRef<Value*>()));
 					
 					renameNewDefs(newdef);
 					
@@ -76,7 +77,8 @@ void uSSA::createNewDefs(BasicBlock *BB)
 						std::string newname = op->getName().str() + newdefstr;
 
 						BinaryOperator *newdef = BinaryOperator::Create(Instruction::Add, op, ConstantInt::get(op->getType(), 0), Twine(newname), next);
-
+						newdef->setMetadata("new-inst", MDNode::get(BB->getParent()->getContext(), llvm::ArrayRef<Value*>()));
+						
 						renameNewDefs(newdef);
 
 						// Skip the instruction that has just been created

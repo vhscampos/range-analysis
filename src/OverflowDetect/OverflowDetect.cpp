@@ -56,7 +56,7 @@ namespace {
 		void InsertGlobalDeclarations();
 		BasicBlock* NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock, Value *messagePtr);
 
-		void insertInstrumentation(Instruction* I, BasicBlock* AbortBB);
+		void insertInstrumentation(Instruction* I, BasicBlock* AbortBB, OvfPrediction Pred);
 		Constant* getSourceFile(Instruction* I);
 		Constant* getLineNumber(Instruction* I);
 
@@ -88,7 +88,7 @@ namespace {
         llvm::LLVMContext* context;
         Constant* constZero;
 
-        Value* GVstderr, *FPrintF, *overflowMessagePtr, *truncErrorMessagePtr;
+        Value* GVstderr, *FPrintF, *overflowMessagePtr, *truncErrorMessagePtr, *overflowMessagePtr2, *truncErrorMessagePtr2;
 
         // Pointer to abort function
         Function *AbortF;
@@ -100,6 +100,7 @@ namespace {
 char OverflowDetect::ID = 0;
 
 STATISTIC(NrInsts, "Number of instructions");
+STATISTIC(NrPrunnedInsts, "Number of prunned instructions");
 STATISTIC(NrSignedInsts, "Number of signed instructions instrumented");
 STATISTIC(NrUnsignedInsts, "Number of unsigned instructions instrumented");
 STATISTIC(NrOvfStaticallyDetected, "Number of statically detected overflows");
@@ -157,41 +158,63 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 	} else {
 
 		unsigned numBits = I->getType()->getPrimitiveSizeInBits();
+		
+		//Check if the Upper and Lower bounds of the range are sound
+		if(r.getUpper().getBitWidth() != r.getLower().getBitWidth()){
+			errs() << "WARNING! Upper and lower bounds with different bitwidths.\n";		
+			return OvUnknown;
+		}
+		
+		//Check if the range is contained within the type bounds, because it is represented with less bits
+		if (r.getUpper().getBitWidth() < numBits || r.getLower().getBitWidth() < numBits) {
+			NrPrunnedInsts++;
+			return OvWillNotHappen;
+		}		
 
 		if (isSignedInst(I)) {
-
+			
 			APInt MinValue = APInt::getSignedMinValue(numBits);
 			APInt MaxValue = APInt::getSignedMaxValue(numBits);
-
-			//FIXME: Convert all the numbers to the same bitWidth
-			//If the bitWidths are different, so I can't compare them using APInt.
-			if (MinValue.getBitWidth() != r.getUpper().getBitWidth() || MinValue.getBitWidth() != r.getLower().getBitWidth() ) {
-				return OvUnknown;
-			} else {
-				if (MinValue.sgt(r.getUpper()) || MaxValue.slt(r.getLower())) {
-					NrOvfStaticallyDetected++;
-					return OvWillHappen;
-				}
-				else if (MinValue.sgt(r.getLower()) || MaxValue.slt(r.getUpper())) {
-					NrPossibleOvfStaticallyDetected++;
-					return OvCanHappen;
-				}
-				else return OvWillNotHappen;
+			
+			//If needed, do the signed extend of everyone to the same bit width
+			if (MinValue.getBitWidth() < r.getUpper().getBitWidth()){
+				MinValue = MinValue.sext(r.getUpper().getBitWidth());
+				MaxValue = MaxValue.sext(r.getUpper().getBitWidth());					
 			}
-
-		} else {
-			APInt MinValue = APInt::getMinValue(numBits);
-			APInt MaxValue = APInt::getMaxValue(numBits);
-
-			if (MinValue.ugt(r.getUpper()) || MaxValue.ult(r.getLower())){
+						
+			if (MinValue.sgt(r.getUpper()) || MaxValue.slt(r.getLower())) {
 				NrOvfStaticallyDetected++;
 				return OvWillHappen;
 			}
-			else if (MinValue.ugt(r.getLower()) || MaxValue.ult(r.getUpper())){
+			else if (MinValue.sgt(r.getLower()) || MaxValue.slt(r.getUpper())) {
 				NrPossibleOvfStaticallyDetected++;
 				return OvCanHappen;
 			}
-			else return OvWillNotHappen;
+			else {
+				NrPrunnedInsts++;
+				return OvWillNotHappen;
+			}
+
+		} else {
+			
+			APInt Zero(numBits, 0);
+			//FIXME: Our RA doesn't handle unsigned instructions very well.
+			// So, I'm using the signed max value to do the analysis. It needs to be fixed.
+			APInt MaxValue = APInt::getSignedMaxValue(numBits);
+			
+			//If needed, do the unsigned extend of everyone to the same bit width
+			if (MaxValue.getBitWidth() < r.getUpper().getBitWidth()){
+				Zero = Zero.zext(r.getUpper().getBitWidth());
+				MaxValue = MaxValue.zext(r.getUpper().getBitWidth());					
+			}
+
+			if (r.getLower().uge(Zero) && r.getUpper().ult(MaxValue)) {
+				NrPrunnedInsts++;
+				return OvWillNotHappen;
+			}
+			else {
+				return OvUnknown;
+			}
 		}
 
 	}
@@ -252,6 +275,7 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 
 	Constant* SourceFile = getSourceFile(I);
 	Constant* LineNumber = getLineNumber(I);
+	Constant* InstructionIdentifier = ConstantInt::get(Type::getInt32Ty(*context), (int)I);
 
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);
@@ -264,6 +288,7 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 		args.push_back(messagePtr);
 		args.push_back(SourceFile);
 		args.push_back(LineNumber);
+		args.push_back(InstructionIdentifier);
 		CallInst::Create(FPrintF, args, "", branch);
 	}
 
@@ -276,7 +301,7 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 void OverflowDetect::InsertGlobalDeclarations(){
 
 	//Create a global variable with the fprintf Message
-	Constant* stringConstant = llvm::ConstantArray::get(*context, "Overflow occurred in %s, line %d.\n", true);
+	Constant* stringConstant = llvm::ConstantArray::get(*context, "Overflow occurred in %s, line %d. [%d]\n", true);
 	GlobalVariable* messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "OverflowMessage");
@@ -287,7 +312,7 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	overflowMessagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
 
 
-	stringConstant = llvm::ConstantArray::get(*context, "Truncation with data loss occurred in %s, line %d.\n", true);
+	stringConstant = llvm::ConstantArray::get(*context, "Truncation with data loss occurred in %s, line %d. [%d]\n", true);
 	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "TruncErrorMessage");
@@ -295,6 +320,27 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	//Get the int8ptr to our message
 	constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
 	truncErrorMessagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+
+	//Messages for the overflows statically detected (suspect instructions)
+	stringConstant = llvm::ConstantArray::get(*context, "(Suspected) Overflow occurred in %s, line %d. [%d]\n", true);
+	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
+	                                                llvm::GlobalValue::InternalLinkage,
+	                                                stringConstant, "TruncErrorMessage");
+
+	//Get the int8ptr to our message
+	constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
+	overflowMessagePtr2 = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
+	stringConstant = llvm::ConstantArray::get(*context, "(Suspected) Truncation with data loss occurred in %s, line %d. [%d]\n", true);
+	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
+	                                                llvm::GlobalValue::InternalLinkage,
+	                                                stringConstant, "TruncErrorMessage");
+
+	//Get the int8ptr to our message
+	constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
+	truncErrorMessagePtr2 = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
+
 
 	Type* IO_FILE_PTR_ty;
 
@@ -365,6 +411,7 @@ void OverflowDetect::InsertGlobalDeclarations(){
     Params.push_back(PointerType::getUnqual(Type::getInt8Ty(*context)));	//message
     Params.push_back(PointerType::getUnqual(Type::getInt8Ty(*context)));	//file name
     Params.push_back(Type::getInt32Ty(*context));							//line number
+    Params.push_back(Type::getInt32Ty(*context));							//Instruction Identifier
 
     // Get the fprintf() function (takes an IO_FILE* and an i8* followed by variadic parameters)
     FPrintF = module->getOrInsertFunction("fprintf",FunctionType::get(Type::getVoidTy(*context), Params, true));
@@ -431,6 +478,7 @@ bool OverflowDetect::runOnModule(Module &M) {
 	NrInsts = 0;
 	NrOvfStaticallyDetected = 0;
 	NrPossibleOvfStaticallyDetected = 0;
+	NrPrunnedInsts = 0;
 
 	//Insert the global declarations (fPrintf, stderr, etc...)
 	InsertGlobalDeclarations();
@@ -471,8 +519,10 @@ bool OverflowDetect::runOnModule(Module &M) {
 
 				if (isValidInst(I) && !IsNotOriginal(*I)){
 
-					if (ovfStaticAnalysis(I, ra) != OvWillNotHappen)
-						insertInstrumentation(I, AbortBB);
+					OvfPrediction Pred = ovfStaticAnalysis(I, ra);
+
+					if (Pred != OvWillNotHappen)
+						insertInstrumentation(I, AbortBB, Pred);
 
 				}					
 			}
@@ -484,7 +534,7 @@ bool OverflowDetect::runOnModule(Module &M) {
 }
 
 
-void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB){
+void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, OvfPrediction Pred){
 
 	// Create comparison instructions, according to the may-overflow instruction.
 	// They are inserted just after the instruction I
@@ -531,7 +581,7 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB){
 		op1 = I->getOperand(0);
 	}
 
-	Value* messagePtr = overflowMessagePtr;
+	Value* messagePtr = (Pred==OvUnknown ? overflowMessagePtr : overflowMessagePtr2);
 
 	switch(I->getOpcode()){
 
@@ -650,7 +700,7 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB){
 			 * How to check an integer bug in a trunc instruction:
 			 * 		Cast the truncated value back to its original type and check if the value remains equal
 			 */
-			messagePtr = truncErrorMessagePtr;
+			messagePtr = (Pred==OvUnknown ? truncErrorMessagePtr : truncErrorMessagePtr2);
 			if (isSigned){
 
 				tmpValue = new SExtInst(I, op1->getType(), "", nextInstruction);
@@ -687,11 +737,11 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB){
 
 void OverflowDetect::MarkAsNotOriginal(Instruction& inst)
 {
-        inst.setMetadata("new-inst", MDNode::get(*context, llvm::ArrayRef<Value*>()));
+	inst.setMetadata("new-inst", MDNode::get(*context, llvm::ArrayRef<Value*>()));
 }
 bool OverflowDetect::IsNotOriginal(Instruction& inst)
 {
-        return inst.getMetadata("new-inst") != 0;
+	return inst.getMetadata("new-inst") != 0;
 }
 
 
