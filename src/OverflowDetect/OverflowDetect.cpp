@@ -175,7 +175,7 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 			
 			APInt MinValue = APInt::getSignedMinValue(numBits);
 			APInt MaxValue = APInt::getSignedMaxValue(numBits);
-			
+
 			//If needed, do the signed extend of everyone to the same bit width
 			if (MinValue.getBitWidth() < r.getUpper().getBitWidth()){
 				MinValue = MinValue.sext(r.getUpper().getBitWidth());
@@ -201,20 +201,29 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 			//FIXME: Our RA doesn't handle unsigned instructions very well.
 			// So, I'm using the signed max value to do the analysis. It needs to be fixed.
 			APInt MaxValue = APInt::getSignedMaxValue(numBits);
-			
+
 			//If needed, do the unsigned extend of everyone to the same bit width
 			if (MaxValue.getBitWidth() < r.getUpper().getBitWidth()){
 				Zero = Zero.zext(r.getUpper().getBitWidth());
 				MaxValue = MaxValue.zext(r.getUpper().getBitWidth());					
 			}
 
-			if (r.getLower().uge(Zero) && r.getUpper().ult(MaxValue)) {
+			/* We don't have the precision needed to say that an overflow will happen.
+			if (MaxValue.ult(r.getLower())) {
+				NrOvfStaticallyDetected++;
+				return OvWillHappen;
+			}
+			else*/ if (MaxValue.ult(r.getUpper())) {
+				NrPossibleOvfStaticallyDetected++;
+				return OvCanHappen;
+			}
+			else if (r.getLower().uge(Zero) && r.getUpper().ult(MaxValue)) {
 				NrPrunnedInsts++;
 				return OvWillNotHappen;
 			}
-			else {
+			else
 				return OvUnknown;
-			}
+
 		}
 
 	}
@@ -326,7 +335,7 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	stringConstant = llvm::ConstantArray::get(*context, "(Suspected) Overflow occurred in %s, line %d. [%d]\n", true);
 	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
-	                                                stringConstant, "TruncErrorMessage");
+	                                                stringConstant, "OverflowMessage");
 
 	//Get the int8ptr to our message
 	constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
