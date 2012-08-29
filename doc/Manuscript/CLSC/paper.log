@@ -1,4 +1,4 @@
-This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  9 AUG 2012 10:44
+This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  29 AUG 2012 16:25
 entering extended mode
 \write18 enabled.
  %&-line parsing enabled.
@@ -327,12 +327,12 @@ LaTeX Info: Redefining \pageref on input line 28.
 \openout4 = `paper.out'.
 
 \AtBeginShipoutBox=\box36
-LaTeX Font Info:    Try loading font information for U+msa on input line 85.
+LaTeX Font Info:    Try loading font information for U+msa on input line 86.
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2002/01/19 v2.2g AMS font definitions
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 85.
+LaTeX Font Info:    Try loading font information for U+msb on input line 86.
 
 (/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2002/01/19 v2.2g AMS font definitions
@@ -340,13 +340,13 @@ File: umsb.fd 2002/01/19 v2.2g AMS font definitions
 
 
 {/usr/local/texlive/2008/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
-Overfull \hbox (10.30511pt too wide) in paragraph at lines 139--139
+Overfull \hbox (10.30511pt too wide) in paragraph at lines 140--140
 [][][]\OT1/cmtt/m/n/8 hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/sr
 c/ion/RangeAnalysis.cpp| 
  []
 
 [2] [3]
-Overfull \hbox (53.59482pt too wide) in alignment at lines 278--314
+Overfull \hbox (53.59482pt too wide) in alignment at lines 279--315
  [][][] []
  []
 
@@ -369,17 +369,17 @@ File: images/ex_graph.pdf Graphic file (type pdf)
 File: images/growth_lattice.pdf Graphic file (type pdf)
 
 <use images/growth_lattice.pdf>
-Overfull \hbox (38.95319pt too wide) in paragraph at lines 643--644
+Overfull \hbox (38.95319pt too wide) in paragraph at lines 644--645
 [][] 
  []
 
 
-Overfull \hbox (33.4022pt too wide) in alignment at lines 648--662
+Overfull \hbox (33.4022pt too wide) in alignment at lines 649--663
  [][][] []
  []
 
 [9 <./images/growth_lattice.pdf>]
-Overfull \hbox (1.1878pt too wide) in paragraph at lines 744--751
+Overfull \hbox (1.1878pt too wide) in paragraph at lines 745--752
 \OT1/cmr/bx/n/10 Narrowing Anal-y-sis. \OT1/cmr/m/n/10 The growth anal-y-sis as
 -so-ciates very con-ser-va-tive bounds
  []
@@ -478,7 +478,7 @@ live/2008/texmf-dist/fonts/type1/bluesky/cm/cmti8.pfb></usr/local/texlive/2008/
 texmf-dist/fonts/type1/bluesky/cm/cmtt10.pfb></usr/local/texlive/2008/texmf-dis
 t/fonts/type1/bluesky/cm/cmtt8.pfb></usr/local/texlive/2008/texmf-dist/fonts/ty
 pe1/bluesky/ams/msbm10.pfb>
-Output written on paper.pdf (27 pages, 1122565 bytes).
+Output written on paper.pdf (27 pages, 1123814 bytes).
 PDF statistics:
  1513 PDF objects out of 1728 (max. 8388607)
  129 named destinations out of 1000 (max. 131072)
