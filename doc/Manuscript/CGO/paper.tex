@@ -88,7 +88,7 @@ overflow -- a bug that resulted in a loss of more than U\$370 million
 dollars~\cite{Dowson97}.
 % TODO We need to explain better the wrapping-arithmetics, and we need to cite it
 % properly. What could be a good (official) citation?
-% And we need to cite 
+% And we need to cite
 
 % Why there is still the need to devise efficient methods to eliminate them.
 Programming languages such as Ada or Lisp can be customized to throw exceptions
@@ -360,6 +360,8 @@ the ranges of the variables.
 Given a set $\varset{C}$ of constraints, which define and/or use constraint
 variables from a set $\varset{V}$, we build a constraint graph
 $G = (\varset{C} \cup \varset{V}, E)$.
+We call the vertices in \varset{C} the {\em constraint nodes}, and we call the
+nodes in \varset{V} the {\em variable nodes}.
 If variable $V \in \varset{V}$ is used in constraint $C \in \varset{C}$, then
 we create an edge from $V$ to $C$.
 If constraint $C \in \varset{C}$ defines variable $\varset{V} \in V$, then we
@@ -666,6 +668,131 @@ that variables are used, and propagate this information forwardly.
 \section{Experimental Results}
 \label{sec:exp}
 
+We have implemented our range analysis algorithm in LLVM 3.0, and have run
+experiments on a Intel quad core CPU with a 2.40GHz clock, and 3.6GB of RAM.
+Each core has a 4,096KB L1 cache.
+We use Linux Ubuntu 10.04.4.
+Our implementation of range analysis has 3,958 lines of
+commented C++ code, our e/u-SSA conversion module has 672 lines, and our
+instrumentation pass has XXX lines.
+We have analyzed 428 C programs that constitute the LLVM test suite plus the
+integer benchmarks in SPEC CPU 2006.
+Together, these programs contain 4.76 million assembly instructions.
+This section has two main goals.
+First, we want to show that our range analysis is fast and precise.
+Second, we want to demonstrate the effectiveness of our framework to detect
+integer overflows.
+
+\noindent
+\textbf{Time and Memory Complexity.}
+Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
+run our range analysis and the size of the input programs.
+We show data for the 100 largest benchmarks in our test suite, in number
+of variable nodes in the constraint graph.
+We perform function inlining before running our analysis.
+Each point in the X line corresponds to a benchmark.
+We analyze the smallest benchmark in this set, \texttt{Prolangs-C/deriv2}, which
+has 1,131 variable nodes in the constraint graph, in 20ms.
+We take 15.91 sec to analyze our largest benchmark, \texttt{403.gcc}, which,
+after function inlining, has 1,266,273 assembly instructions, and a
+constraint graph with 679,652 variable nodes.
+For this data set, the coefficient of determination $(R^2)$ is 0.967, which
+provides very strong evidence about the linear asymptotic complexity of our
+implementation.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/TimeCorr}
+\end{center}
+\caption{\label{fig:TimeCorr}
+Correlation between program size (number of var nodes in constraint
+graphs after inlining) and analysis runtime (ms).
+Coefficient of determination = 0.967.
+}
+\end{figure}
+
+The experiments also reveal that the memory consumption of our implementation
+is linear with the program size.
+Figure~\ref{fig:MemCorr} plots these two quantities together.
+The linear correlation, in this case, is even stronger than that found in
+Figure~\ref{fig:TimeCorr}, which compares runtime and program size: the
+coefficient of determination is 0.9947.
+The figure only shows our 100 largest benchmarks.
+Again, SPEC \texttt{403.gcc} is the heaviest benchmark, requiring
+265,588KB to run.
+Memory includes stack, heap and the executable program code.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/MemCorr}
+\end{center}
+\caption{\label{fig:MemCorr}
+Comparison between program size (number of var nodes in constraint
+graphs) and memory consumption (KB).
+Coefficient of determination = 0.9947.
+}
+\end{figure}
+
+\noindent
+\textbf{Precision.}
+Our implementation of range analysis is remarkably precise, considering its
+runtime.
+Lakhdar {\em et al.}'s relational analysis~\cite{Lakhdar11}, for instance, takes
+about 25 minutes to go over a program with almost 900 basic blocks.
+We analyze programs of similar size in less than one second.
+We do not claim our approach is as precise as such algorithms, even though we
+are able to find exact bounds to 4/5 of the examples presented
+in~\cite{Lakhdar11}.
+On the contrary, we present a compromise between precision and speed
+that scales to very large programs.
+Nevertheless, our results are far from being trivial.
+We have implemented a dynamic profiler that measures, for each variable,
+its upper and lower limits, given an execution of the target program.
+Figure~\ref{fig:precision} compares our results with those measured
+dynamically for the Stanford benchmark suite, which is publicly
+available~\footnote{\texttt{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}}.
+We chose Stanford because these benchmarks do not read data from external
+files; hence, imprecisions are due to library functions that we cannot
+analyze.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/precUpperBound}
+\includegraphics[width=\columnwidth]{images/precLowerBound}
+\end{center}
+\caption{\label{fig:precision}
+(Upper) Comparison between static range analysis and dynamic profiler for
+upper bounds.
+(Lower) Comparison between static range analysis and dynamic profiler for
+lower bounds. The numbers above the benchmark names give the number of
+variables in each program.}
+\end{figure}
+
+We have classified the bounds estimated by the static analysis into four
+categories.
+The first category, which we call $1$, contains those bounds that are tight:
+during the execution of the program, the variable has been assigned an upper,
+or lower limit, that equals the limit inferred statically.
+The second category, which we call $n$, contains the bounds that are
+within twice the value inferred statically.
+For instance, if the range analysis estimates that a variable $v$ is in the
+range $[0, 100]$, and during the execution the dynamic profiler finds that
+its maximum value is $51$, then $v$ falls into this category.
+The third category, $n^2$, contains variables whose actual value is within
+a quadratic factor from the estimated value.
+In our example, $v$'s upper bound would have to be at most $10$ for it to
+be in this category.
+Finally, the fourth category contains variables whose estimated value lays
+outside a quadratic factor of the actual value.
+We call this category {\em imprecise}, and it contains mostly the limits that
+our static analysis has marked as either $+\infty$ or $-\infty$.
+As we see in Figure~\ref{fig:precision}, 54.11\% of the lower limits that
+we have estimated statically are exact.
+Similarly, 51.99\% of our upper bounds are also tight.
+The figure also shows that, on average, 37.39\% of our lower limits are
+imprecise, and 35.40\% of our upper limits are imprecise.
+This result is on pair with those obtained by more costly analysis, such as
+Stephenson {\em et al.}'s~\cite{Stephenson00}.
 
 \section{Related Work}
 \label{sec:rel}
