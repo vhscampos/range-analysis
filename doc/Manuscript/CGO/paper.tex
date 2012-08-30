@@ -667,7 +667,7 @@ that variables are used, and propagate this information forwardly.
 
 %What is our instrumentation library
 We have implemented our instrumentation library as a LLVM transformation pass.
-This means our library works on the LLVM IR\footnote{LLVM Intermediate Representation, available at \url{http://llvm.org/docs/LangRef.html}}
+This means our library works on the LLVM IR\footnote{LLVM Intermediate Representation, available at \texttt{http://llvm.org/docs/LangRef.html}}
 instead of working directly on the original source code. 
 This fact brings the advantage of allowing us to rely on
 other analysis, such as the range analysis, to check if it is safe to state that
@@ -877,8 +877,8 @@ Nevertheless, our results are far from being trivial.
 We have implemented a dynamic profiler that measures, for each variable,
 its upper and lower limits, given an execution of the target program.
 Figure~\ref{fig:precision} compares our results with those measured
-dynamically for the Stanford benchmark suite, which is publicly
-available~\footnote{\url{http://classes.engineering.wustl.edu/cse465/docs/BCCExamples/stanford.c}}.
+dynamically for the Stanford benchmark, which is publicly
+available in the LLVM test suite.
 We chose Stanford because these benchmarks do not read data from external
 files; hence, imprecisions are due to library functions that we cannot
 analyze.
@@ -927,14 +927,48 @@ Stephenson {\em et al.}'s~\cite{Stephenson00}.
 
 \noindent
 \paragraph{Dynamic Detection of Integer Overflows: }
-Brumley {\em et al.}~\cite{Brumley07} have developed a tool, RICH, to detect
-integer integer overflows.
-Their approach consists in instrumenting every integer operation that might cause
-to an overflow, underflow, or data loss.
-Different from our method, RICH uses specific features of the x86 architecture
+Brumley {\em et al.}~\cite{Brumley07} have developed a tool, RICH, to
+dynamically detect integer overflows.
+Their goal is to secure C programs against integer overflow based
+vulnerabilities.
+The author's approach consists in instrumenting every integer operation that
+might cause an overflow, underflow, or data loss.
+The main result of Brumley {\em et al.} is the verification that instrumenting
+programs to guard them against integer overflows does not compromise their
+performance significantly: the average slowdown across four large applications
+is 5\%.
+RICH, Brumley {\em et al}'s tool, uses specific features of the x86 architecture
 to reduce the instrumentation overhead.
-Moreover, no static analysis is used to avoid unnecessary assertions, although
-this improvement is cited as future work.
+Chinchani {\em et al.}~\cite{Chinchani04} follow a similar approach.
+In this work, the authors describe each arithmetic operation formally, and then
+use characteristics of the computer architecture to detect overflows at
+runtime.
+% TODO bibtex: cite Archerr: Runtime environment driven program safety.
+Contrary to these previous work, we instrument programs at LLVM's intermediate
+representation level, which is machine independent.
+Nevertheless, the performance of the programs that we instrument is on par with
+Brumley's.
+
+Similar to Brumley {\em et al.}, Dietz {\em et al.}~\cite{Dietz12} have 
+implemented a tool, IOC, that instruments C/C++ programs to detect integer
+overflows.
+They approach the problem of detecting integer overflows from a software
+engineering point-of-view; hence, performance is not a concern.
+The authors have used IOC to perform a lengthy study about the occurrences
+of overflows in real-world programs, and have found that these events are very
+common.
+It is possible to implement a dynamic analysis without instrumenting the
+target program.
+In this case, developers must use some form of code emulation.
+Chen {\em et al.}~\cite{Chen09}, for instance, uses a modified
+Valgrind~\cite{Nethercote07} virtual machine to detect integer overflows.
+The main drawback of emulation is performance: Chen {\em et al.} report a
+50X slowdown.
+% TODO: cite "Brick: A  binary tool for run-time detecting and locating
+% integer-based vulnerability.
+The main difference between all these previous works and ours is the fact that
+we focus on generating less instrumentation, an endeavor that we accomplish via
+static analysis.
 
 \paragraph{Static Detection of Integer Overflows: }
 \noindent
@@ -947,7 +981,7 @@ Thus, contrary to our work, Zhang {\em et al.}'s only need to instrument
 about 10\% of the integer operations in the program.
 However, they do not use any form of range analysis to limit the number of
 checks inserted in the transformed code.
-Wang {\em et a.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}Õs work are essentially different: they use symbolic execution, whereas we rely on
+Wang {\em et a.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}'s work are essentially different: they use symbolic execution, whereas we rely on
 range analysis.
 Furthermore, contrary to them, we do not try to detected statically the
 possibility of an integer overflow happening.
