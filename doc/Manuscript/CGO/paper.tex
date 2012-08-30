@@ -10,6 +10,7 @@
 \usepackage{graphicx}
 \usepackage{mathpartir} % To use \inferrule
 \usepackage{amssymb}    % To use \mathbb
+\usepackage{skak}
 
 \newtheorem{definition}[section]{Definition}
 
@@ -666,106 +667,72 @@ that variables are used, and propagate this information forwardly.
 \label{sec:dyn}
 
 %What is our instrumentation library
-We have implemented our instrumentation library as a LLVM transformation pass.
-This means our library works on the LLVM IR\footnote{LLVM Intermediate Representation, available at \texttt{http://llvm.org/docs/LangRef.html}}
-instead of working directly on the original source code. 
-This fact brings the advantage of allowing us to rely on
-other analysis, such as the range analysis, to check if it is safe to state that
-the possible values of an instruction will always be within the range of
-the declared type of the instruction. 
-If we can state this, it means that it is impossible for an overflow to 
-occur in the analyzed instruction, because the range analysis is a conservative analysis; 
-in this case, we don't need to insert dynamic checks, and the instrumented program
-will be smaller and run faster than it would run without this prunning.
-%How our instrumentation works
+We have implemented our instrumentation library as a LLVM transformation pass;
+thus, we work at the level of the compiler's intermediate
+representation~\footnote{\texttt{http://llvm.org/docs/LangRef.html}}.
+This is in contrast to previous work, which either transforms the
+source code~\cite{Dietz12}, or the machine dependent code~\cite{Brumley07}.
+We work at this level because we want to couple our library with static
+analyses, such as the algorithm that we describe in Section~\ref{sec:range}.
+% TODO: add text about the interaction between static an dynamic analysis at
+% the end of this section.
 Our instrumentation works by identifying the instructions that may 
-lead to an overflow, and inserting assertions after that instructions. 
-The LLVM IR has five instructions that may lead to an overflow: 
-ADD, SUB, MUL, SHL, and TRUNC.
+lead to an overflow, and inserting assertions after those instructions. 
+The LLVM IR has five instructions that may lead to an overflow:
+\textsc{Add}, \textsc{Sub}, \textsc{Mul},  \textsc{Trunc} and \textsc{Shl}
+(left shift).
+Figure~\ref{fig:instrumentation} shows the conditions that we use to
+detect overflows.
 
-%ADD instrumentation
-The ADD instruction performs the sum of two operands $op_1$ and $op_2$ and
-stores the result in a variable $x$.
-The semantics of an ADD instruction is $x = op_1 + op_2$. 
-The goal of the instrumentation of the instruction $x$ is to ensure that after the
-execution of the ADD instruction, $x$ stores the correct result of the sum,
-without any data loss.
-For this, we insert different checks for signed and unsigned instructions.
-If we are dealing with an unsigned ADD instruction $x$, we insert the following check:
-\code{if $x < op_1$ or $x < op_2$ then} handle overflow \code{else} continue to 
-$x$'s next instruction. If, instead, we are instrumenting a signed instruction $x$, 
-we will have the following assertion:
-\code{if ($op_1 > 0$ and $op_2 > 0$ and $x < 0$) or ($op_1 < 0$ and $op_2 < 0$ and $x > 0$) then} 
-handle overflow \code{else} continue to $x$'s next instruction.
+\begin{figure}[t!]
+\begin{center}
+\begin{tabular}{ll}
+$x = o_1 \ +_s \ o_2$ & $(o_1 > 0 \wedge o_2 > 0 \wedge x < 0) \ \ \vee$ \\
+                  & $(o_1 < 0 \wedge o_2 < 0 \wedge x > 0)$ \\ \\
+$x = o_1 \ +_u \ o_2$ & $x < o_1 \vee x < o_2$ \\ \\
+$x = o_1 \ -_s \ o_2$ & $(o_1 < 0 \vee o_2 > 0 \vee x > 0) \vee$ \\
+                  & $(o_1 > 0 \vee o_2 < 0 \vee x < 0)$ \\ \\
+$x = o_1 \ -_u \ o_2$ & $o_1 < o_2$ \\ \\
+$x = o_1 \ \times_{u/s} \ o_2$ & $x \neq 0 \Rightarrow x \div o_1 \neq o_2$ \\ \\
+$x = o_1 \ \qside \ n$ & $(o_1 > 0 \wedge x < o_1) \vee (o_1 < 0 \wedge n \neq 0)$ \\ \\
+$x = \ \downarrow_n \ o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\ \\
+$x = \ (\mbox{type}_n) o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\
+\end{tabular}
+\end{center}
+\caption{\label{fig:instrumentation}Overflow checks. We use $\downarrow_n$ for
+the operation that truncates to $n$ bits, and we use $(\mbox{type}_n)$ for a
+bit-cast to $n$ bits. Both operations have the same semantics in our setting.
+The subscript $s$ indicates a signed instruction; the subscript $u$ indicate
+an unsigned operation.}
+\end{figure}
 
 %SUB instrumentation
-The SUB instruction performs the subtraction of two operands $op_1$ and $op_2$ and
-stores the result in a variable $x$.
-The semantics of a SUB instruction is $x = op_1 - op_2$. 
-Note that the SUB semantics is close to the ADD semantics. For this reason, the
-instrumentation of the SUB instructions looks like the ADD instrumentation.
-In this case, we insert different checks for signed and unsigned instructions, too.
-If we are dealing with an unsigned SUB instruction $x$, we insert the following check:
-\code{if $op_1 < op_2$ then} handle overflow \code{else} continue to 
-$x$'s next instruction. Note that the assertion makes a single comparison. This is sound
-because if $op_2$ is greater than $op_1$, the result would be negative. However, unsigned
-integers can't represent negative numbers. In this case, we have a overflow.
-The instrumentation of a signed SUB instruction $x$ will have the following assertion:
-\code{if ($op_1 < 0$ and $op_2 > 0$ and $x > 0$) or ($op_1 > 0$ and $op_2 < 0$ and $x < 0$) then} 
-handle overflow \code{else} continue to $x$'s next instruction.
+The instrumentation that we insert is mostly straightforward.
+We discuss in the rest of this section a few cases.
+If we are dealing with an unsigned \textsc{Sub} instruction, e.g,
+$x = o_1 \ -_u \ o_2$, then a single check is enough to detect the bad
+behavior: $o_1 < o_2$.
+This is sound because if $o_2$ is greater than $o_1$, then we assume that it is
+a bug to try to represent a negative number in unsigned arithmetics.
+Regarding multiplication, e.g., $x = o_1 \times o_2$, if $o_1 = 0$, then this
+operation can never cause an overflow.
+This test is necessary to us, because we check integer overflows in
+multiplication via the inverse operation of integer division.
+Thus, the test prevents a division by zero from happening.
+The semantics of a \textsc{Trunc} instruction $x = \ \downarrow_n \ o_1$ is
+to assign to $x$ the $n$ least significant bits of $o_1$.
+The dynamic checking in this case consists in expanding $x$ to
+the datatype of $o_1$ and comparing the expanded value with $o_1$.
+The LLVM IR provides instructions to perform these type expansions.
+Note that our instrumentation catches any truncation with loss of precision, even
+if it is a benign one.
+However, we give users the possibility of disabling checks on truncation.
 
-%MUL instrumentation
-The MUL instruction performs the multiplication of two operands $op_1$ and $op_2$ and
-stores the result in a variable $x$.
-The semantics of a MUL instruction is $x = op_1 \times{} op_2$. 
-The dynamic check of the MUL instruction is the same for signed or unsigned
-instructions, because it relies on DIV, the inverse operation. 
-To verify if the overflow has occurred, we divide $x$ by $op_1$. If the result
-is different of $op_2$, then we have an overflow to handle. 
-In this case, we will have the following assertion: 
-\code{if $op_1 \neq{} 0$ and $(x \div{} op_1) \neq{} op_2$ then} 
-handle overflow \code{else} continue to $x$'s next instruction.
-Note that if $op_1 = 0$, the result of the multiplication will never overflow,
-because the result of the MUL will be $0$, too. In this case, if $op_1 = 0$,
-we don't perform the DIV, to prevent a division by zero exception.
-This technique of using the inverse operation to check for overflows doesn't work
-for ADD and SUB instructions because the $n$-bits two's complement wrapping-arithmetics 
-would give us false negatives in the assertions.
-
-%SHL instrumentation
-The SHL instruction performs the shift left operation. It receives a value $op_1$
-and the number of bits $n$ the SHL will shift $op_1$ by; the operation's result
-is stored in a variable $x$.
-The semantics of a SHL instruction is $x = op_1 \times{} 2^n$. 
-The SHL instructions result in overflows when the $op_1$ is positive and 
-$x$ is negative or when $op_1$ is negative and $n \neq{} 0$, because 
-the SHL in negative numbers would produce undefined results that are
-as harmful as integer overflows. This assertion has the same semantics for
-signed and unsigned instructions.
-In this case, we will have the following check: 
-\code{if ($op_1 > 0$ and $x < op_1$) or ($op_1 < 0$ and $n \neq{} 0$) then} 
-handle overflow \code{else} continue to $x$'s next instruction.
-
-%TRUNC instrumentation
-The TRUNC instruction performs the truncation of the operand $op_1$
-to a number $n$ of bits and stores the result in a variable $x$.
-The semantics of a TRUNC instruction is $x = n$LessSignificantBits$(op_1)$.
-The dynamic checking of a TRUNC instruction is done by expanding $x$ to
-the datatype of $op_1$ and comparing the expanded $x$ with $op_1$. If they 
-don't have the same value, some data has been lost by the TRUNC instruction.
-In this case, we have the following check:
-\code{if $cast(x, getDataType(op_1)) \neq{} op_1$ then} 
-handle overflow \code{else} continue to $x$'s next instruction.
-Note that the instrumentation of the TRUNC instructions is a very fragile point, 
-because it would catch any truncation with loss of precision, even if it is a
-benign one.
-To avoid trouble and make it easier to our users, the instrumentation library 
-can receive an argument to let the user decide whether to insert or not
-instrumentation in the TRUNC instructions.
-
+\paragraph{Practical Considerations: }
 %Overview about the instrumentation technique
 Our instrumentation library works by adding new instructions to
-the target programs. The instrumentation of all the instructions works
+the target programs.
+The instrumentation of all the instructions works
 in the same way: first, the pass inserts instructions to gather the
 information needed to do the assertion.
 Then, the pass inserts compare instructions to generate a boolean value
