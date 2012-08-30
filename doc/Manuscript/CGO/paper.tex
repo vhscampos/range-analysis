@@ -701,7 +701,7 @@ handle overflow \code{else} continue to $x$'s next instruction.
 %SUB instrumentation
 The SUB instruction performs the subtraction of two operands $op_1$ and $op_2$ and
 stores the result in a variable $x$.
-The semantics of an SUB instruction is $x = op_1 - op_2$. 
+The semantics of a SUB instruction is $x = op_1 - op_2$. 
 Note that the SUB semantics is close to the ADD semantics. For this reason, the
 instrumentation of the SUB instructions looks like the ADD instrumentation.
 In this case, we insert different checks for signed and unsigned instructions, too.
@@ -717,7 +717,7 @@ handle overflow \code{else} continue to $x$'s next instruction.
 %MUL instrumentation
 The MUL instruction performs the multiplication of two operands $op_1$ and $op_2$ and
 stores the result in a variable $x$.
-The semantics of an SUB instruction is $x = op_1 \times{} op_2$. 
+The semantics of a MUL instruction is $x = op_1 \times{} op_2$. 
 The dynamic check of the MUL instruction is the same for signed or unsigned
 instructions, because it relies on DIV, the inverse operation. 
 To verify if the overflow has occurred, we divide $x$ by $op_1$. If the result
@@ -726,7 +726,7 @@ In this case, we will have the following assertion:
 \code{if $op_1 \neq{} 0$ and $(x \div{} op_1) \neq{} op_2$ then} 
 handle overflow \code{else} continue to $x$'s next instruction.
 Note that if $op_1 = 0$, the result of the multiplication will never overflow,
-because the result of the MUL will be $0$, too. In this case, if $op_1 \eq{} 0$,
+because the result of the MUL will be $0$, too. In this case, if $op_1 = 0$,
 we don't perform the DIV, to prevent a division by zero exception.
 This technique of using the inverse operation to check for overflows doesn't work
 for ADD and SUB instructions because the $n$-bits two's complement wrapping-arithmetics 
@@ -736,7 +736,7 @@ would give us false negatives in the assertions.
 The SHL instruction performs the shift left operation. It receives a value $op_1$
 and the number of bits $n$ the SHL will shift $op_1$ by; the operation's result
 is stored in a variable $x$.
-The semantics os a SHL instruction is $x = op_1 \times{} 2^n$. 
+The semantics of a SHL instruction is $x = op_1 \times{} 2^n$. 
 The SHL instructions result in overflows when the $op_1$ is positive and 
 $x$ is negative or when $op_1$ is negative and $n \neq{} 0$, because 
 the SHL in negative numbers would produce undefined results that are
@@ -772,7 +772,7 @@ Then, the pass inserts compare instructions to generate a boolean value
 that indicates if there is an overflow or not. 
 After this, the pass inserts a conditional branch: 
 the false clause of the branch, where the control goes when there is no 
-overflow and the program, leads to the first instruction after the instruction
+overflow, leads to the first instruction after the instruction
 which has received the instrumentation.
 the true clause of the branch leads to a block where we do the
 overflow handling. 
