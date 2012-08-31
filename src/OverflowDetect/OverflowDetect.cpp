@@ -131,6 +131,7 @@ static bool isSignedInst(Value* V){
 			return dyn_cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
 			break;
 
+		case Instruction::BitCast:
 		case Instruction::Trunc:
 			return isSignedInst(I->getOperand(0));
 			break;
@@ -462,6 +463,9 @@ bool OverflowDetect::isValidInst(Instruction *I)
 		return I->getType()->isIntegerTy() && I->getOperand(0)->getType()->isIntegerTy() && I->getOperand(1)->getType()->isIntegerTy();
 	else if (dyn_cast<TruncInst>(I))
 		return TruncInstrumentation && I->getType()->isIntegerTy() && I->getOperand(0)->getType()->isIntegerTy();
+	else if (dyn_cast<BitCastInst>(I))
+		//Only do the instrumentation of the bitcast if the cast is to a lower size datatype (semantically equivalent to a trunc)
+		return TruncInstrumentation && I->getType()->isIntegerTy() && I->getOperand(0)->getType()->isIntegerTy() && I->getType()->getPrimitiveSizeInBits() < I->getOperand(0)->getType()->getPrimitiveSizeInBits();
 	else
 		return false;
 }
@@ -555,6 +559,7 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, 
     ICmpInst *positiveOp2;
 
     ICmpInst *negativeOp1;
+    ICmpInst *negativeOp2;
 
     ICmpInst *lessThanOp1;
     ICmpInst *lessThanOp2;
@@ -577,6 +582,9 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, 
 
 	Value* op1;
 	Value* op2;
+
+	Value* hasIntegerBug1 = NULL;
+	Value* hasIntegerBug2 = NULL;
 	Value* hasIntegerBug = NULL;
     Value* canCauseOverflow;
     Value* tmpValue;
@@ -599,14 +607,21 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, 
 			if (isSigned){
 				//How to do an integer bug with a signed Add instruction:
 				//		add two big positive numbers and get a negative number as result
-				positiveOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGT, op1, constZero);
-				positiveOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGT, op2, constZero);
+				positiveOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, op1, constZero);
+				positiveOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, op2, constZero);
 				canCauseOverflow = BinaryOperator::Create(Instruction::And, positiveOp1, positiveOp2, "", nextInstruction);
-
 				negativeResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, constZero);
+				hasIntegerBug1 = BinaryOperator::Create(Instruction::And, canCauseOverflow, negativeResult, "", nextInstruction);
+
+				//	or	add two big negative numbers and get a positive number as result
+				negativeOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, op1, constZero);
+				negativeOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, op2, constZero);
+				canCauseOverflow = BinaryOperator::Create(Instruction::And, negativeOp1, negativeOp2, "", nextInstruction);
+				positiveResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, I, constZero);
+				hasIntegerBug2 = BinaryOperator::Create(Instruction::And, canCauseOverflow, positiveResult, "", nextInstruction);
 
 				// AND the results
-				hasIntegerBug = BinaryOperator::Create(Instruction::And, canCauseOverflow, negativeResult, "", nextInstruction);
+				hasIntegerBug = BinaryOperator::Create(Instruction::Or, hasIntegerBug1, hasIntegerBug2, "", nextInstruction);
 			} else {
 				//How to do an integer bug with a unsigned Add instruction:
 				//		add two numbers and get a result smaller than one of the operands
@@ -622,13 +637,21 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, 
 				//How to do an integer bug with a signed Sub instruction:
 				//		subtract a positive number from a negative number and get a positive number as result
 				negativeOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, op1, constZero);
-				positiveOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGT, op2, constZero);
+				positiveOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, op2, constZero);
 				canCauseOverflow = BinaryOperator::Create(Instruction::And, negativeOp1, positiveOp2, "", nextInstruction);
+				positiveResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, I, constZero);
+				hasIntegerBug1 = BinaryOperator::Create(Instruction::And, canCauseOverflow, positiveResult, "", nextInstruction);
 
-				positiveResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, constZero);
+				//	or	subtract a negative number from a positive number and get a negative number as result
+				positiveOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, op1, constZero);
+				negativeOp2 = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, op2, constZero);
+				canCauseOverflow = BinaryOperator::Create(Instruction::And, positiveOp1, negativeOp2, "", nextInstruction);
+				negativeResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, constZero);
+				hasIntegerBug2 = BinaryOperator::Create(Instruction::And, canCauseOverflow, negativeResult, "", nextInstruction);
 
 				// AND the results
-				hasIntegerBug = BinaryOperator::Create(Instruction::And, canCauseOverflow, positiveResult, "", nextInstruction);
+				hasIntegerBug = BinaryOperator::Create(Instruction::Or, hasIntegerBug1, hasIntegerBug2, "", nextInstruction);
+
 			} else {
 
 				//How to do an integer bug with an unsigned Sub instruction:
@@ -691,19 +714,31 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, 
 
 		case Instruction::Shl:
 
-			//The result of a Shift Left must be greater than the first operand.
-			//	Case the result is less than the first operand, there is an integer bug
+			//The result of a Shift Left must be positive if the first operand is positive
+			//    or the second operand must be zero if the first operand is negative.
 			if (isSigned){
 
-				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, op1);
+
+				positiveOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SGE, op1, constZero);
+				negativeResult = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, I, constZero);
+				hasIntegerBug1 = BinaryOperator::Create(Instruction::And, positiveOp1, negativeResult, "", nextInstruction);
+
+				negativeOp1 = new ICmpInst(nextInstruction, CmpInst::ICMP_SLT, op1, constZero);
+				canCauseOverflow = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, op2, constZero);
+				hasIntegerBug1 = BinaryOperator::Create(Instruction::And, canCauseOverflow, negativeOp1, "", nextInstruction);
+
+				hasIntegerBug = BinaryOperator::Create(Instruction::Or, hasIntegerBug1, hasIntegerBug2, "", nextInstruction);
+
 
 			} else {
 
+				//if the result is greater than the first operand, something has gone wrong in the SHL
 				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_ULT, I, op1);
 
 			}
 			break;
 
+		case Instruction::BitCast:
 		case Instruction::Trunc:
 			/*
 			 * How to check an integer bug in a trunc instruction:
@@ -718,6 +753,7 @@ void OverflowDetect::insertInstrumentation(Instruction* I, BasicBlock* AbortBB, 
 			} else {
 
 				tmpValue = CastInst::CreateZExtOrBitCast(I, op1->getType(), "", nextInstruction);
+				MarkAsNotOriginal(*(dyn_cast<Instruction>(tmpValue)));
 				hasIntegerBug = new ICmpInst(nextInstruction, CmpInst::ICMP_NE, tmpValue, op1);
 
 			}
