@@ -746,9 +746,13 @@ Our dynamic tests check for overflows after they happen.
 The code that we insert to detect the overflow diverts the program flow in case
 such an event takes place.
 
-% TODO: add a snapshot of a function with, and without the integer overflow
-% instrumentation. Let this function be very simple, e.g.,
-% int foo(int x, int y) {return x + y; }
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/instrumented_cfg}
+\end{center}
+\caption{\label{fig:instrumented_cfg}
+XXX.}
+\end{figure}
 
 Which actions are performed once the overflow is detected depends on the
 user.
