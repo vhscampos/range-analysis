@@ -683,35 +683,29 @@ The LLVM IR has five instructions that may lead to an overflow:
 (left shift).
 Figure~\ref{fig:instrumentation} shows the dynamic tests that we perform to
 detect overflows.
-This figure also shows how the static analysis helps us to avoid inserting
-some of those tests.
-We only generate the dynamic tests on the right if the conditions in the middle
-are false.
 
-\begin{figure*}[t!]
+\begin{figure}[t!]
 \begin{center}
-\begin{tabular}{lll}
-Instruction & Static Check & Dynamic Check \\ \\
-$x = o_1 \ +_s \ o_2$ & $\lb{I[o_1]} + \lb{I[o_2]} > \mbox{MIN\_INT} \wedge \ub{I[o_1]} + \ub{I[o_2]} < \mbox{MAX\_INT}$ & $(o_1 > 0 \wedge o_2 > 0 \wedge x < 0) \ \ \vee$ \\
-                  & & $(o_1 < 0 \wedge o_2 < 0 \wedge x > 0)$ \\ \\
-$x = o_1 \ +_u \ o_2$ & $\ub{I[o_1]} + \ub{I[o_2]} < \mbox{MAX\_INT}$ & $x < o_1 \vee x < o_2$ \\ \\
-$x = o_1 \ -_s \ o_2$ & $\lb{I[o_1]} - \lb{I[o_2]} > \mbox{MIN\_INT} \wedge \ub{I[o_1]} - \ub{I[o_2]} < \mbox{MAX\_INT}$ & $(o_1 < 0 \vee o_2 > 0 \vee x > 0) \ \ \vee$ \\
-                      & & $(o_1 > 0 \vee o_2 < 0 \vee x < 0)$ \\ \\
-$x = o_1 \ -_u \ o_2$ & $\lb{I[o_1]} > \ub{I[o_2]}$ & $o_1 < o_2$ \\ \\
-$x = o_1 \ \times_{u/s} \ o_2$ & $\mbox{MIN\_INT} < \{ \lb{I[o_1]} \times \lb{I[o_2]}, \lb{I[o_1]} \times \ub{I[o_2]} \}< \mbox{MAX\_INT}$ & $x \neq 0 \Rightarrow x \div o_1 \neq o_2$ \\
-                       & $\mbox{MIN\_INT} < \{ \ub{I[o_1]}\times \lb{I[o_2]}, \ub{I[o_1]}\times \ub{I[o_2]} \}< \mbox{MAX\_INT}$ & \\ \\
-$x = o_1 \ \qside \ n$ & $2^n \times \ub{I[o_1]} < \mbox{MAX\_INT}$ & $(o_1 > 0 \wedge x < o_1) \vee (o_1 < 0 \wedge n \neq 0)$ \\ \\
-$x = \ \downarrow_n \ o_1$  & $\lb{I[o_1]} > -2^n \wedge \ub{I[o_1]} < 2^n_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\ \\
-$x = \ (\mbox{type}_n) o_1$ & $\lb{I[o_1]} > -2^n \wedge \ub{I[o_1]} < 2^n_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\
+\begin{tabular}{ll}
+Instruction & Dynamic Check \\ \\
+$x = o_1 \ +_s \ o_2$ & $(o_1 > 0 \wedge o_2 > 0 \wedge x < 0) \ \ \vee$ \\
+                      & $(o_1 < 0 \wedge o_2 < 0 \wedge x > 0)$ \\ \\
+$x = o_1 \ +_u \ o_2$ & $x < o_1 \vee x < o_2$ \\ \\
+$x = o_1 \ -_s \ o_2$ & $(o_1 < 0 \vee o_2 > 0 \vee x > 0) \ \ \vee$ \\
+                      & $(o_1 > 0 \vee o_2 < 0 \vee x < 0)$ \\ \\
+$x = o_1 \ -_u \ o_2$ & $o_1 < o_2$ \\ \\
+$x = o_1 \ \times_{u/s} \ o_2$ & $x \neq 0 \Rightarrow x \div o_1 \neq o_2$ \\ \\
+$x = o_1 \ \qside \ n$ & $(o_1 > 0 \wedge x < o_1) \vee (o_1 < 0 \wedge n \neq 0)$ \\ \\
+$x = \ \downarrow_n \ o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\ \\
+$x = \ (\mbox{type}_n) o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\
 \end{tabular}
 \end{center}
 \caption{\label{fig:instrumentation}Overflow checks. We use $\downarrow_n$ for
 the operation that truncates to $n$ bits, and we use $(\mbox{type}_n)$ for a
 bit-cast to $n$ bits. Both operations have the same semantics in our setting.
 The subscript $s$ indicates a signed instruction; the subscript $u$ indicate
-an unsigned operation. If the static check is true, we do not insert the dynamic
-check. The values \{MAX/MIN\}\_INT depend on the type of the instruction.}
-\end{figure*}
+an unsigned operation.}
+\end{figure}
 
 %SUB instrumentation
 The instrumentation that we insert is mostly straightforward.
@@ -723,12 +717,12 @@ This is sound because if $o_2$ is greater than $o_1$, then we assume that it is
 a bug to try to represent a negative number in unsigned arithmetics.
 Regarding multiplication, e.g., $x = o_1 \times o_2$, if $o_1 = 0$, then this
 operation can never cause an overflow.
-This test is necessary to us, because we check integer overflows in
-multiplication via the inverse operation of integer division.
+This test is necessary, because we check integer overflows in
+multiplication via the inverse operation, e.g., integer division.
 Thus, the test prevents a division by zero from happening.
 The \textsc{Trunc} instruction, e.g., $x = \ \downarrow_n \ o_1$ assigns to $x$
 the $n$ least significant bits of $o_1$.
-The dynamic checking in this case consists in expanding $x$ to
+The dynamic check, in this case, consists in expanding $x$ to
 the datatype of $o_1$ and comparing the expanded value with $o_1$.
 The LLVM IR provides instructions to perform these type expansions.
 Note that our instrumentation catches any truncation that might result in
@@ -742,20 +736,35 @@ Our instrumentation library works by adding new instructions to
 the target program.
 Although the dynamic check depends on the instruction that is instrumented,
 the general modus operandi is the same.
-Our dynamic tests check for overflows after they happen.
+The dynamic tests check for overflows after they happen.
 The code that we insert to detect the overflow diverts the program flow in case
 such an event takes place.
+Figure~\ref{fig:instrumented_cfg} shows an actual control flow graph, before
+and after the instrumentation.
+From this figure, it is clear that the instrumented program will be larger
+than the original code.
+However, as we show empirically, this growth is not too large when compared
+to the total size of our benchmarks, because most of the instructions in these
+programs do not demand instrumentation.
+Furthermore, none of the instructions used to instrument integer arithmetics
+access memory.
+Therefore, the overall slowdown that the instrumentation causes is usually
+small.
 
 \begin{figure}[t!]
 \begin{center}
 \includegraphics[width=\columnwidth]{images/instrumented_cfg}
 \end{center}
 \caption{\label{fig:instrumented_cfg}
-XXX.}
+(a) A simple C function.
+(b) The same function converted to the LLVM intermediate representation.
+(c) The instrumented code. The boldface lines were part of the original
+program.}
 \end{figure}
 
 Which actions are performed once the overflow is detected depends on the
-user.
+user, who has the option to overwrite the \texttt{handle\_overflow}
+function in Figure~\ref{fig:instrumented_cfg}.
 Our library gives the user three options to handle them. 
 First option: no-op.
 This option allows us to verify the slowdown produced by the new instructions.
@@ -767,6 +776,40 @@ FileName.cpp, line X.} in the standard error stream.
 Third option: abort.
 This option terminates the program once an overflow is detected.
 Thus, it disallows undefined behavior due to integer overflows.
+
+\paragraph{Using the static analysis to avoid some overflow checks.}
+Our library can, optionally, use the range analysis to avoid having to
+insert some overflow checks into the instrumented program.
+We give the user the possibility of calling the range analysis with either the
+e-SSA or the u-SSA live range splitting strategies.
+Our static analysis classifies variables into four categories, depending on
+their bounds:
+\begin{itemize}
+\item \textbf{Safe}: a variable is safe if its bounds are fully contained
+inside its declared type.
+For instance, if $x$ is declared as an unsigned 8-bits integer, then $x$ is
+safe if its bounds are within the interval $[0, 255]$.
+\item \textbf{Suspicious}: we say that a variable is suspicious if its bounds
+go beyond the interval of its declared type, but the intersection between
+these two ranges is non-empty.
+For instance, the same variable $x$ would be suspicious if
+$I[x] = [0, 257]$, as $\ub{I[x]} > \ub{\mathtt{int8}}$.
+\item \textbf{Uncertain}: we classify a variable as uncertain if at least one
+of its limits is unbounded.
+Our variable $x$ would be uncertain if $I[x] = [0, \infty]$.
+We distinguish suspicious from uncertain variables because we speculate that
+actual overflows are more common among elements in the former category.
+\item \textbf{buggy}: a variable is buggy if the intersection between its
+inferred range and the range of its declared type is empty.
+This is a definitive case of an overflow.
+Continuing with our example, $x$ would be buggy if, for instance,
+$I[x] = [257, \infty]$, given that $[257, \infty] \sqcap [0, 255] = \emptyset$.
+\end{itemize}
+Independent on the arithmetic instruction that is being analyzed, the
+instrumentation library performs the same test:
+if the result $x$ of an arithmetic instruction such as $x = o_1 +_s \ o_2$ is
+safe, then the overflow check is not necessary, otherwise it must be
+created.
 
 \section{Experimental Results}
 \label{sec:exp}
