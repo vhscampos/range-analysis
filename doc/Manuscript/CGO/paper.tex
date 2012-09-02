@@ -28,7 +28,7 @@
 \copyrightdata{[to be supplied]} 
 
 \titlebanner{Code Generation and Optimization}        % These are ignored unless
-\preprintfooter{Dinamica EGO}   % 'preprint' option specified.
+\preprintfooter{Overflow Elimination}   % 'preprint' option specified.
 
 \title{Combining Static and Dynamic Analyses to Secure Programs against
 Integer Overflows}
@@ -748,12 +748,11 @@ Figure~\ref{fig:instrumented_cfg} shows an actual control flow graph, before
 and after the instrumentation.
 From this figure, it is clear that the instrumented program will be larger
 than the original code.
-Instrumenting \textsc{Add} or \textsc{Sub} requires 12 LLVM instructions.
-Left shifts need 8 instructions, \textsc{Mul} requires 7 and
-\textsc{Trunc} requires only 3.
-These numbers do not include the instructions necessary to handle the overflow,
-e.g., block \texttt{\%11} in Figure~\ref{fig:instrumented_cfg}, as this code is
-not in the program's main path.
+Figure~\ref{fig:num_instructions} shows how many LLVM instructions are
+necessary to instrument each arithmetic operation.
+These numbers do not include the instructions necessary to handle the overflow
+itself, e.g., block \texttt{\%11} in Figure~\ref{fig:instrumented_cfg}, as this
+code is not in the program's main path.
 Nevertheless, as we show empirically, this growth is not too large when
 compared to the total size of our benchmarks, because most of the instructions
 in these programs do not demand instrumentation.
@@ -761,6 +760,21 @@ Furthermore, none of the instructions used to instrument integer arithmetics
 access memory.
 Therefore, the overall slowdown that the instrumentation causes is usually
 small.
+
+\begin{figure}[t!]
+\begin{center}
+\begin{small}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{lccccc}
+& \textsc{Add} & \textsc{Sub} & \textsc{Mul} & \textsc{Shl} & \textsc{Trunc} \\
+signed   & 12 & 12 & 6 & 8 & 3 \\
+unsigned & 4  & 2  & 6 & 2 & 3
+\end{tabular}
+\end{small}
+\caption{\label{fig:num_instructions}
+Number of instructions used in each dynamic check.}
+\end{center}
+\end{figure}
 
 \begin{figure}[t!]
 \begin{center}
@@ -774,7 +788,7 @@ program.}
 \end{figure}
 
 Which actions are performed once the overflow is detected depends on the
-user, who has the option to overwrite the \texttt{handle\_overflow}
+user, who has the option to overwrite the \texttt{handle\_ overflow}
 function in Figure~\ref{fig:instrumented_cfg}.
 Our library gives the user three options to handle them. 
 First option: no-op.
