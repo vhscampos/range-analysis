@@ -1,4 +1,4 @@
-This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  2 SEP 2012 11:54
+This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  2 SEP 2012 17:09
 entering extended mode
 \write18 enabled.
  %&-line parsing enabled.
@@ -384,76 +384,80 @@ Overfull \hbox (1.1878pt too wide) in paragraph at lines 745--752
 -so-ciates very con-ser-va-tive bounds
  []
 
-<images/ex_partition_grow_crop.pdf, id=425, 403.50548pt x 253.94977pt>
+<images/ex_partition_grow_crop.pdf, id=425, 235.88226pt x 374.40175pt>
 File: images/ex_partition_grow_crop.pdf Graphic file (type pdf)
 
-<use images/ex_partition_grow_crop.pdf> [10 <./images/ex_partition_grow_crop.pd
-f>] <images/TimeCorr.pdf, id=496, 746.79pt x 198.7425pt>
+<use images/ex_partition_grow_crop.pdf>
+
+LaTeX Warning: Float too large for page by 48.11032pt on input line 763.
+
+[10] <images/TimeCorr.pdf, id=450, 746.79pt x 198.7425pt>
 File: images/TimeCorr.pdf Graphic file (type pdf)
 
-<use images/TimeCorr.pdf> [11]
-<images/MemCorr.pdf, id=507, 622.325pt x 171.64125pt>
+<use images/TimeCorr.pdf>
+<images/MemCorr.pdf, id=453, 622.325pt x 171.64125pt>
 File: images/MemCorr.pdf Graphic file (type pdf)
  <use images/MemCorr.pdf>
-<images/precUpperBound.pdf, id=512, 680.5425pt x 183.68625pt>
+<images/precUpperBound.pdf, id=458, 680.5425pt x 183.68625pt>
 File: images/precUpperBound.pdf Graphic file (type pdf)
 
 <use images/precUpperBound.pdf>
-<images/precLowerBound.pdf, id=513, 566.11298pt x 168.62799pt>
+<images/precLowerBound.pdf, id=459, 566.11298pt x 168.62799pt>
 File: images/precLowerBound.pdf Graphic file (type pdf)
 
-<use images/precLowerBound.pdf> [12 <./images/TimeCorr.pdf> <./images/MemCorr.p
-df>] [13 <./images/precUpperBound.pdf> <./images/precLowerBound.pdf>]
-<images/space.pdf, id=597, 478.78876pt x 261.09747pt>
+<use images/precLowerBound.pdf> [11]
+<images/space.pdf, id=472, 478.78876pt x 261.09747pt>
 File: images/space.pdf Graphic file (type pdf)
  <use images/space.pdf>
-[14 <./images/space.pdf>]
-<images/impactSCC.pdf, id=631, 562.636pt x 165.954pt>
+[12] <images/impactSCC.pdf, id=480, 562.636pt x 165.954pt>
 File: images/impactSCC.pdf Graphic file (type pdf)
 
-<use images/impactSCC.pdf> [15 <./images/impactSCC.pdf>]
-<images/impactESSA.pdf, id=826, 563.10577pt x 166.62552pt>
+<use images/impactSCC.pdf>
+<images/impactESSA.pdf, id=488, 563.10577pt x 166.62552pt>
 File: images/impactESSA.pdf Graphic file (type pdf)
 
 <use images/impactESSA.pdf>
-<images/precESSA.pdf, id=831, 556.33444pt x 173.65076pt>
+<images/precESSA.pdf, id=493, 556.33444pt x 173.65076pt>
 File: images/precESSA.pdf Graphic file (type pdf)
 
-<use images/precESSA.pdf> [16 <./images/impactESSA.pdf> <./images/precESSA.pdf>
-] <images/intra.pdf, id=1075, 429.602pt x 172.64601pt>
+<use images/precESSA.pdf> [13]
+<images/intra.pdf, id=506, 429.602pt x 172.64601pt>
 File: images/intra.pdf Graphic file (type pdf)
  <use images/intra.pdf>
-[17 <./images/intra.pdf>]
-<images/context.pdf, id=1139, 525.96703pt x 191.71826pt>
+[14] <images/context.pdf, id=525, 525.96703pt x 191.71826pt>
 File: images/context.pdf Graphic file (type pdf)
 
 <use images/context.pdf>
-<images/wholeImpact.pdf, id=1141, 556.32745pt x 170.63649pt>
+<images/wholeImpact.pdf, id=527, 556.32745pt x 170.63649pt>
 File: images/wholeImpact.pdf Graphic file (type pdf)
 
-<use images/wholeImpact.pdf> [18 <./images/context.pdf>]
-<images/timeIntraInterInline.pdf, id=1178, 322.20375pt x 200.75pt>
+<use images/wholeImpact.pdf>
+<images/timeIntraInterInline.pdf, id=530, 322.20375pt x 200.75pt>
 File: images/timeIntraInterInline.pdf Graphic file (type pdf)
 
 <use images/timeIntraInterInline.pdf>
-<images/timeWideningOperators.pdf, id=1179, 434.62375pt x 249.93375pt>
+<images/timeWideningOperators.pdf, id=531, 434.62375pt x 249.93375pt>
 File: images/timeWideningOperators.pdf Graphic file (type pdf)
 
-<use images/timeWideningOperators.pdf> [19 <./images/wholeImpact.pdf> <./images
-/timeIntraInterInline.pdf> <./images/timeWideningOperators.pdf>]
-<images/jumpSet.pdf, id=1273, 515.92848pt x 224.83899pt>
+<use images/timeWideningOperators.pdf>
+<images/jumpSet.pdf, id=542, 515.92848pt x 224.83899pt>
 File: images/jumpSet.pdf Graphic file (type pdf)
 
-<use images/jumpSet.pdf> [20 <./images/jumpSet.pdf>] [21] [22] (./paper.bbl
-[23] [24] [25] [26]) [27] (./paper.aux)
+<use images/jumpSet.pdf> [15] [16] [17] (./paper.bbl [18] [19] [20] [21])
+[22] [23 <./images/ex_partition_grow_crop.pdf>] [24 <./images/TimeCorr.pdf> <./
+images/MemCorr.pdf> <./images/precUpperBound.pdf> <./images/precLowerBound.pdf>
+] [25 <./images/space.pdf> <./images/impactSCC.pdf>] [26 <./images/impactESSA.p
+df> <./images/precESSA.pdf> <./images/intra.pdf>] [27 <./images/context.pdf> <.
+/images/wholeImpact.pdf> <./images/timeIntraInterInline.pdf> <./images/timeWide
+ningOperators.pdf>] [28 <./images/jumpSet.pdf>] (./paper.aux)
 
 LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
  ) 
 Here is how much of TeX's memory you used:
- 6146 strings out of 493876
- 85218 string characters out of 1150568
- 167505 words of memory out of 3000000
+ 6147 strings out of 493876
+ 85225 string characters out of 1150568
+ 173799 words of memory out of 3000000
  9170 multiletter control sequences out of 10000+50000
  13341 words of font info for 51 fonts, out of 3000000 for 5000
  714 hyphenation exceptions out of 8191
@@ -481,9 +485,9 @@ pe1/bluesky/cm/cmti7.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesk
 y/cm/cmti8.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmtt1
 0.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmtt8.pfb></us
 r/local/texlive/2008/texmf-dist/fonts/type1/bluesky/ams/msbm10.pfb>
-Output written on paper.pdf (27 pages, 1123845 bytes).
+Output written on paper.pdf (28 pages, 1123387 bytes).
 PDF statistics:
- 1513 PDF objects out of 1728 (max. 8388607)
- 129 named destinations out of 1000 (max. 131072)
+ 1517 PDF objects out of 1728 (max. 8388607)
+ 130 named destinations out of 1000 (max. 131072)
  217 words of extra memory for PDF output out of 10000 (max. 10000000)
 
