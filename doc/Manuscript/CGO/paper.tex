@@ -76,11 +76,11 @@ For instance, the \texttt{int} type, in Java, ranges from $-2^{31}-1$ to
 $2^{31}$.
 Consequently, there exist numbers that cannot be represented by these types.
 In general, these programming languages resort to a {\em wrapping-arithmetics}
-semantics~\cite{TODO} to perform integer operations.
+semantics~\cite{Warren02} to perform integer operations.
 If a number $n$ is too large to fit into a primitive data type $T$, then $n$'s
 value wraps around, and $n \mbox{module} T_{max}$ wounds up represented
 instead.
-There are situations in which this semantics is acceptable~\cite{TODO}.
+There are situations in which this semantics is acceptable~\cite{Dietz12}.
 For instance, programers might rely on this behavior to implement hash functions
 and random number generators.
 On the other hand, there exist also situations in which this behavior might
@@ -139,14 +139,18 @@ This instrumentation framework, also a contribution of this paper, has been
 implemented in the LLVM compiler~\cite{Lattner04}.
 We have used it to log overflows in a vast number of programs, and in this
 paper we focus on SPEC CPU 2006.
-Our implementation has been able to reproduce the results recently obtained by XX
-{\em et al.}~\cite{TODO}.
+Our implementation has been able to reproduce the results obtained by
+previous work.
+We have re-discovered the integer overflows recently observed by
+Dietz {\em et al.}~\cite{Dietz12}, and the performance of our instrumentation
+library, without the support of range analysis, matches the state-of-the-art
+implementation of Brumley {\em et al.}
 Our range analysis algorithm has been able to remove XX\% of the overflow
 checks created by the dynamic instrumentation framework.
 All our experiments use an interprocedural version of range analysis.
 We inline small functions to make our implementation more context sensitive.
-Our experiments show that the speed and memory consumption of our range analysis
-grows linearly with the program size.
+Our experiments show that the speed and memory consumption of our range
+analysis grows linearly with the program size.
 By comparing the ranges that we determine statically with the results found by
 a profiler, we see that more than 50\% of the bounds that we found are within a
 factor of 50\% of the values that variables actually assume.
@@ -316,16 +320,17 @@ A suite of constraints that produce an instance of the range analysis problem.}
 \end{center}
 \end{figure}
 
-We will use the program in Figure~\ref{fig:ex1}(a) to illustrate our range
-analysis.
-Figure~\ref{fig:ex1}(b) shows the same program in e-SSA form~\cite{Bodik00},
-and Figure~\ref{fig:ex1}(c) outlines the constraints that we extract from this
-program.
+We will use the program in Figure~\ref{fig:ex_eSSA_cgo}(a) to illustrate our
+range analysis.
+Figure~\ref{fig:ex_eSSA_cgo}(b) shows the same program in e-SSA
+form~\cite{Bodik00},
+and Figure~\ref{fig:ex_eSSA_cgo}(c) outlines the constraints that we extract
+from this program.
 There is a clear correspondence between instructions and constraints.
 Our analysis is sparse~\cite{Choi91}; thus, we associate one, and only one,
 constraint with each integer variable defined in the program.
 A possible solution to the range analysis problem, as obtained via the
-techniques that we will introduce in Section~\ref{sub:algo}, is given in
+techniques that we will introduce in Section~\ref{sub:prop}, is given in
 Figure~\ref{fig:ex_eSSA_cgo}(d).
 
 \begin{figure}[t!]
@@ -679,10 +684,13 @@ Section~\ref{sec:range}.
 Our instrumentation works by identifying the instructions that may 
 lead to an overflow, and inserting assertions after those instructions. 
 The LLVM IR has five instructions that may lead to an overflow:
-\textsc{Add}, \textsc{Sub}, \textsc{Mul},  \textsc{Trunc} and \textsc{Shl}
-(left shift).
+\textsc{Add}, \textsc{Sub}, \textsc{Mul},  \textsc{Trunc} (also bit-casts) and
+\textsc{Shl} (left shift).
 Figure~\ref{fig:instrumentation} shows the dynamic tests that we perform to
 detect overflows.
+Instrumenting \textsc{Add} or \textsc{Sub} requires 12 LLVM instructions.
+Left shifts need 8 instructions, \textsc{Mul} requires 7 and
+\textsc{Trunc} requires only 3.
 
 \begin{figure}[t!]
 \begin{center}
