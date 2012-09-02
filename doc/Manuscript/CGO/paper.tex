@@ -966,14 +966,14 @@ runtime.
 Contrary to these previous work, we instrument programs at LLVM's intermediate
 representation level, which is machine independent.
 Nevertheless, the performance of the programs that we instrument is on par with
-Brumley's.
+Brumley's, even without the support of the static range analysis.
 
-Similar to Brumley {\em et al.}, Dietz {\em et al.}~\cite{Dietz12} have 
-implemented a tool, IOC, that instruments C/C++ programs to detect integer
-overflows.
+Dietz {\em et al.}~\cite{Dietz12} have 
+implemented a tool, IOC, that instruments the source code of C/C++ programs to
+detect integer overflows.
 They approach the problem of detecting integer overflows from a software
 engineering point-of-view; hence, performance is not a concern.
-The authors have used IOC to perform a lengthy study about the occurrences
+The authors have used IOC to carry out a lengthy study about the occurrences
 of overflows in real-world programs, and have found that these events are very
 common.
 It is possible to implement a dynamic analysis without instrumenting the
@@ -985,13 +985,11 @@ The main drawback of emulation is performance: Chen {\em et al.} report a
 50X slowdown.
 % TODO: cite "Brick: A  binary tool for run-time detecting and locating
 % integer-based vulnerability.
-The main difference between all these previous works and ours is the fact that
-we focus on generating less instrumentation, an endeavor that we accomplish via
-static analysis.
+We differ from all this previous work because we focus on generating less
+instrumentation, an endeavor that we accomplish via static analysis.
 
 \paragraph{Static Detection of Integer Overflows: }
-\noindent
-Zhang {\em et al.}~\cite{Zhang09} have designed a static analysis to sanitize
+Zhang {\em et al.}~\cite{Zhang09} have used static analysis to sanitize
 programs against integer overflow based vulnerabilities.
 They instrument integer operations in paths from a source to a sink.
 In Zhang {\em et al.}'s context, sources are functions that read values from
@@ -1010,8 +1008,66 @@ Still in the field of symbolic execution, Molnar
 Linux x86 binaries to find integer overflow bugs.
 They prove the existence of bugs by generating test cases for them.
 
+\paragraph{Range Analysis:}
+One of the goals of this paper is to describe a state-of-the-art range analysis
+algorithm.
+Many parts of this algorithm are well-known, others are novel.
+The widening and narrowing operators from Section~\ref{sub:micro} were
+introduced by Cousot and Cousot's seminal paper~\cite{Cousot77}.
+The widening operator that we use in our implementation is well-known among
+compiler writers~\cite[p.228]{Nielson99}.
+The interval lattice from Section~\ref{sub:lattice} has been used in a
+plethora of old and recent range analysis
+solvers~\cite{Gough94,Mahlke01,Oh12,Patterson95,Stephenson00,Su05}.
+The use of futures to handle comparisons between variables is a contribution
+of this paper.
+It is well-known that the use of strongly connected components speeds up
+constraint resolution systems~\cite[Sec 6.3]{Nielson99}.
+However, publicly available implementations of range analysis such as those in
+FLEX~\footnote{The MIT's FLEX/Harpoon compiler
+provides an implementation of Stephenson's algorithm~\cite{Stephenson00}, and
+is available at \texttt{http://flex.cscott. net/Harpoon/}.},
+gcc~\footnote{Gcc's VRP pass (at \texttt{http://gcc.gnu.org/svn/gcc/trunk/gcc/
+tree-vrp.c}) implements a variant of Patterson's
+algorithm~\cite{Patterson95}.} or Mozilla's IonMonkey~\footnote{\texttt{hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/
+src/ion/RangeAnalysis.cpp}. This code is implemented after Gough and
+Klaeren~\cite{Gough94}} do not resort to this technique.
+Furthermore, they only deal with comparisons between variables and constants.
+
+
 \noindent
-\paragraph{Intermediate Program Representations: }
+\paragraph{Sparse Dataflow Analysis: }
+In this paper we provide a {\em sparse} implementation of range analysis.
+Sparsity, in our context, means that we associate points in the lattice of
+interest -- intervals in our case -- directly to variables.
+Dense analyses map such information to pairs formed by variables and program
+points.
+The compiler related literature contains many descriptions of sparse
+data-flow analyses.
+Some analyses obtain sparsity by using specific program
+representations, like we did.
+Others rely on data-structures.
+In terms of data-structures, the first, and best known method proposed to
+support sparse data-flow analyses is Choi {\em et al.}'s {\em Sparse Evaluation
+Graph} (SEG)~\cite{Choi91}.
+
+One of the program representation that we discuss in
+Section~\ref{sub:splitting} -- the {\em
+Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
+{\em et al.}~\cite{Bodik00} and Gough {\em et al.}~\cite{Gough94}.
+The other representation, which we call u-SSA, is very similar to
+the \emph{Static Single Use} form (SSU).
+There exists many variants of SSU~\cite{Plevyak96,George03,Lo98}.
+The main difference is that our dataflow analysis propagates information
+forwardly, whereas the SSU form has been conceive for dataflow analyses
+that propagate information backwardly.
+Thus, it requires special nodes at branches to merge information from
+different program paths.
+The SSU form programs are a subset of the programs in the so called
+{\em Static Single Information} form, a program representation proposed by
+Scott Ananian~\cite{Ananian99}.
+SSI makes sparse the dataflow analyses that propagate information both
+forwardly and backwardly.
 
 \section{Final Remarks}
 \label{sec:rem}

@@ -1,4 +1,4 @@
-This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  29 AUG 2012 16:25
+This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2009.8.18)  2 SEP 2012 11:54
 entering extended mode
 \write18 enabled.
  %&-line parsing enabled.
@@ -445,40 +445,43 @@ File: images/timeWideningOperators.pdf Graphic file (type pdf)
 File: images/jumpSet.pdf Graphic file (type pdf)
 
 <use images/jumpSet.pdf> [20 <./images/jumpSet.pdf>] [21] [22] (./paper.bbl
-[23] [24] [25] [26]) [27] (./paper.aux) ) 
+[23] [24] [25] [26]) [27] (./paper.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ ) 
 Here is how much of TeX's memory you used:
  6146 strings out of 493876
  85218 string characters out of 1150568
- 167490 words of memory out of 3000000
+ 167505 words of memory out of 3000000
  9170 multiletter control sequences out of 10000+50000
  13341 words of font info for 51 fonts, out of 3000000 for 5000
  714 hyphenation exceptions out of 8191
  36i,27n,36p,436b,539s stack positions out of 5000i,500n,10000p,200000b,50000s
-</usr/local/texlive/2008/texmf-dist/fo
-nts/type1/bluesky/cm/cmbx10.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1
-/bluesky/cm/cmbxti10.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesk
-y/cm/cmcsc10.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cme
-x10.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmmi10.pfb><
-/usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmmi6.pfb></usr/local
-/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmmi7.pfb></usr/local/texlive/2
-008/texmf-dist/fonts/type1/bluesky/cm/cmmi8.pfb></usr/local/texlive/2008/texmf-
-dist/fonts/type1/bluesky/cm/cmmi9.pfb></usr/local/texlive/2008/texmf-dist/fonts
-/type1/bluesky/cm/cmr10.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/blu
-esky/cm/cmr12.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cm
-r6.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmr7.pfb></us
-r/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmr8.pfb></usr/local/tex
-live/2008/texmf-dist/fonts/type1/bluesky/cm/cmr9.pfb></usr/local/texlive/2008/t
-exmf-dist/fonts/type1/bluesky/cm/cmsy10.pfb></usr/local/texlive/2008/texmf-dist
-/fonts/type1/bluesky/cm/cmsy5.pfb></usr/local/texlive/2008/texmf-dist/fonts/typ
-e1/bluesky/cm/cmsy6.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky
-/cm/cmsy7.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy9.
-pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmti10.pfb></usr
-/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmti7.pfb></usr/local/tex
-live/2008/texmf-dist/fonts/type1/bluesky/cm/cmti8.pfb></usr/local/texlive/2008/
-texmf-dist/fonts/type1/bluesky/cm/cmtt10.pfb></usr/local/texlive/2008/texmf-dis
-t/fonts/type1/bluesky/cm/cmtt8.pfb></usr/local/texlive/2008/texmf-dist/fonts/ty
-pe1/bluesky/ams/msbm10.pfb>
-Output written on paper.pdf (27 pages, 1123814 bytes).
+</usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmbx10.pfb></usr/l
+ocal/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmbxti10.pfb></usr/local/te
+xlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmcsc10.pfb></usr/local/texlive/20
+08/texmf-dist/fonts/type1/bluesky/cm/cmex10.pfb></usr/local/texlive/2008/texmf-
+dist/fonts/type1/bluesky/cm/cmmi10.pfb></usr/local/texlive/2008/texmf-dist/font
+s/type1/bluesky/cm/cmmi6.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bl
+uesky/cm/cmmi7.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/c
+mmi8.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmmi9.pfb><
+/usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmr10.pfb></usr/local
+/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmr12.pfb></usr/local/texlive/2
+008/texmf-dist/fonts/type1/bluesky/cm/cmr6.pfb></usr/local/texlive/2008/texmf-d
+ist/fonts/type1/bluesky/cm/cmr7.pfb></usr/local/texlive/2008/texmf-dist/fonts/t
+ype1/bluesky/cm/cmr8.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesk
+y/cm/cmr9.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy10
+.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy5.pfb></usr
+/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy6.pfb></usr/local/tex
+live/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy7.pfb></usr/local/texlive/2008/
+texmf-dist/fonts/type1/bluesky/cm/cmsy9.pfb></usr/local/texlive/2008/texmf-dist
+/fonts/type1/bluesky/cm/cmti10.pfb></usr/local/texlive/2008/texmf-dist/fonts/ty
+pe1/bluesky/cm/cmti7.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesk
+y/cm/cmti8.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmtt1
+0.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmtt8.pfb></us
+r/local/texlive/2008/texmf-dist/fonts/type1/bluesky/ams/msbm10.pfb>
+Output written on paper.pdf (27 pages, 1123845 bytes).
 PDF statistics:
  1513 PDF objects out of 1728 (max. 8388607)
  129 named destinations out of 1000 (max. 131072)
