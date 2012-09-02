@@ -688,9 +688,6 @@ The LLVM IR has five instructions that may lead to an overflow:
 \textsc{Shl} (left shift).
 Figure~\ref{fig:instrumentation} shows the dynamic tests that we perform to
 detect overflows.
-Instrumenting \textsc{Add} or \textsc{Sub} requires 12 LLVM instructions.
-Left shifts need 8 instructions, \textsc{Mul} requires 7 and
-\textsc{Trunc} requires only 3.
 
 \begin{figure}[t!]
 \begin{center}
@@ -751,9 +748,15 @@ Figure~\ref{fig:instrumented_cfg} shows an actual control flow graph, before
 and after the instrumentation.
 From this figure, it is clear that the instrumented program will be larger
 than the original code.
-However, as we show empirically, this growth is not too large when compared
-to the total size of our benchmarks, because most of the instructions in these
-programs do not demand instrumentation.
+Instrumenting \textsc{Add} or \textsc{Sub} requires 12 LLVM instructions.
+Left shifts need 8 instructions, \textsc{Mul} requires 7 and
+\textsc{Trunc} requires only 3.
+These numbers do not include the instructions necessary to handle the overflow,
+e.g., block \texttt{\%11} in Figure~\ref{fig:instrumented_cfg}, as this code is
+not in the program's main path.
+Nevertheless, as we show empirically, this growth is not too large when
+compared to the total size of our benchmarks, because most of the instructions
+in these programs do not demand instrumentation.
 Furthermore, none of the instructions used to instrument integer arithmetics
 access memory.
 Therefore, the overall slowdown that the instrumentation causes is usually
