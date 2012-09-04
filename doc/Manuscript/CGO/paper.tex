@@ -30,8 +30,10 @@
 \titlebanner{Code Generation and Optimization}        % These are ignored unless
 \preprintfooter{Overflow Elimination}   % 'preprint' option specified.
 
-\title{Combining Static and Dynamic Analyses to Secure Programs against
+\title{A fast and Low-Overhead Technique to Secure Programs Against
 Integer Overflows}
+%\title{Combining Static and Dynamic Analyses to Secure Programs against
+%Integer Overflows}
 %\subtitle{A case study of the Dinamica EGO toolkit}
 
 \authorinfo{Removed due to blind review}
@@ -54,8 +56,9 @@ our range analysis.
 We have used this algorithm to improve the quality of a dynamic instrumentation
 library that we have implemented in LLVM.
 This framework has been used to detect overflows in hundreds of C/C++ programs.
-As a testimony of its effectiveness, our range analysis has been able to speedup
-the SPEC CPU 2006 instrumented programs by XX\%.
+As a testimony of its effectiveness, our range analysis has been able to eliminate
+19\% of all the overflow checks necessary to secure the C programs in the
+SPEC CPU 2006 benchmark suite.
 \end{abstract}
 
 \category{D.3.4}{Processors}{Compilers}
