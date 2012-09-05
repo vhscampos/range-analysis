@@ -11,6 +11,7 @@
 \usepackage{mathpartir} % To use \inferrule
 \usepackage{amssymb}    % To use \mathbb
 \usepackage{skak}
+\usepackage{pbox}
 
 \newtheorem{definition}[section]{Definition}
 
@@ -968,6 +969,28 @@ The figure also shows that, on average, 37.39\% of our lower limits are
 imprecise, and 35.40\% of our upper limits are imprecise.
 This result is on pair with those obtained by more costly analysis, such as
 Stephenson {\em et al.}'s~\cite{Stephenson00}.
+
+%How we have done the dynamic tests  
+We have executed the instrumented programs of the integer benchmarks of SPEC
+2006 CPU to measure the overhead produced by our instrumentation in 
+real world programs.
+To do this, we have developed a little test framework that compiles, runs and
+collects the statistics about the execution of all the programs of SPEC 2006.
+The execution of the programs was made using the arguments and inputs of the "test"
+mode, which is faster to execute than the "ref" inputs.
+
+%Analysis about the Table 1 of the spreadsheet (Unpruned Instrumentation)
+Figure~\ref{fig:unpruned_analysis} shows the number of instructions that has
+received instrumentation, without avoiding inserting the instrumentation by
+using any static analysis. We can see that the number of these instructions is low 
+(3,96 in the average). 
+Figure~\ref{fig:prunning_analysis} shows that it is possible to use static 
+analysis to avoid inserting the instrumentation in some instructions.
+
+
+
+
+
 
 \section{Related Work}
 \label{sec:rel}
