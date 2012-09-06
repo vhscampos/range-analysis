@@ -76,8 +76,8 @@ Integer arithmetics, Overflow, Compiler, Range analysis
 % What are integer overflows.
 The most popular programming languages, including C, C++ and Java, limit the
 size of primitive numeric types.
-For instance, the \texttt{int} type, in Java, ranges from $-2^{31}-1$ to
-$2^{31}$.
+For instance, the \texttt{int} type, in C++, ranges from $-2^{31}$ to
+$2^{31}-1$.
 Consequently, there exist numbers that cannot be represented by these types.
 In general, these programming languages resort to a {\em wrapping-arithmetics}
 semantics~\cite{Warren02} to perform integer operations.
@@ -90,11 +90,11 @@ and random number generators.
 On the other hand, there exist also situations in which this behavior might
 lead a program to produce unexpected results.
 As an example, in 1996, the Ariane 5 rocket was lost due to an arithmetic
-overflow -- a bug that resulted in a loss of more than U\$370 million
-dollars~\cite{Dowson97}.
+overflow -- a bug that resulted in a loss of more than US\$370 million~\cite{Dowson97}.
+
 % TODO We need to explain better the wrapping-arithmetics, and we need to cite it
 % properly. What could be a good (official) citation?
-% And we need to cite
+
 
 % Why there is still the need to devise efficient methods to eliminate them.
 Programming languages such as Ada or Lisp can be customized to throw exceptions
@@ -149,7 +149,7 @@ We have re-discovered the integer overflows recently observed by
 Dietz {\em et al.}~\cite{Dietz12}, and the performance of our instrumentation
 library, without the support of range analysis, matches the state-of-the-art
 implementation of Brumley {\em et al.}
-Our range analysis algorithm has been able to remove XX\% of the overflow
+Our range analysis algorithm has been able to remove 24.93\% of the overflow
 checks created by the dynamic instrumentation framework.
 All our experiments use an interprocedural version of range analysis.
 We inline small functions to make our implementation more context sensitive.
@@ -227,7 +227,7 @@ naturally given by $-\infty < \ldots < -2 < -1 < 0 < 1 < 2 < \ldots +\infty$.
 For any $x > -\infty$ we define:
 
 \begin{tabular}{lcl}
-$x + \infty = \infty, x \neq -\infty$ & \mbox{\hspace{0.1cm}} & $x - \infty = - \infty, x \neq +\infty$ \\
+$x + \infty = \infty$ & \mbox{\hspace{0.1cm}} & $x - \infty = - \infty, x \neq +\infty$ \\
 $x \times \infty = \infty$ if $x > 0$ & & $x \times \infty = -\infty$ if $x < 0$ \\
 $0 \times \infty = 0$ & & $(-\infty) \times \infty = \ $ not defined $$ \\
 \end{tabular}
@@ -256,7 +256,8 @@ And range union, ``$\sqcup$", is given by:
 \]
 
 Given an interval $\iota = [l, u]$, we let $\lb{\iota} = l$, and
-$\ub{\iota} = u$.
+$\ub{\iota} = u$, where $\lb{\iota}$ is the lower bound and $\ub{\iota}$ is
+the upper bound of a variable.
 We let \varset{V} be a set of constraint variables, and
 $I: \varset{V} \mapsto \varset{Z}^2$ a
 mapping from these variables to intervals in $\varset{Z}^2$.
