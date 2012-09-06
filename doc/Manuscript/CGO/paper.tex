@@ -859,8 +859,11 @@ First, we want to show that our range analysis is fast and precise.
 Second, we want to demonstrate the effectiveness of our framework to detect
 integer overflows.
 
+\subsection{Static Range Analysis}
+\label{sub:range}
+
 \noindent
-\textbf{Time and Memory Complexity.}
+\textbf{Time and Memory Complexity: }
 Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
 run our range analysis and the size of the input programs.
 We show data for the 100 largest benchmarks in our test suite, in number
@@ -911,11 +914,11 @@ Coefficient of determination = 0.9947.
 \end{figure}
 
 \noindent
-\textbf{Precision.}
-Our implementation of range analysis is remarkably precise, considering its
-runtime.
-Lakhdar {\em et al.}'s relational analysis~\cite{Lakhdar11}, for instance, takes
-about 25 minutes to go over a program with almost 900 basic blocks.
+\textbf{Precision: }
+Our implementation of range analysis offers a good tradeoff between
+precision and runtime.
+Lakhdar {\em et al.}'s relational analysis~\cite{Lakhdar11}, for instance,
+takes about 25 minutes to go over a program with almost 900 basic blocks.
 We analyze programs of similar size in less than one second.
 We do not claim our approach is as precise as such algorithms, even though we
 are able to find exact bounds to 4/5 of the examples presented
@@ -977,49 +980,89 @@ Stephenson {\em et al.}'s~\cite{Stephenson00}.
 %Static Analysis
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%How we have done the dynamic tests
+\subsection{The Instrumentation Library}
+\label{sub:inst}
+
+We have executed the instrumented programs of the integer benchmarks of SPEC
+2006 CPU to probe the overhead imposed by our instrumentation.
+All the programs have been executed with its ``test" input set.
+We have not been able to run the binary that LLVM produces for SPEC's
+\texttt{gcc} in our environment, even without any of our passes.
+Figure~\ref{fig:unprunedTable} shows the percentage of instructions that
+we instrument, without the intervention of the range analysis.
+The number of instrumented instructions is relatively low, compared to the
+total number of instructions, because we only instrument six different
+LLVM bitcodes, in a set of 57 opcodes, not counting intrinsics.
+Figure~\ref{fig:unprunedTable} also shows how many instructions have caused
+overflows.
+On the average, 4.90\% of the instrumented sites have caused integer overflows.
+
 %Analysis about the amount of instructions
-\begin{figure*}[t!]
+\begin{figure}[htb]
 \begin{center}
 \begin{small}
-\begin{tabular}{|l|r|r|r|r|}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|}
 \hline
-Program Name & \multicolumn{1}{l|}{Num. of Instructions} & \multicolumn{1}{l|}{Num. Instrumented Instructions} & \multicolumn{1}{l|}{Perc. Instrumented Instructions} & \multicolumn{1}{l|}{Num. Instructions Where Overflows Occurred} \\ \hline
-470.lbm & 13.724 & 1.142 & 8,32\% & 0 \\ \hline
-433.milc & 44.236 & 1.602 & 3,62\% & 11 \\ \hline
-444.namd & 100.276 & 3.234 & 3,23\% & 12 \\ \hline
-447.dealII & 1.381.408 & 36.157 & 2,62\% & 50 \\ \hline
-450.soplex & 136.367 & 3.158 & 2,32\% & 13 \\ \hline
-464.h264ref & 271.627 & 13.846 & 5,10\% & 167 \\ \hline
-473.astar & 19.243 & 857 & 4,45\% & 0 \\ \hline
-458.sjeng & 54.051 & 2.504 & 4,63\% & 68 \\ \hline
-429.mcf & 4.725 & 165 & 3,49\% & 8 \\ \hline
-471.omnetpp & 203.201 & 1.972 & 0,97\% & 2 \\ \hline
-403.gcc & 1.419.456 & 18.669 & 1,32\% & N/A \\ \hline
-445.gobmk & 308.475 & 14.129 & 4,58\% & 4 \\ \hline
-462.libquantum & 16.297 & 928 & 5,69\% & 7 \\ \hline
-401.bzip2 & 38.831 & 2.158 & 5,56\% & N/A \\ \hline
-456.hmmer & 114.136 & 4.001 & 3,51\% & 0 \\ \hline
+Benchmark & \#I & \#II & \#II/\#I & \#O \\ \hline
+470.lbm & 13,724 & 1,142 & 8.32\% & 0 \\ \hline
+433.milc & 44,236 & 1,602 & 3.62\% & 11 \\ \hline
+444.namd & 100,276 & 3,234 & 3.23\% & 12 \\ \hline
+447.dealII & 1,381,408 & 36,157 & 2.62\% & 50 \\ \hline
+450.soplex & 136,367 & 3,158 & 2.32\% & 13 \\ \hline
+464.h264ref & 271,627 & 13,846 & 5.10\% & 167 \\ \hline
+473.astar & 19,243 & 857 & 4.45\% & 0 \\ \hline
+458.sjeng & 54,051 & 2,504 & 4.63\% & 68 \\ \hline
+429.mcf & 4,725 & 165 & 3,49\% & 8 \\ \hline
+471.omnetpp & 203,201 & 1,972 & 0.97\% & 2 \\ \hline
+403.gcc & 1,419,456 & 18,669 & 1.32\% & N/A \\ \hline
+445.gobmk & 308,475 & 14,129 & 4.58\% & 4 \\ \hline
+462.libquantum & 16,297 & 928 & 5.69\% & 7 \\ \hline
+401.bzip2 & 38,831 & 2,158 & 5.56\% & N/A \\ \hline
+456.hmmer & 114,136 & 4,001 & 3.51\% & 0 \\ \hline
 \multicolumn{1}{|r|}{Total (Average)} & 275.070 & 6.968 & 3,96\% &  \\ \hline
-\end{tabular}
+\end{tabular*}
 \end{small}
 \end{center}
 \caption{\label{fig:unprunedTable}
-Unpruned analysis.}
-\end{figure*}
+Instrumentation library without support of static range analysis.
+\#I: number of LLVM bitcode instructions in the original program.
+\#II: number of instructions that have been instrumented.
+\#O: number of actual overflow tests detected dynamically.}
+\end{figure}
+
+Figure~\ref{fig:prunningTable} shows how many checks our range analysis
+can avoid.
+In some benchmarks we obtain impressive results:
+For instance, the range analysis avoids 1,138 out of 1,142 checks in
+\texttt{470.lbm}.
+In other benchmarks, such as in \texttt{429.mcf}, we have been able to
+avoid only 1, out of 165 tests.
+In general we fare better in programs that bound input sizes via conditional
+tests, as \texttt{lbm} does.
+Using u-SSA, instead of e-SSA adds a negligible improvement onto our results.
+We speculate that this improvement is small because variables tend to be used
+a small number of times.
+Benoit {\em et al.}~\cite{Benoit08} have demonstrated that the vast majority
+of all the program variables are used less than five times in the program
+code.
+The u-SSA form only helps to avoid checks upon variables that are used more
+than once.
 
 %Prunning analysis
-\begin{figure*}[t!]
+\begin{figure}[t!]
 \begin{center}
 \begin{small}
-\begin{tabular}{|l|r|r|r|r|r|}
+\begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|r|}
 \hline
-Name & \multicolumn{1}{l|}{Num. instrumented instructions} & \multicolumn{1}{l|}{Num. instrumented instructions with e-SSA form} & \multicolumn{1}{l|}{Perc. reduction of e-SSA compared with original} & \multicolumn{1}{l|}{Num. instrumented instructions with u-SSA form} & \multicolumn{1}{l|}{Perc. reduction of u-SSA compared with original} \\ \hline
+Benchmark & \#II & \#E & \#I/\#E & \#U &
+\#I/\#U \\ \hline
 470.lbm & 1.142 & 4 & 99,65\% & 4 & 99,65\% \\ \hline
 433.milc & 1.573 & 1.070 & 31,98\% & 1.065 & 32,29\% \\ \hline
 444.namd & 2.965 & 2.900 & 2,19\% & 2.900 & 2,19\% \\ \hline
 447.dealII & 37.234 & 29.870 & 19,78\% & 28.779 & 22,71\% \\ \hline
 450.soplex & 3.268 & 2.927 & 10,43\% & 2.897 & 11,35\% \\ \hline
-464.h264ref & 13.548 & 11.301 & 16,59\% & 11.342 & 16,28\% \\ \hline
+464.h264ref & 13.548 & 11.342 & 16,59\% & 11.301 & 16,28\% \\ \hline
 473.astar & 903 & 808 & 10,52\% & 806 & 10,74\% \\ \hline
 458.sjeng & 2.483 & 2.354 & 5,20\% & 2.190 & 11,80\% \\ \hline
 429.mcf & 165 & 164 & 0,61\% & 164 & 0,61\% \\ \hline
@@ -1030,95 +1073,117 @@ Name & \multicolumn{1}{l|}{Num. instrumented instructions} & \multicolumn{1}{l|}
 401.bzip2 & 2.350 & 1.966 & 16,34\% & 1.966 & 16,34\% \\ \hline
 456.hmmer & 3.963 & 3.346 & 15,57\% & 3.304 & 16,63\% \\ \hline
 Total (Average) & 6.823 & 5.779 & 18,17\% & 5.676 & 19,09\% \\ \hline
-\end{tabular}
+\end{tabular*}
 \end{small}
 \end{center}
 \caption{\label{fig:prunningTable}
-Prunning analysis.}
-\end{figure*}
-
-%Classification analysis
-\begin{figure*}[t!]
-\begin{center}
-\begin{small}
-\begin{tabular}{|l|r|r|r|r|r|r|r|r|}
-\hline
-Name & \multicolumn{1}{l|}{Number of safe instructions} & \multicolumn{1}{l|}{Number of suspicious instructions} & \multicolumn{1}{l|}{Number of uncertain instructions} & \multicolumn{1}{l|}{Number of buggy instructions} & \multicolumn{1}{l|}{Number of suspicious instructions that produced overflows} & \multicolumn{1}{l|}{Percentage of suspicious instructions that produced overflows} & \multicolumn{1}{l|}{Number of Uncertain instructions that produced overflows} & \multicolumn{1}{l|}{Percentage of Uncertain instructions that produced overflows} \\ \hline
-470.lbm & 1.138 & 0 & 4 & 0 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
-433.milc & 536 & 17 & 1.048 & 0 & 0 & 0,00\% & 11 & 1,05\% \\ \hline
-444.namd & 334 & 480 & 2.420 & 0 & 0 & 0,00\% & 12 & 0,50\% \\ \hline
-447.dealII & 6.188 & 39 & 28.740 & 0 & 0 & 0,00\% & 50 & 0,17\% \\ \hline
-450.soplex & 229 & 16 & 2.881 & 0 & 0 & 0,00\% & 13 & 0,45\% \\ \hline
-464.h264ref & 2.539 & 1.195 & 10.147 & 0 & 7 & 0,59\% & 167 & 1,65\% \\ \hline
-473.astar & 48 & 11 & 795 & 0 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
-458.sjeng & 150 & 213 & 1.977 & 0 & 0 & 0,00\% & 68 & 3,44\% \\ \hline
-429.mcf & 1 & 0 & 164 & 0 & 0 & 0,00\% & 8 & 4,88\% \\ \hline
-471.omnetpp & 659 & 25 & 1.288 & 0 & 1 & 4,00\% & 2 & 0,16\% \\ \hline
-403.gcc & 3.365 & 1.045 & 14.065 & 0 & N/A & N/A & N/A & N/A \\ \hline
-445.gobmk & 1.509 & 742 & 11.736 & 0 & 0 & 0,00\% & 4 & 0,03\% \\ \hline
-462.libquantum & 104 & 12 & 805 & 0 & 0 & 0,00\% & 7 & 0,87\% \\ \hline
-401.bzip2 & 192 & 40 & 1.926 & 0 & N/A & N/A & N/A & N/A \\ \hline
-456.hmmer & 663 & 222 & 3.082 & 0 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
-\end{tabular}
-\end{small}
-\end{center}
-\caption{\label{fig:classificationTable}
-Classification analysis.}
-\end{figure*}
-
-
-\begin{figure}[t!]
-\begin{center}
-\includegraphics[width=\columnwidth]{images/prunningChart}
-\end{center}
-\caption{\label{fig:prunningChart}
-Chart showing that our analysis was able to avoid inserting 24.93\%
-of the instrumentations, in average.}
+Instrumentation library with support of static range analysis.
+\#II: number of instructions that have been instrumented without range
+analysis.
+\#E: number of instructions instrumented in the e-SSA form program.
+\#U: number of instructions instrumented in the u-SSA form program.}
 \end{figure}
 
-%Analysis about the tables
+Figure~\ref{fig:classificationTable} shows how our range analysis
+classifies instructions.
+Out of all the 102,790 instructions that we have instrumented throughout the
+entire SPEC suite, 3.92\% are suspicious, 17.19\% are safe, and
+78.89\% are uncertain.
+We had, at first, speculated that overflows would be more common among
+suspicious instructions, as their bounds, inferred statically, go beyond the
+limits of their declared types.
+However, our experiments did not let us confirm this hypothesis.
 
-%Analysis about the area chart (Amount of instrumentations pruned)
+%Classification analysis
+\begin{figure}[t!]
+\begin{center}
+\begin{scriptsize}
+\begin{tabular}{|l|r|r|r|r|r|r|r|r|}
+\hline
+Bench & \#Sf & \#S & \#U & \#SO & \#SO/\#O & \#UO & \#UO/\#O
+\\ \hline
+lbm     & 1138 & 0    & 4 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
+milc    & 536  & 17   & 1048  & 0 & 0,00\% & 11 & 1,05\% \\ \hline
+namd    & 334  & 480  & 2420  & 0 & 0,00\% & 12 & 0,50\% \\ \hline
+dealII  & 6188 & 39   & 28740  & 0 & 0,00\% & 50 & 0,17\% \\ \hline
+soplex  & 229  & 16   & 2881 & 0 & 0,00\% & 13 & 0,45\% \\ \hline
+h264ref & 2539 & 1195 & 10147 & 7 & 0,59\% & 167 & 1,65\% \\ \hline
+astar   & 48   & 11   & 795 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
+sjeng   & 150  & 213  & 1977 &0 & 0,00\% & 68 & 3,44\% \\ \hline
+mcf     & 1    & 0    & 164 & 0 & 0,00\% & 8 & 4,88\% \\ \hline
+omnetpp & 659  & 25   & 1288 & 1 & 4,00\% & 2 & 0,16\% \\ \hline
+gcc     & 3365 & 1045 & 14065 & N/A & N/A & N/A & N/A \\ \hline
+gobmk   & 1509 & 742  & 11736 & 0 & 0,00\% & 4 & 0,03\% \\ \hline
+libqtum & 104  & 12   & 805 & 0 & 0,00\% & 7 & 0,87\% \\ \hline
+bzip2   & 192  & 40   & 1926 & N/A & N/A & N/A & N/A \\ \hline
+hmmer   & 663  & 222  & 3082 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
+\end{tabular}
+\end{scriptsize}
+\end{center}
+\caption{\label{fig:classificationTable}
+How the range analysis classified arithmetic instructions.
+\#Sf: safe.
+\#S: suspicious.
+\#U: uncertain.
+\#SO: number of suspicious instructions that overflowed.
+\#UO: number of uncertain instructions that overflowed.
+}
+\end{figure}
 
-
-%How we have done the dynamic tests  
-We have executed the instrumented programs of the integer benchmarks of SPEC
-2006 CPU to measure the overhead produced by our instrumentation in 
-real world programs.
-To do this, we have developed a little test framework that compiles, runs and
-collects the statistics about the execution of all the programs of SPEC 2006.
-The execution of the programs was made using the arguments and inputs of the "test"
-mode, which is faster to execute than the "ref" inputs.
+Figure~\ref{fig:percentage_elimination} shows, for the entire LLVM test
+suite, the percentage of overflow checks that our range analysis, with the
+e-SSA intermediate representation, could avoid.
+Each bar refers to a specific benchmark in the test suite.
+We only consider applications that had at least one instrumented
+instruction; the total number of benchmarks that meet this requirement is
+333.
+On the average, our range analysis avoid 24.93\% of the overflow checks.
+Considering the benchmarks in SPEC2006 only, this number is 20.57\%.
 
 \begin{figure}[t!]
 \begin{center}
-\includegraphics[width=\columnwidth]{images/performanceChart}
+\includegraphics[width=\columnwidth]{images/percentage_elimination}
 \end{center}
-\caption{\label{fig:performanceChart}
+\caption{\label{fig:percentage_elimination}
+Percentage of overflow checks that our range analysis has been able to remove.
+Each bar is a benchmark in the LLVM test suite.
+Benchmarks have been ordered by the effectiveness of the range analysis.
+On average, we have eliminated 24.93\% of the checks (geomean).}
+\end{figure}
+
+Figure~\ref{fig:spec_runtime} shows the impact of our instrumentation in the
+runtime of the SPEC benchmarks.
+We run each benchmark 20 times.
+The largest slowdown that we have observed, 11.83\%, happened in
+\texttt{h264ref}, the benchmark that presented the largest number of distinct
+sites where overflows happened dynamically. 
+On the average, the instrumented programs are 3.24\% slower than the
+original benchmarks.
+If we use the range analysis to eliminate overflow checks, this slowdown falls
+to 1.73\%.
+The range analysis, in this case, reduces the instrumentation overhead by
+53.40\%.
+This improvement is larger than the percentage of overflow checks that we
+avoid, e.g,. 20.57\%.
+We believe that this difference is due to the fact that we are able to
+eliminate checks on induction variables, as our range analysis can rely on
+the loop boundaries to achieve this end.
+
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=\columnwidth]{images/spec_runtime}
+\end{center}
+\caption{\label{fig:spec_runtime}
 Comparison between the execution times with and without prunning, 
 normalized by the original program's execution time.}
 \end{figure}
-
-%Performance
-Figure~\ref{fig:performanceChart} compares the execution times of the original program (baseline),
-the instrumented program without avoiding to insert any instrumentation (black), and 
-the instrumented program avoiding to insert the instrumentation whenever possible (gray).
-We can see that the maximum overhead we have got was near 10\% in 464.h264ref, a program
-that relies heavily on arithmetics instructions. 
-As pointed by Dietz {\em et al.}~\cite{Dietz12}, we had some cases where surprisingly we had
-a little speedup, too. Nevertheless, the fully instrumented programs had an average slowdown of 3,2\%
-and the programs instrumented using the range analysis to do the prunning had an average slowdown
-of 1,7\%. That results indicate that even avoiding to insert just 25\% of the overflow checks,
-we still can recover almost 50\% of the overhead, because many of the 
-analyzed instructions are within loops.
-
 
 
 \section{Related Work}
 \label{sec:rel}
 
 \noindent
-\paragraph{Dynamic Detection of Integer Overflows: }
+\textbf{Dynamic Detection of Integer Overflows: }
 Brumley {\em et al.}~\cite{Brumley07} have developed a tool, RICH, to
 dynamically detect integer overflows.
 Their goal is to secure C programs against integer overflow based
@@ -1161,7 +1226,8 @@ The main drawback of emulation is performance: Chen {\em et al.} report a
 We differ from all this previous work because we focus on generating less
 instrumentation, an endeavor that we accomplish via static analysis.
 
-\paragraph{Static Detection of Integer Overflows: }
+\noindent
+\textbf{Static Detection of Integer Overflows: }
 Zhang {\em et al.}~\cite{Zhang09} have used static analysis to sanitize
 programs against integer overflow based vulnerabilities.
 They instrument integer operations in paths from a source to a sink.
@@ -1181,7 +1247,8 @@ Still in the field of symbolic execution, Molnar
 Linux x86 binaries to find integer overflow bugs.
 They prove the existence of bugs by generating test cases for them.
 
-\paragraph{Range Analysis:}
+\noindent
+\textbf{Range Analysis and sparse representations:}
 One of the goals of this paper is to describe a state-of-the-art range analysis
 algorithm.
 Many parts of this algorithm are well-known, others are novel.
@@ -1206,24 +1273,21 @@ algorithm~\cite{Patterson95}.} or Mozilla's IonMonkey~\footnote{\texttt{hg.mozil
 src/ion/RangeAnalysis.cpp}. This code is implemented after Gough and
 Klaeren~\cite{Gough94}} do not resort to this technique.
 Furthermore, they only deal with comparisons between variables and constants.
+The only work that we are aware of that has used range analysis to avoid
+overflow checks is Sol {\em et al}'s~\cite{Sol11}; however, their algorithm
+is much more limited than ours.
+Contrary to us, Sol {\em et al.} eliminate overflow checks in
+straight-line code traces produced by a just-in-time compiler, and they use the
+runtime values of variables to improve their precision.
 
 
-\noindent
-\paragraph{Sparse Dataflow Analysis: }
 In this paper we provide a {\em sparse} implementation of range analysis.
 Sparsity, in our context, means that we associate points in the lattice of
 interest -- intervals in our case -- directly to variables.
 Dense analyses map such information to pairs formed by variables and program
 points.
-The compiler related literature contains many descriptions of sparse
-data-flow analyses.
-Some analyses obtain sparsity by using specific program
+Some previous analyses have achieved sparsity by using specific program
 representations, like we did.
-Others rely on data-structures.
-In terms of data-structures, the first, and best known method proposed to
-support sparse data-flow analyses is Choi {\em et al.}'s {\em Sparse Evaluation
-Graph} (SEG)~\cite{Choi91}.
-
 One of the program representation that we discuss in
 Section~\ref{sub:splitting} -- the {\em
 Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
@@ -1231,9 +1295,9 @@ Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
 The other representation, which we call u-SSA, is very similar to
 the \emph{Static Single Use} form (SSU).
 There exists many variants of SSU~\cite{Plevyak96,George03,Lo98}.
-The main difference is that our dataflow analysis propagates information
-forwardly, whereas the SSU form has been conceive for dataflow analyses
-that propagate information backwardly.
+The main difference to our representation is that our dataflow analysis
+propagates information forwardly, whereas the SSU form has been conceive for
+dataflow analyses that propagate information backwardly.
 Thus, it requires special nodes at branches to merge information from
 different program paths.
 The SSU form programs are a subset of the programs in the so called
@@ -1244,6 +1308,21 @@ forwardly and backwardly.
 
 \section{Final Remarks}
 \label{sec:rem}
+
+This paper has presented a static range analysis algorithm that reduces
+the overhead necessary to secure programs against integer overflows.
+This algorithm is able to analyze inter-procedurally programs with
+half-a-million lines of code, which produce almost one million constraints, in
+ten seconds.
+We proposed the notion of ``future bounds" as a way to handle comparisons
+between variables, and relied on strong connected components to scale up to
+large programs.
+Although the overhead of guarding programs against integer overflows is small,
+as previous work has demonstrated, we believe that our technique is still
+important, as its gains are cumulative with improvements in hardware.
+Our entire code is publicly available, as a series of LLVM patches.
+The data that we show in this paper is also anonymously available, to ensure
+the reproducibility of our experiments.
 
 \bibliographystyle{plain}
 \bibliography{../references}
