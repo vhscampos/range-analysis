@@ -1028,7 +1028,7 @@ Benchmark & \#I & \#II & \#II/\#I & \#O \\ \hline
 Instrumentation library without support of static range analysis.
 \#I: number of LLVM bitcode instructions in the original program.
 \#II: number of instructions that have been instrumented.
-\#O: number of actual overflow tests detected dynamically.}
+\#O: number of instructions that actually overflowed in the dynamic tests.}
 \end{figure}
 
 Figure~\ref{fig:prunningTable} shows how many checks our range analysis
@@ -1100,18 +1100,18 @@ However, our experiments did not let us confirm this hypothesis.
 \begin{scriptsize}
 \begin{tabular}{|l|r|r|r|r|r|r|r|r|}
 \hline
-Bench & \#Sf & \#S & \#U & \#SO & \#SO/\#O & \#UO & \#UO/\#O
+Bench & \#Sf & \#S & \#U & \#SO & \#SO/\#S & \#UO & \#UO/\#U
 \\ \hline
 lbm     & 1138 & 0    & 4 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
 milc    & 536  & 17   & 1048  & 0 & 0,00\% & 11 & 1,05\% \\ \hline
 namd    & 334  & 480  & 2420  & 0 & 0,00\% & 12 & 0,50\% \\ \hline
 dealII  & 6188 & 39   & 28740  & 0 & 0,00\% & 50 & 0,17\% \\ \hline
 soplex  & 229  & 16   & 2881 & 0 & 0,00\% & 13 & 0,45\% \\ \hline
-h264ref & 2539 & 1195 & 10147 & 7 & 0,59\% & 167 & 1,65\% \\ \hline
+h264ref & 2539 & 1195 & 10147 & 7 & 0,59\% & 160 & 1,58\% \\ \hline
 astar   & 48   & 11   & 795 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
 sjeng   & 150  & 213  & 1977 &0 & 0,00\% & 68 & 3,44\% \\ \hline
 mcf     & 1    & 0    & 164 & 0 & 0,00\% & 8 & 4,88\% \\ \hline
-omnetpp & 659  & 25   & 1288 & 1 & 4,00\% & 2 & 0,16\% \\ \hline
+omnetpp & 659  & 25   & 1288 & 1 & 4,00\% & 1 & 0,07\% \\ \hline
 gcc     & 3365 & 1045 & 14065 & N/A & N/A & N/A & N/A \\ \hline
 gobmk   & 1509 & 742  & 11736 & 0 & 0,00\% & 4 & 0,03\% \\ \hline
 libqtum & 104  & 12   & 805 & 0 & 0,00\% & 7 & 0,87\% \\ \hline
@@ -1121,7 +1121,8 @@ hmmer   & 663  & 222  & 3082 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
 \end{scriptsize}
 \end{center}
 \caption{\label{fig:classificationTable}
-How the range analysis classified arithmetic instructions.
+How the range analysis classified arithmetic instructions in the 
+u-SSA form program.
 \#Sf: safe.
 \#S: suspicious.
 \#U: uncertain.
@@ -1162,7 +1163,7 @@ original benchmarks.
 If we use the range analysis to eliminate overflow checks, this slowdown falls
 to 1.73\%.
 The range analysis, in this case, reduces the instrumentation overhead by
-53.40\%.
+46.60\%.
 This improvement is larger than the percentage of overflow checks that we
 avoid, e.g,. 20.57\%.
 We believe that this difference is due to the fact that we are able to
@@ -1185,9 +1186,7 @@ normalized by the original program's execution time.}
 \noindent
 \textbf{Dynamic Detection of Integer Overflows: }
 Brumley {\em et al.}~\cite{Brumley07} have developed a tool, RICH, to
-dynamically detect integer overflows.
-Their goal is to secure C programs against integer overflow based
-vulnerabilities.
+secure C programs against integer overflow based vulnerabilities.
 The author's approach consists in instrumenting every integer operation that
 might cause an overflow, underflow, or data loss.
 The main result of Brumley {\em et al.} is the verification that instrumenting
@@ -1239,8 +1238,6 @@ However, they do not use any form of range analysis to limit the number of
 checks inserted in the transformed code.
 Wang {\em et a.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}'s work are essentially different: they use symbolic execution, whereas we rely on
 range analysis.
-Furthermore, contrary to them, we do not try to detected statically the
-possibility of an integer overflow happening.
 Contrary to us, they do not transform the program to prevent or detect such event dynamically.
 Still in the field of symbolic execution, Molnar
 {\em et al.}~\cite{Molnar09} have implemented a tool, SmartFuzz, that analyzes
