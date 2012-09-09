@@ -1,10 +1,6 @@
 \documentclass[preprint]{sigplanconf}[10pt]
 
-% The following \documentclass options may be useful:
-%
-% 10pt          To set in 10-point type instead of 9-point.
-% 11pt          To set in 11-point type instead of 9-point.
-% authoryear    To obtain author/year citation style instead of numeric.
+% TODO: explain that we have not observed overflows in the safe instructions.
 
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -68,7 +64,7 @@ SPEC CPU 2006 benchmark suite.
 Languages, Performance
 
 \keywords
-Integer arithmetics, Overflow, Compiler, Range analysis
+Integer Overflow, Compiler, Range analysis
 
 \section{Introduction}
 \label{sec:int}
@@ -111,53 +107,54 @@ overhead via a tainted flow analysis.
 We have a similar goal, yet, our approach is substantially different.
 
 % Our contribution: range analysis.
-In this paper we discuss a simple and efficient range analysis algorithm that
+This paper describes the range analysis algorithm that
 we have developed to eliminate overflow checks in instrumented programs.
-Our algorithm has three core insights.
-Firstly, we rely on a three-phases approach to extract information from
-comparisons between variables, e.g., $x < y$.
-Previous algorithms either deal with these comparisons by resorting to
+As we show in Section~\ref{sec:range}, our algorithm has three core insights.
+Firstly, in Section~\ref{sub:micro} we propose a three-phases approach to extract
+information from comparisons between variables, e.g., $x < y$.
+Previous algorithms either deal with these comparisons via
 expensive relational analyses~\cite{Cousot78,Lakhdar11,Mine06}, or only
 consider comparisons between variables and
 constants~\cite{Mahlke01,Patterson95,Stephenson00}.
-Secondly, we rely on strongly connected components to achieve better speed and
-precision.
-It is well-known that this technique is effective in speeding up static analysis
-algorithms~\cite[Sec 6.3]{Nielson99}.
-However, given our three-phases approach, we also achieve better precision
-by solving strong components in a topological ordering.
-Finally, we propose a program representation that allows us to perform a sparse
-range analysis while taking benefit from the knowledge that the execution of
-an instrumented program is overflow-free.
-This extensive live range splitting strategy is only valid if the instrumented
+Secondly, in Section~\ref{sub:prop} we show how we rely on strongly connected
+components to achieve speed and precision.
+It is well-known that this technique is effective in speeding up constraint
+resolution~\cite[Sec 6.3]{Nielson99}.
+However, given our three-phases approach, we improve precision
+by solving strong components in topological order.
+Finally, in Section~\ref{sub:splitting} we propose a new program representation that
+is more precise than other intermediate forms used to solve range
+analysis sparsely.
+This new live range splitting strategy is only valid if the instrumented
 program terminates whenever an integer overflow is detected.
-If we cannot rely on this guarantee, then our live range splitting strategy
-is more conservative, and produces the program representation that Bodik
-{\em et al.}~\cite{Bodik00} have called the Extended Static Single Assignment
+If we cannot rely on this guarantee, then our more conservative live range splitting
+strategy produces the program representation that Bodik
+{\em et al.}~\cite{Bodik00} call Extended Static Single Assignment
 form.
+In Section~\ref{sec:exp} we show that an interprocedural implementation of our
+algorithm analyzes programs with half-a-million lines of code in less than ten
+seconds.
+Furthermore, the speed and memory consumption of our range analysis grows linearly
+with the program size.
 
 % Our experimental results.
 We use our range analysis to reduce the runtime overhead imposed by a dynamic
 instrumentation library.
-This instrumentation framework, also a contribution of this paper, has been
-implemented in the LLVM compiler~\cite{Lattner04}.
-We have used it to log overflows in a vast number of programs, and in this
+This instrumentation framework, a contribution of this paper that we describe in
+Section~\ref{sec:dyn}, has been implemented in the LLVM compiler~\cite{Lattner04}.
+We have logged overflows in a vast number of programs, and in this
 paper we focus on SPEC CPU 2006.
-Our implementation has been able to reproduce the results obtained by
-previous work.
 We have re-discovered the integer overflows recently observed by
-Dietz {\em et al.}~\cite{Dietz12}, and the performance of our instrumentation
-library, without the support of range analysis, matches the state-of-the-art
-implementation of Brumley {\em et al.}
-Our range analysis algorithm has been able to remove 24.93\% of the overflow
+Dietz {\em et al.}~\cite{Dietz12}.
+The performance of our instrumentation library, even without the support of range
+analysis, is within the 5\% runtime overhead of Brumley {\em et al.}'s~\cite{Brumley07}
+state-of-the-art algorithm.
+The range analysis halves down this overhead.
+Our static analysis algorithm avoids 24.93\% of the overflow
 checks created by the dynamic instrumentation framework.
-All our experiments use an interprocedural version of range analysis.
-We inline small functions to make our implementation more context sensitive.
-Our experiments show that the speed and memory consumption of our range
-analysis grows linearly with the program size.
-By comparing the ranges that we determine statically with the results found by
-a profiler, we see that more than 50\% of the bounds that we found are within a
-factor of 50\% of the values that variables actually assume.
+With this support, the instrumented SPEC programs are only 1.73\% slower.
+Therefore, we show in this paper that securing programs against integer overflows
+is very cheap.
 
 \subsection{The Danger that Integer Overflows Represent}
 \label{sub:danger}
@@ -353,8 +350,7 @@ Figure~\ref{fig:ex_eSSA_cgo}(d).
 \label{sub:prop}
 
 % The macro algorithm
-The range analysis algorithm that we propose in this paper works in a number
-of steps.
+Our range analysis algorithm works in a number of steps.
 Firstly, we convert the program to an intermediate representation that gives
 us subsidies to perform a sparse analysis.
 We have tested our algorithm with two different representations, as we discuss
@@ -373,12 +369,12 @@ the ranges of the variables.
 Given a set $\varset{C}$ of constraints, which define and/or use constraint
 variables from a set $\varset{V}$, we build a constraint graph
 $G = (\varset{C} \cup \varset{V}, E)$.
-We call the vertices in \varset{C} the {\em constraint nodes}, and we call the
-nodes in \varset{V} the {\em variable nodes}.
-If variable $V \in \varset{V}$ is used in constraint $C \in \varset{C}$, then
-we create an edge from $V$ to $C$.
+The vertices in \varset{C} are the {\em constraint nodes}, and the
+nodes in \varset{V} are the {\em variable nodes}.
+If $V \in \varset{V}$ is used in constraint $C \in \varset{C}$, then
+we create an edge $\overrightarrow{VC}$.
 If constraint $C \in \varset{C}$ defines variable $\varset{V} \in V$, then we
-create an edge from $C$ to $V$.
+create an edge from $\overrightarrow{CV}$.
 Figure~\ref{fig:ex_graph} shows the constraint graph that we build for the
 program in Figure~\ref{fig:ex_eSSA_cgo}(b).
 If $V$ is used by $C$ as the input of a future, then the edge from
@@ -417,20 +413,19 @@ This large SCC exists due to a long chain of mutually recursive function calls.
 \subsection{A Three-Phases Approach to Solve Strong Components}
 \label{sub:micro}
 
-We determine the ranges for each strongly connected component in a three phases
-approach.
-For each SCC, first we determine the growth pattern of each variable via a
-widening phase.
+We determine the ranges for each strongly connected component in three phases.
+First we determine the growth pattern of each variable in the component via
+widening.
 In the second step, once we know in which directions the values stored in each
 variable might grow, we replace futures by actual bounds.
-Finally, we have a narrowing phase that uses conditional tests to improve the
+Finally, a narrowing phase starting from conditional tests improves the
 precision of our results.
 
 \noindent
 \textbf{Widening: } we start solving constraints by determining how each program
 variable might grow.
 For instance, if a variable is only updated by sums with positive numbers, then
-we say that it only grows up.
+it only grows up.
 If, instead, a variable is only updated by sums with negative numbers, then it
 grows down.
 Some variables can also grow in both directions.
@@ -466,9 +461,8 @@ variable can only change three times, e.g., $[\bot, \bot] \rightarrow [c_1, c_2]
 \rightarrow [c_1, \infty] \rightarrow [-\infty, \infty]$, or
 $[\bot, \bot] \rightarrow [c_1, c_2] \rightarrow [-\infty, c_2]
 \rightarrow [-\infty, \infty]$.
-Therefore, we can determine the growth behavior of each constraint variable in
-a strong component in linear time on the number of constraints in that
-component.
+Therefore, we determine the growth behavior of each constraint variable in
+a strong component in linear time on the number of constraints.
 Figure~\ref{fig:ex_partition_grow_crop}(b) shows the abstract state of the
 variables in the largest SCC of the graph in Figure~\ref{fig:ex_graph}.
 As we see in the figure, this step of our algorithm has been able to determine
@@ -618,11 +612,11 @@ and $v_{2f} = v_2 \sqcap [-\infty, \fun{ft}(v_1)]$.
 Similarly, at $l_t$ we insert
 $v_{1v} = v_1 \sqcap [-\infty, \fun{ft}(v_2) - 1]$
 and $v_{2f} = v_2 \sqcap [\fun{ft}(v_1) + 1, +\infty]$.
-Notice that a variable $v$ can never be associated with a future bound to
+A variable $v$ can never be associated with a future bound to
 itself, e.g., $\fun{ft}(v)$.
 This invariant holds because whenever the e-SSA conversion associates a variable
 $u$ with $\fun{ft}(v)$, then $u$ is a fresh name created to split the live range
-of $v$, given that $v$ was used in a conditional.
+of $v$.
 
 The second intermediate representation consists in splitting live ranges at
 (i) definition sites -- it subsumes SSA, (ii) at conditional tests -- it
@@ -864,8 +858,8 @@ integer overflows.
 
 \noindent
 \textbf{Time and Memory Complexity: }
-Figure~\ref{fig:TimeCorr} provides a visual comparison between the time to
-run our range analysis and the size of the input programs.
+Figure~\ref{fig:TimeCorr} compares the time to run our range analysis with the size of
+the input programs.
 We show data for the 100 largest benchmarks in our test suite, in number
 of variable nodes in the constraint graph.
 We perform function inlining before running our analysis.
@@ -950,10 +944,10 @@ variables in each program.}
 
 We have classified the bounds estimated by the static analysis into four
 categories.
-The first category, which we call $1$, contains those bounds that are tight:
-during the execution of the program, the variable has been assigned an upper,
+The first category, called $1$, contains tight bounds:
+during program execution, the variable has been assigned an upper,
 or lower limit, that equals the limit inferred statically.
-The second category, which we call $n$, contains the bounds that are
+The second category, called $n$, contains the bounds that are
 within twice the value inferred statically.
 For instance, if the range analysis estimates that a variable $v$ is in the
 range $[0, 100]$, and during the execution the dynamic profiler finds that
@@ -986,9 +980,10 @@ Stephenson {\em et al.}'s~\cite{Stephenson00}.
 
 We have executed the instrumented programs of the integer benchmarks of SPEC
 2006 CPU to probe the overhead imposed by our instrumentation.
-All the programs have been executed with its ``test" input set.
+These programs have been executed with their ``test" input sets.
 We have not been able to run the binary that LLVM produces for SPEC's
-\texttt{gcc} in our environment, even without any of our passes.
+\texttt{gcc} in our environment, even without any of our passes, due to a missing
+\texttt{ctype.h} header file.
 Figure~\ref{fig:unprunedTable} shows the percentage of instructions that
 we instrument, without the intervention of the range analysis.
 The number of instrumented instructions is relatively low, compared to the
@@ -1025,16 +1020,15 @@ Benchmark & \#I & \#II & \#II/\#I & \#O \\ \hline
 \end{small}
 \end{center}
 \caption{\label{fig:unprunedTable}
-Instrumentation library without support of static range analysis.
+Instrumentation without support of range analysis.
 \#I: number of LLVM bitcode instructions in the original program.
 \#II: number of instructions that have been instrumented.
 \#O: number of instructions that actually overflowed in the dynamic tests.}
 \end{figure}
 
 Figure~\ref{fig:prunningTable} shows how many checks our range analysis
-can avoid.
-In some benchmarks we obtain impressive results:
-For instance, the range analysis avoids 1,138 out of 1,142 checks in
+avoids.
+Some results are expressive: the range analysis avoids 1,138 out of 1,142 checks in
 \texttt{470.lbm}.
 In other benchmarks, such as in \texttt{429.mcf}, we have been able to
 avoid only 1, out of 165 tests.
@@ -1086,8 +1080,8 @@ analysis.
 
 Figure~\ref{fig:classificationTable} shows how our range analysis
 classifies instructions.
-Out of all the 102,790 instructions that we have instrumented throughout the
-entire SPEC suite, 3.92\% are suspicious, 17.19\% are safe, and
+Out of all the 102,790 instructions that we have instrumented in SPEC, 3.92\% are
+suspicious, 17.19\% are safe, and
 78.89\% are uncertain.
 We had, at first, speculated that overflows would be more common among
 suspicious instructions, as their bounds, inferred statically, go beyond the
@@ -1146,7 +1140,7 @@ Considering the benchmarks in SPEC2006 only, this number is 20.57\%.
 \includegraphics[width=\columnwidth]{images/percentage_elimination}
 \end{center}
 \caption{\label{fig:percentage_elimination}
-Percentage of overflow checks that our range analysis has been able to remove.
+Percentage of overflow checks that our range analysis removes.
 Each bar is a benchmark in the LLVM test suite.
 Benchmarks have been ordered by the effectiveness of the range analysis.
 On average, we have eliminated 24.93\% of the checks (geomean).}
@@ -1175,7 +1169,7 @@ the loop boundaries to achieve this end.
 \includegraphics[width=\columnwidth]{images/spec_runtime}
 \end{center}
 \caption{\label{fig:spec_runtime}
-Comparison between the execution times with and without prunning, 
+Comparison between execution times with and without prunning, 
 normalized by the original program's execution time.}
 \end{figure}
 
@@ -1186,11 +1180,11 @@ normalized by the original program's execution time.}
 \noindent
 \textbf{Dynamic Detection of Integer Overflows: }
 Brumley {\em et al.}~\cite{Brumley07} have developed a tool, RICH, to
-secure C programs against integer overflow based vulnerabilities.
+secure C programs against integer overflows.
 The author's approach consists in instrumenting every integer operation that
 might cause an overflow, underflow, or data loss.
-The main result of Brumley {\em et al.} is the verification that instrumenting
-programs to guard them against integer overflows does not compromise their
+The main result of Brumley {\em et al.} is the verification that guarding programs
+against integer overflows does not compromise their
 performance significantly: the average slowdown across four large applications
 is 5\%.
 RICH, Brumley {\em et al}'s tool, uses specific features of the x86 architecture
@@ -1210,7 +1204,7 @@ implemented a tool, IOC, that instruments the source code of C/C++ programs to
 detect integer overflows.
 They approach the problem of detecting integer overflows from a software
 engineering point-of-view; hence, performance is not a concern.
-The authors have used IOC to carry out a lengthy study about the occurrences
+The authors have used IOC to carry out a study about the occurrences
 of overflows in real-world programs, and have found that these events are very
 common.
 It is possible to implement a dynamic analysis without instrumenting the
@@ -1291,7 +1285,7 @@ Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
 {\em et al.}~\cite{Bodik00} and Gough {\em et al.}~\cite{Gough94}.
 The other representation, which we call u-SSA, is very similar to
 the \emph{Static Single Use} form (SSU).
-There exists many variants of SSU~\cite{Plevyak96,George03,Lo98}.
+There exists other variants of SSU~\cite{Plevyak96,George03}.
 The main difference to our representation is that our dataflow analysis
 propagates information forwardly, whereas the SSU form has been conceive for
 dataflow analyses that propagate information backwardly.
@@ -1308,15 +1302,15 @@ forwardly and backwardly.
 
 This paper has presented a static range analysis algorithm that reduces
 the overhead necessary to secure programs against integer overflows.
-This algorithm is able to analyze inter-procedurally programs with
-half-a-million lines of code, which produce almost one million constraints, in
+This algorithm analyzes inter-procedurally programs with
+half-a-million lines of code, i.e., almost one million constraints, in
 ten seconds.
-We proposed the notion of ``future bounds" as a way to handle comparisons
-between variables, and relied on strong connected components to scale up to
-large programs.
+We proposed the notion of ``future bounds" to handle comparisons
+between variables, and tested different program representations to improve our
+precision.
 Although the overhead of guarding programs against integer overflows is small,
 as previous work has demonstrated, we believe that our technique is still
-important, as its gains are cumulative with improvements in hardware.
+important, as some of these programs will be executed millions of times.
 Our entire code is publicly available, as a series of LLVM patches.
 The data that we show in this paper is also anonymously available, to ensure
 the reproducibility of our experiments.
