@@ -1,6 +1,7 @@
 \documentclass[preprint]{sigplanconf}[10pt]
 
 % TODO: explain that we have not observed overflows in the safe instructions.
+% TODO: explain that u-SSA does not yield noticeable performance improvements.
 
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -41,21 +42,22 @@ Integer Overflows}
 
 \begin{abstract}
 The integer primitive type has upper and lower bounds in many programming
-languages, including C, C++ and Java.
-This limitation might lead programs that manipulate large integer numbers to
+languages, including C, and Java.
+These limits might lead programs that manipulate large integer numbers to
 produce unexpected results due to overflows.
 There exists a plethora of works that instrument programs to track the occurrence
 of these overflows.
-In this paper we present an algorithm that relies on static range analysis to
-eliminate this instrumentation whenever possible.
-We present a novel live range splitting strategy that refine the precision of
-our range analysis.
-We have used this algorithm to improve the quality of a dynamic instrumentation
+In this paper we present the first algorithm that uses static range analysis to
+avoid this instrumentation whenever possible.
+Our range analysis contains novel techniques, such as a live range splitting
+strategy that refines the precision of our results.
+We have used this algorithm to avoid some checks created by a dynamic instrumentation
 library that we have implemented in LLVM.
 This framework has been used to detect overflows in hundreds of C/C++ programs.
-As a testimony of its effectiveness, our range analysis has been able to eliminate
-19\% of all the overflow checks necessary to secure the C programs in the
-SPEC CPU 2006 benchmark suite.
+As a testimony of its effectiveness, our range analysis has been able to avoid
+25\% of all the overflow checks necessary to secure the C programs in the
+LLVM test suite.
+This reduction has reduced 50\% of the runtime overhead of instrumentation.
 \end{abstract}
 
 \category{D.3.4}{Processors}{Compilers}
@@ -78,8 +80,7 @@ Consequently, there exist numbers that cannot be represented by these types.
 In general, these programming languages resort to a {\em wrapping-arithmetics}
 semantics~\cite{Warren02} to perform integer operations.
 If a number $n$ is too large to fit into a primitive data type $T$, then $n$'s
-value wraps around, and $n \mbox{module} T_{max}$ wounds up represented
-instead.
+value wraps around, and we obtain $n \ \mbox{module} \ T_{max}$.
 There are situations in which this semantics is acceptable~\cite{Dietz12}.
 For instance, programers might rely on this behavior to implement hash functions
 and random number generators.
@@ -131,7 +132,7 @@ If we cannot rely on this guarantee, then our more conservative live range split
 strategy produces the program representation that Bodik
 {\em et al.}~\cite{Bodik00} call Extended Static Single Assignment
 form.
-In Section~\ref{sec:exp} we show that an interprocedural implementation of our
+In Section~\ref{sub:range} we show that an interprocedural implementation of our
 algorithm analyzes programs with half-a-million lines of code in less than ten
 seconds.
 Furthermore, the speed and memory consumption of our range analysis grows linearly
@@ -230,7 +231,7 @@ $0 \times \infty = 0$ & & $(-\infty) \times \infty = \ $ not defined $$ \\
 \end{tabular}
 
 From the lattice $\varset{Z}$ we define the product lattice
-$\varset{Z}^2$, which is defined as follows:
+$\varset{Z}^2$ as follows:
 %
 \begin{equation*}
 \varset{Z}^2 = \{ \emptyset \} \cup \{[z_1, z_2] | \ z_1,z_2 \in \varset{Z},
@@ -243,7 +244,7 @@ Range intersection, ``$\sqcap$", is defined by:
 \[
 [a_1, a_2] \sqcap [b_1, b_2] =
 \begin{cases}
-[\mbox{max}(a_1, b_1), \mbox{min}(a_2, b_2)], \ \mbox{if} \ a_1 \leq b_1 \leq a_2  \\ \mbox{or} \ b_1 \leq a_1 \leq b_2 \\
+[\mbox{max}(a_1, b_1), \mbox{min}(a_2, b_2)], \ \mbox{if} \ a_1 \leq b_1 \leq a_2  \\ \ \ \ \ \mbox{or} \ b_1 \leq a_1 \leq b_2 \\
 [a_1, a_2] \sqcap [b_1, b_2] = \emptyset, \ \mbox{otherwise}
 \end{cases}
 \]
@@ -374,10 +375,13 @@ nodes in \varset{V} are the {\em variable nodes}.
 If $V \in \varset{V}$ is used in constraint $C \in \varset{C}$, then
 we create an edge $\overrightarrow{VC}$.
 If constraint $C \in \varset{C}$ defines variable $\varset{V} \in V$, then we
-create an edge from $\overrightarrow{CV}$.
+create an edge $\overrightarrow{CV}$.
 Figure~\ref{fig:ex_graph} shows the constraint graph that we build for the
 program in Figure~\ref{fig:ex_eSSA_cgo}(b).
-If $V$ is used by $C$ as the input of a future, then the edge from
+Our algorithm introduces the notion of {\em future ranges}, which we use to extract
+range information from comparisons between variables.
+In Section~\ref{sub:splitting} we explain how futures are created.
+If $V$ is used by $C$ as the input of a future range, then the edge from
 $V$ to $C$ represents what Ferrante {\em et al.} call a {\em control
 dependence}~\cite[p.323]{Ferrante87}.
 We use dashed lines to represent these edges.
@@ -397,17 +401,17 @@ Figure~\ref{fig:ex_eSSA_cgo}(b).}
 \noindent
 \textbf{Propagating Ranges in Topological Order. }
 After building the constraint graph, we find its strongly connected components.
-We collapse these components in super nodes, and then proceed to propagate
+We collapse these components in super nodes, and then propagate
 ranges along the resulting digraph.
 This approach is essential for scalability, because all the complexity of our
 algorithm lies in the resolution of strong components.
 Our tests show that the vast majority of the strongly connected components are
 singletons.
-For instance, 99.11\% of the SCCs in SPEC CPU 2006 gcc (\texttt{403.gcc}) have
+For instance, 99.11\% of the SCCs in SPEC CPU 2006 dealII (\texttt{447.dealII}) have
 only one node.
 Moreover, the composite components usually contain a small number of nodes.
-As an example, the largest component in \texttt{403.gcc}, has 2,131 nodes,
-even though gcc's constraint graph has over one million nodes.
+As an example, the largest component in dealII has 2,131 nodes,
+even though dealII's constraint graph has over one million nodes.
 This large SCC exists due to a long chain of mutually recursive function calls.
 
 \subsection{A Three-Phases Approach to Solve Strong Components}
@@ -499,10 +503,10 @@ accomplish by using the rules below:
 \end{array}
 \end{eqnarray*}
 %
-In order to correctly replace a future $\fun{ft}(V)$ that limits a constraint
+To correctly replace a future $\fun{ft}(V)$ that limits a constraint
 variable $V'$, we need to have already applied the growth analysis onto $V$.
 Had we considered only data dependence edges, then it would be possible
-that $V'$ be analyzed before $V$.
+that $V'$'s strong component would be analyzed before $V$'s.
 However, because of control dependence edges, this case cannot happen.
 The control dependence edges ensure that any topological ordering of the
 constraint graph either places $V$ before $V'$, or places these nodes
@@ -539,7 +543,7 @@ I[Y] =
 %
 Figure~\ref{fig:ex_partition_grow_crop}(d) show the result of our narrowing
 operator in our running example.
-Ranges initially improve due to the two conditional tests in the program.
+Ranges improve due to the two conditional tests in the program.
 Firstly, we have that $I[I_t] = I[I_1] \sqcap [-\infty, 98]$, which gives us
 that $I[I_t] = [0, 98]$.
 We also have that $I[J_t] = I[J_1] \sqcap [0, \infty]$, giving
@@ -649,10 +653,10 @@ We then associate $u$ with the constraint $I[U'] \sqsubseteq I[U] \sqcap [-\inft
 Figure~\ref{fig:ex_ir} compares the u-SSA form with the SSA and e-SSA
 intermediate program representations.
 We use the notation $v = \bullet$ to denote a definition of variable $v$, and
-$\bullet = v$ to denote a use of that variable.
+$\bullet = v$ to denote a use of it.
 Figure~\ref{fig:ex_ir}(b) shows the example program converted to the SSA format.
-The different definitions of variable $u$ have been renamed, and a
-$\phi$-function re-combines these definitions into a single name.
+Different definitions of variable $u$ have been renamed, and a
+$\phi$-function joins these definitions into a single name.
 The SSA form sparsifies a dataflow analysis that only extracts information from
 the definition sites of variables, such as constant propagation.
 Figure~\ref{fig:ex_ir}(c) shows the same program in e-SSA form.
@@ -665,7 +669,7 @@ elimination~\cite{Bodik00} and traditional implementations of range
 analyses~\cite{Gough94,Patterson95}.
 Finally, Figure~\ref{fig:ex_ir}(d) shows our example in u-SSA form.
 The live range of variable $v_1$ has been divided right after its use.
-This representation is useful to analyses that learn information from the way
+This representation assists analyses that learn information from the way
 that variables are used, and propagate this information forwardly.
 
 \section{The Dynamic Instrumentation Library}
@@ -714,10 +718,10 @@ an unsigned operation.}
 %SUB instrumentation
 The instrumentation that we insert is mostly straightforward.
 We discuss in the rest of this section a few interesting cases.
-If we are dealing with an unsigned \textsc{Sub} instruction, e.g,
+When dealing with an unsigned \textsc{Sub} instruction, e.g,
 $x = o_1 \ -_u \ o_2$, then a single check is enough to detect the bad
 behavior: $o_1 < o_2$.
-This is sound because if $o_2$ is greater than $o_1$, then we assume that it is
+If $o_2$ is greater than $o_1$, then we assume that it is
 a bug to try to represent a negative number in unsigned arithmetics.
 Regarding multiplication, e.g., $x = o_1 \times o_2$, if $o_1 = 0$, then this
 operation can never cause an overflow.
@@ -736,29 +740,29 @@ disabling tests over truncations.
 
 \paragraph{Practical Considerations: }
 %Overview about the instrumentation technique
-Our instrumentation library works by adding new instructions to
+Our instrumentation library inserts new instructions into
 the target program.
 Although the dynamic check depends on the instruction that is instrumented,
 the general modus operandi is the same.
-The dynamic tests check for overflows after they happen.
+Dynamic tests check for overflows after they happen.
 The code that we insert to detect the overflow diverts the program flow in case
 such an event takes place.
 Figure~\ref{fig:instrumented_cfg} shows an actual control flow graph, before
 and after the instrumentation.
-From this figure, it is clear that the instrumented program will be larger
-than the original code.
+Clearly the instrumented program will be larger than the original code.
 Figure~\ref{fig:num_instructions} shows how many LLVM instructions are
 necessary to instrument each arithmetic operation.
 These numbers do not include the instructions necessary to handle the overflow
 itself, e.g., block \texttt{\%11} in Figure~\ref{fig:instrumented_cfg}, as this
 code is not in the program's main path.
-Nevertheless, as we show empirically, this growth is not too large when
+Nevertheless, as we show empirically, this growth is small when
 compared to the total size of our benchmarks, because most of the instructions
 in these programs do not demand instrumentation.
 Furthermore, none of the instructions used to instrument integer arithmetics
 access memory.
 Therefore, the overall slowdown that the instrumentation causes is usually
-small.
+small, and the experiments in Section~\ref{sub:inst} confirm this
+observation.
 
 \begin{figure}[t!]
 \begin{center}
@@ -789,7 +793,7 @@ program.}
 Which actions are performed once the overflow is detected depends on the
 user, who has the option to overwrite the \texttt{handle\_ overflow}
 function in Figure~\ref{fig:instrumented_cfg}.
-Our library gives the user three options to handle them. 
+Our library gives the user three options to handle overflows. 
 First option: no-op.
 This option allows us to verify the slowdown produced by the new instructions.
 Second option: logging.
@@ -799,7 +803,8 @@ Whenever an overflow is detected, we print \texttt{Overflow detected in
 FileName.cpp, line X.} in the standard error stream.
 Third option: abort.
 This option terminates the program once an overflow is detected.
-Thus, it disallows undefined behavior due to integer overflows.
+Thus, it disallows undefined behavior due to integer overflows, and gives us the
+opportunity to use the u-SSA form to get extra precision.
 
 \paragraph{Using the static analysis to avoid some overflow checks.}
 Our library can, optionally, use the range analysis to avoid having to
@@ -860,14 +865,14 @@ integer overflows.
 \textbf{Time and Memory Complexity: }
 Figure~\ref{fig:TimeCorr} compares the time to run our range analysis with the size of
 the input programs.
-We show data for the 100 largest benchmarks in our test suite, in number
+We show data for the 100 largest benchmarks in our test suite, considering the number
 of variable nodes in the constraint graph.
 We perform function inlining before running our analysis.
 Each point in the X line corresponds to a benchmark.
 We analyze the smallest benchmark in this set, \texttt{Prolangs-C/deriv2}, which
 has 1,131 variable nodes in the constraint graph, in 20ms.
-We take 15.91 sec to analyze our largest benchmark, \texttt{403.gcc}, which,
-after function inlining, has 1,266,273 assembly instructions, and a
+We take 9.91 sec to analyze our largest benchmark, \texttt{403.gcc}, which,
+after function inlining, has 1,419,456 assembly instructions, and a
 constraint graph with 679,652 variable nodes.
 For this data set, the coefficient of determination $(R^2)$ is 0.967, which
 provides very strong evidence about the linear asymptotic complexity of our
@@ -879,20 +884,19 @@ implementation.
 \end{center}
 \caption{\label{fig:TimeCorr}
 Correlation between program size (number of var nodes in constraint
-graphs after inlining) and analysis runtime (ms).
+graphs) and analysis runtime (ms).
 Each point represents a benchmark.
 Coefficient of determination = 0.967.
 }
 \end{figure}
 
 The experiments also reveal that the memory consumption of our implementation
-is linear with the program size.
-Figure~\ref{fig:MemCorr} plots these two quantities together.
+grows linearly with the program size.
+Figure~\ref{fig:MemCorr} plots these two quantities.
 The linear correlation, in this case, is even stronger than that found in
-Figure~\ref{fig:TimeCorr}, which compares runtime and program size: the
-coefficient of determination is 0.9947.
+Figure~\ref{fig:TimeCorr}: the coefficient of determination is 0.9947.
 The figure only shows our 100 largest benchmarks.
-Again, SPEC \texttt{403.gcc} is the heaviest benchmark, requiring
+Again, SPEC \texttt{403.gcc} is the largest benchmark, requiring
 265,588KB to run.
 Memory includes stack, heap and the executable program code.
 
@@ -919,14 +923,14 @@ are able to find exact bounds to 4/5 of the examples presented
 in~\cite{Lakhdar11}.
 On the contrary, we present a compromise between precision and speed
 that scales to very large programs.
-Nevertheless, our results are far from being trivial.
+Nevertheless, our results are not trivial.
 We have implemented a dynamic profiler that measures, for each variable,
 its upper and lower limits, given an execution of the target program.
 Figure~\ref{fig:precision} compares our results with those measured
 dynamically for the Stanford benchmark, which is publicly
 available in the LLVM test suite.
 We chose Stanford because these benchmarks do not read data from external
-files; hence, imprecisions are due to library functions that we cannot
+files; hence, imprecisions are due exclusively to library functions that we cannot
 analyze.
 
 \begin{figure}[t!]
@@ -953,7 +957,7 @@ For instance, if the range analysis estimates that a variable $v$ is in the
 range $[0, 100]$, and during the execution the dynamic profiler finds that
 its maximum value is $51$, then $v$ falls into this category.
 The third category, $n^2$, contains variables whose actual value is within
-a quadratic factor from the estimated value.
+a quadratic factor of the estimated value.
 In our example, $v$'s upper bound would have to be at most $10$ for it to
 be in this category.
 Finally, the fourth category contains variables whose estimated value lays
@@ -982,8 +986,8 @@ We have executed the instrumented programs of the integer benchmarks of SPEC
 2006 CPU to probe the overhead imposed by our instrumentation.
 These programs have been executed with their ``test" input sets.
 We have not been able to run the binary that LLVM produces for SPEC's
-\texttt{gcc} in our environment, even without any of our passes, due to a missing
-\texttt{ctype.h} header file.
+\texttt{gcc} in our environment, even without any of our passes, due to an
+incompatible \texttt{ctype.h} header.
 Figure~\ref{fig:unprunedTable} shows the percentage of instructions that
 we instrument, without the intervention of the range analysis.
 The number of instrumented instructions is relatively low, compared to the
@@ -1013,7 +1017,7 @@ Benchmark & \#I & \#II & \#II/\#I & \#O \\ \hline
 403.gcc & 1,419,456 & 18,669 & 1.32\% & N/A \\ \hline
 445.gobmk & 308,475 & 14,129 & 4.58\% & 4 \\ \hline
 462.libquantum & 16,297 & 928 & 5.69\% & 7 \\ \hline
-401.bzip2 & 38,831 & 2,158 & 5.56\% & N/A \\ \hline
+401.bzip2 & 38,831 & 2,158 & 5.56\% & 0 \\ \hline
 456.hmmer & 114,136 & 4,001 & 3.51\% & 0 \\ \hline
 \multicolumn{1}{|r|}{Total (Average)} & 275.070 & 6.968 & 3,96\% &  \\ \hline
 \end{tabular*}
@@ -1087,6 +1091,8 @@ We had, at first, speculated that overflows would be more common among
 suspicious instructions, as their bounds, inferred statically, go beyond the
 limits of their declared types.
 However, our experiments did not let us confirm this hypothesis.
+To check the correctness of our approach, we have instrumented the safe instructions,
+but have not observed any overflow caused by them.
 
 %Classification analysis
 \begin{figure}[t!]
@@ -1163,6 +1169,8 @@ avoid, e.g,. 20.57\%.
 We believe that this difference is due to the fact that we are able to
 eliminate checks on induction variables, as our range analysis can rely on
 the loop boundaries to achieve this end.
+We have not noticed any runtime difference between programs converted to
+e-SSA form or u-SSA form.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1311,9 +1319,8 @@ precision.
 Although the overhead of guarding programs against integer overflows is small,
 as previous work has demonstrated, we believe that our technique is still
 important, as some of these programs will be executed millions of times.
-Our entire code is publicly available, as a series of LLVM patches.
-The data that we show in this paper is also anonymously available, to ensure
-the reproducibility of our experiments.
+Our entire code plus the data that we show in this paper is publicly available.
+A more extensive list of experiments is also available in our technical report.
 
 \bibliographystyle{plain}
 \bibliography{../references}
