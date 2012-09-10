@@ -19,6 +19,9 @@
 \newcommand{\varset}[1]{\mbox{$\cal{#1}$}}
 \newcommand{\code}[1]{\textbf{#1}}
 
+\setlength{\textfloatsep}{12.0pt plus 1.0pt minus 1.0pt}
+
+
 \begin{document}
 
 \conferenceinfo{CGO '13}{February 23 - February 27. Shenzhen, China} 
@@ -207,7 +210,7 @@ However, if, for instance, we have that \texttt{w}$= 16$ and \texttt{h}$= 16$,
 then \texttt{s}$= 0$, as pointed before.
 In this case, a buffer of length zero would be allocated, and all the data
 stored in the file would overwrite memory in the stack of activation records.
-By carefully crafting an input file, and adversary can, in this way, overwrite
+By carefully crafting an input file, an adversary can, in this way, overwrite
 the return address of \texttt{read\_matrix}, diverting program's execution to
 one of \texttt{libc}'s function, such as \texttt{telnet}, for instance.
 
@@ -988,6 +991,10 @@ These programs have been executed with their ``test" input sets.
 We have not been able to run the binary that LLVM produces for SPEC's
 \texttt{gcc} in our environment, even without any of our passes, due to an
 incompatible \texttt{ctype.h} header.
+In addition, we have not been able to collect the statistics regarding
+the overflows occurred in SPEC's \texttt{bzip2}, because the log file
+has became too large, due to the occurrence of more than 3.000.000.000 
+overflows. Thus, the machine ran out of memory.
 Figure~\ref{fig:unprunedTable} shows the percentage of instructions that
 we instrument, without the intervention of the range analysis.
 The number of instrumented instructions is relatively low, compared to the
@@ -1017,7 +1024,7 @@ Benchmark & \#I & \#II & \#II/\#I & \#O \\ \hline
 403.gcc & 1,419,456 & 18,669 & 1.32\% & N/A \\ \hline
 445.gobmk & 308,475 & 14,129 & 4.58\% & 4 \\ \hline
 462.libquantum & 16,297 & 928 & 5.69\% & 7 \\ \hline
-401.bzip2 & 38,831 & 2,158 & 5.56\% & 0 \\ \hline
+401.bzip2 & 38,831 & 2,158 & 5.56\% & N/A \\ \hline
 456.hmmer & 114,136 & 4,001 & 3.51\% & 0 \\ \hline
 \multicolumn{1}{|r|}{Total (Average)} & 275.070 & 6.968 & 3,96\% &  \\ \hline
 \end{tabular*}
