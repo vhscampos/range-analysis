@@ -33,13 +33,12 @@
 
 \title{A fast and Low-Overhead Technique to Secure Programs Against
 Integer Overflows}
-%\title{Combining Static and Dynamic Analyses to Secure Programs against
-%Integer Overflows}
 %\subtitle{A case study of the Dinamica EGO toolkit}
 
-\authorinfo{Removed due to blind review}
-           {No affiliation given}
-           {No e-mail given}
+\authorinfo{Raphael Ernani Rodrigues, Victor Hugo Sperle Campos,
+Fernando Magno Quint\~{a}o Pereira}
+           {Department of Computer Science -- The Federal University of Minas gerais (UFMG) -- Brazil}
+           {\{raphael,victorsc,fernando\}@dcc.ufmg.br}
 
 \maketitle
 
@@ -106,7 +105,7 @@ Thus, if an overflow happens, then the instrumented program can take some
 action, such as to log the event, or to terminate the program.
 However, this safety comes with a price: arithmetic operations need to be
 surveilled, and the runtime checks cost time.
-Zhang {\em et al.}~\cite{Zhang09} have proposed to eliminate some of this
+Zhang {\em et al.}~\cite{Zhang10} have proposed to eliminate some of this
 overhead via a tainted flow analysis.
 We have a similar goal, yet, our approach is substantially different.
 
@@ -114,7 +113,7 @@ We have a similar goal, yet, our approach is substantially different.
 This paper describes the range analysis algorithm that
 we have developed to eliminate overflow checks in instrumented programs.
 As we show in Section~\ref{sec:range}, our algorithm has three core insights.
-Firstly, in Section~\ref{sub:micro} we propose a three-phases approach to extract
+Firstly, in Section~\ref{sub:micro} we propose a three-phase approach to extract
 information from comparisons between variables, e.g., $x < y$.
 Previous algorithms either deal with these comparisons via
 expensive relational analyses~\cite{Cousot78,Lakhdar11,Mine06}, or only
@@ -124,7 +123,7 @@ Secondly, in Section~\ref{sub:prop} we show how we rely on strongly connected
 components to achieve speed and precision.
 It is well-known that this technique is effective in speeding up constraint
 resolution~\cite[Sec 6.3]{Nielson99}.
-However, given our three-phases approach, we improve precision
+However, given our three-phase approach, we improve precision
 by solving strong components in topological order.
 Finally, in Section~\ref{sub:splitting} we propose a new program representation that
 is more precise than other intermediate forms used to solve range
@@ -198,7 +197,7 @@ For simplicity, we will use the C datatype \texttt{char}, which represents
 8-bit long numbers.
 Examples of actual vulnerabilities, with larger primitive types, are given
 by Brumley {\em et al.}~\cite{Brumley07}, Dietz {\em et al.}~\cite{Dietz12}, and
-Zhang {\em et al.}~\cite{Zhang09}.
+Zhang {\em et al.}~\cite{Zhang10}.
 The function \texttt{read\_matrix} reads a matrix of bytes from a file.
 This matrix is stored as a linear sequence of bytes in a vector \texttt{out}.
 The first and second bytes in the file, e.g., \texttt{w} and \texttt{h},
@@ -233,6 +232,7 @@ $x \times \infty = \infty$ if $x > 0$ & & $x \times \infty = -\infty$ if $x < 0$
 $0 \times \infty = 0$ & & $(-\infty) \times \infty = \ $ not defined $$ \\
 \end{tabular}
 
+Notice that $(\infty -\infty)$ is not well-defined.
 From the lattice $\varset{Z}$ we define the product lattice
 $\varset{Z}^2$ as follows:
 %
@@ -262,8 +262,8 @@ the upper bound of a variable.
 We let \varset{V} be a set of constraint variables, and
 $I: \varset{V} \mapsto \varset{Z}^2$ a
 mapping from these variables to intervals in $\varset{Z}^2$.
-Our objective is to solve a constraint system $C$, formed by constraints such
-as those seen in Figure~\ref{fig:eval_function}(left).
+Our objective is to solve a constraint system \varset{C}, formed by constraints
+such as those seen in Figure~\ref{fig:eval_function}(left).
 We let the $\phi$-functions be as defined by Cytron
 {\em et al.}~\cite{Cytron91}: they join different variable names into a single
 definition.
@@ -274,8 +274,8 @@ Armed with these concepts, we define the range analysis problem as follows:
 \begin{definition}
 \label{def:rcp}
 \textsc{Range Analysis Problem} \\
-\textbf{Input:} a set $C$ of constraints ranging over a set \varset{V} of
-variables. \\
+\textbf{Input:} a set \varset{C} of constraints ranging over a set
+\varset{V} of variables. \\
 \textbf{Output:} a mapping I such that, for any variable
 $V \in \varset{V}$, e(V) = I[V].
 \end{definition}
@@ -365,7 +365,7 @@ Su and Wagner~\cite{Su05}.
 However, contrary to them, in a next phase we find the strongly connected
 components in this graph, collapse them into super-nodes, and sort the
 resulting digraph topologically.
-Finally, for each strong component, we apply a three-phases approach to determine
+Finally, for each strong component, we apply a three-phase approach to determine
 the ranges of the variables.
 
 \noindent
@@ -384,8 +384,8 @@ program in Figure~\ref{fig:ex_eSSA_cgo}(b).
 Our algorithm introduces the notion of {\em future ranges}, which we use to extract
 range information from comparisons between variables.
 In Section~\ref{sub:splitting} we explain how futures are created.
-If $V$ is used by $C$ as the input of a future range, then the edge from
-$V$ to $C$ represents what Ferrante {\em et al.} call a {\em control
+If $V$ is used by constraint $C$ as the input of a future range, then the edge
+from $V$ to $C$ represents what Ferrante {\em et al.} call a {\em control
 dependence}~\cite[p.323]{Ferrante87}.
 We use dashed lines to represent these edges.
 All the other edges denote {\em data dependences}~\cite[p.322]{Ferrante87}.
@@ -417,10 +417,11 @@ As an example, the largest component in dealII has 2,131 nodes,
 even though dealII's constraint graph has over one million nodes.
 This large SCC exists due to a long chain of mutually recursive function calls.
 
-\subsection{A Three-Phases Approach to Solve Strong Components}
+\subsection{A Three-Phase Approach to Solve Strong Components}
 \label{sub:micro}
 
-We determine the ranges for each strongly connected component in three phases.
+We find the ranges of the variables in each strongly connected component in
+three phases.
 First we determine the growth pattern of each variable in the component via
 widening.
 In the second step, once we know in which directions the values stored in each
@@ -429,15 +430,15 @@ Finally, a narrowing phase starting from conditional tests improves the
 precision of our results.
 
 \noindent
-\textbf{Widening: } we start solving constraints by determining how each program
-variable might grow.
+\textbf{Widening: } we start solving constraints by determining how each
+program variable might grow.
 For instance, if a variable is only updated by sums with positive numbers, then
 it only grows up.
 If, instead, a variable is only updated by sums with negative numbers, then it
 grows down.
 Some variables can also grow in both directions.
-We discover these growth patterns by abstractly interpreting the constraints that
-constitute the strongly connected component.
+We discover these growth patterns by abstractly interpreting the constraints
+that constitute the strongly connected component.
 We ensure termination via a widening operator.
 Our implementation uses {\em jump-set widening}, which is typically used in
 range analysis~\cite[p.228]{Nielson99}.
@@ -455,9 +456,13 @@ I[Y] =
 \end{equation*}
 %
 We let $\lb{[l, u]} = l$ and $\ub{[l, u]} = u$.
+We let $\bot$ denote non-itialized intervals, so that $[\bot, \bot] \sqcup
+[l, u] = [l, u]$.
+This operation only happens at $\phi$-nodes, because we evaluate constraints in
+topological order.
 The map $I$ and the abstract evaluation function $e$ are determined as in
 Figure~\ref{fig:eval_function}.
-We have a different implementation of $e$ for each operation that the
+We have an implementation of $e$ for each operation that the
 target programming language provides.
 Our current LLVM implementation has 18 different instances of $e$, including
 signed and unsigned addition, subtraction, multiplication and division, plus
@@ -972,7 +977,7 @@ we have estimated statically are exact.
 Similarly, 51.99\% of our upper bounds are also tight.
 The figure also shows that, on average, 37.39\% of our lower limits are
 imprecise, and 35.40\% of our upper limits are imprecise.
-This result is on pair with those obtained by more costly analysis, such as
+This result is on par with those obtained by more costly analysis, such as
 Stephenson {\em et al.}'s~\cite{Stephenson00}.
 
 
@@ -991,10 +996,10 @@ These programs have been executed with their ``test" input sets.
 We have not been able to run the binary that LLVM produces for SPEC's
 \texttt{gcc} in our environment, even without any of our passes, due to an
 incompatible \texttt{ctype.h} header.
-In addition, we have not been able to collect the statistics regarding
-the overflows occurred in SPEC's \texttt{bzip2}, because the log file
-has became too large, due to the occurrence of more than 3.000.000.000 
-overflows. Thus, the machine ran out of memory.
+In addition, we have not been able to collect the statistics about
+the overflows that occurred in SPEC's \texttt{bzip2}, because the log file
+was too large.
+We verified more than 3.000.000.000  overflows in this program.
 Figure~\ref{fig:unprunedTable} shows the percentage of instructions that
 we instrument, without the intervention of the range analysis.
 The number of instrumented instructions is relatively low, compared to the
@@ -1060,24 +1065,24 @@ than once.
 \begin{small}
 \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|r|}
 \hline
-Benchmark & \#II & \#E & \#I/\#E & \#U &
-\#I/\#U \\ \hline
-470.lbm & 1.142 & 4 & 99,65\% & 4 & 99,65\% \\ \hline
-433.milc & 1.573 & 1.070 & 31,98\% & 1.065 & 32,29\% \\ \hline
-444.namd & 2.965 & 2.900 & 2,19\% & 2.900 & 2,19\% \\ \hline
-447.dealII & 37.234 & 29.870 & 19,78\% & 28.779 & 22,71\% \\ \hline
-450.soplex & 3.268 & 2.927 & 10,43\% & 2.897 & 11,35\% \\ \hline
-464.h264ref & 13.548 & 11.342 & 16,59\% & 11.301 & 16,28\% \\ \hline
-473.astar & 903 & 808 & 10,52\% & 806 & 10,74\% \\ \hline
-458.sjeng & 2.483 & 2.354 & 5,20\% & 2.190 & 11,80\% \\ \hline
-429.mcf & 165 & 164 & 0,61\% & 164 & 0,61\% \\ \hline
-471.omnetpp & 1.533 & 1.313 & 14,35\% & 1.313 & 14,35\% \\ \hline
-403.gcc & 16.330 & 15.282 & 6,42\% & 15.110 & 7,47\% \\ \hline
-445.gobmk & 13.947 & 12.563 & 9,92\% & 12.478 & 10,53\% \\ \hline
-462.libquantum & 943 & 820 & 13,04\% & 817 & 13,36\% \\ \hline
-401.bzip2 & 2.350 & 1.966 & 16,34\% & 1.966 & 16,34\% \\ \hline
-456.hmmer & 3.963 & 3.346 & 15,57\% & 3.304 & 16,63\% \\ \hline
-Total (Average) & 6.823 & 5.779 & 18,17\% & 5.676 & 19,09\% \\ \hline
+Benchmark & \#II & \#E & \%(II, E) & \#U &
+\%(II, U) \\ \hline
+lbm & 1.142 & 4 & 99,65\% & 4 & 99,65\% \\ \hline
+milc & 1.573 & 1.070 & 31,98\% & 1.065 & 32,29\% \\ \hline
+namd & 2.965 & 2.900 & 2,19\% & 2.900 & 2,19\% \\ \hline
+dealII & 37.234 & 29.870 & 19,78\% & 28.779 & 22,71\% \\ \hline
+soplex & 3.268 & 2.927 & 10,43\% & 2.897 & 11,35\% \\ \hline
+h264ref & 13.548 & 11.342 & 16,59\% & 11.301 & 16,28\% \\ \hline
+astar & 903 & 808 & 10,52\% & 806 & 10,74\% \\ \hline
+sjeng & 2.483 & 2.354 & 5,20\% & 2.190 & 11,80\% \\ \hline
+mcf & 165 & 164 & 0,61\% & 164 & 0,61\% \\ \hline
+omnetpp & 1.533 & 1.313 & 14,35\% & 1.313 & 14,35\% \\ \hline
+gcc & 16.330 & 15.282 & 6,42\% & 15.110 & 7,47\% \\ \hline
+gobmk & 13.947 & 12.563 & 9,92\% & 12.478 & 10,53\% \\ \hline
+libquantum & 943 & 820 & 13,04\% & 817 & 13,36\% \\ \hline
+bzip2 & 2.350 & 1.966 & 16,34\% & 1.966 & 16,34\% \\ \hline
+hmmer & 3.963 & 3.346 & 15,57\% & 3.304 & 16,63\% \\ \hline
+Average & 6.823 & 5.779 & 18,17\% & 5.676 & 19,09\% \\ \hline
 \end{tabular*}
 \end{small}
 \end{center}
@@ -1091,9 +1096,11 @@ analysis.
 
 Figure~\ref{fig:classificationTable} shows how our range analysis
 classifies instructions.
-Out of all the 102,790 instructions that we have instrumented in SPEC, 3.92\% are
-suspicious, 17.19\% are safe, and
-78.89\% are uncertain.
+Out of all the 102,790 instructions that we have instrumented in SPEC,
+3.92\% are suspicious, 17.19\% are safe, and 78.89\% are uncertain.
+This means that we found precise bounds to $3.92 + 17.19 = 21.11\%$ of all
+the program variables, and that 78.98\% of them are bound to intervals with
+at least one unknown limit.
 We had, at first, speculated that overflows would be more common among
 suspicious instructions, as their bounds, inferred statically, go beyond the
 limits of their declared types.
@@ -1184,7 +1191,7 @@ e-SSA form or u-SSA form.
 \includegraphics[width=\columnwidth]{images/spec_runtime}
 \end{center}
 \caption{\label{fig:spec_runtime}
-Comparison between execution times with and without prunning, 
+Comparison between execution times with and without pruning, 
 normalized by the original program's execution time.}
 \end{figure}
 
@@ -1213,6 +1220,9 @@ Contrary to these previous work, we instrument programs at LLVM's intermediate
 representation level, which is machine independent.
 Nevertheless, the performance of the programs that we instrument is on par with
 Brumley's, even without the support of the static range analysis.
+None of the above works use range analysis to eliminate overflow checks.
+This analysis, in our case, could eliminate approximately 45\% of the
+tests.
 
 Dietz {\em et al.}~\cite{Dietz12} have 
 implemented a tool, IOC, that instruments the source code of C/C++ programs to
@@ -1236,7 +1246,7 @@ instrumentation, an endeavor that we accomplish via static analysis.
 
 \noindent
 \textbf{Static Detection of Integer Overflows: }
-Zhang {\em et al.}~\cite{Zhang09} have used static analysis to sanitize
+Zhang {\em et al.}~\cite{Zhang10} have used static analysis to sanitize
 programs against integer overflow based vulnerabilities.
 They instrument integer operations in paths from a source to a sink.
 In Zhang {\em et al.}'s context, sources are functions that read values from
@@ -1264,7 +1274,7 @@ The widening operator that we use in our implementation is well-known among
 compiler writers~\cite[p.228]{Nielson99}.
 The interval lattice from Section~\ref{sub:lattice} has been used in a
 plethora of old and recent range analysis
-solvers~\cite{Gough94,Mahlke01,Oh12,Patterson95,Stephenson00,Su05}.
+solvers~\cite{Gough94,Gawlitza09,Logozzo10,Mahlke01,Oh12,Patterson95,Stephenson00,Su05}.
 The use of futures to handle comparisons between variables is a contribution
 of this paper.
 It is well-known that the use of strongly connected components speeds up
@@ -1300,9 +1310,9 @@ Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
 {\em et al.}~\cite{Bodik00} and Gough {\em et al.}~\cite{Gough94}.
 The other representation, which we call u-SSA, is very similar to
 the \emph{Static Single Use} form (SSU).
-There exists other variants of SSU~\cite{Plevyak96,George03}.
+There exists other variants of SSU~\cite{Lo98,Plevyak96,George03}.
 The main difference to our representation is that our dataflow analysis
-propagates information forwardly, whereas the SSU form has been conceive for
+propagates information forwardly, whereas the SSU form has been conceived for
 dataflow analyses that propagate information backwardly.
 Thus, it requires special nodes at branches to merge information from
 different program paths.
