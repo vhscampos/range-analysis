@@ -1,4 +1,4 @@
-\documentclass[preprint]{sigplanconf}[10pt]
+\documentclass{sigplanconf}[10pt]
 
 % TODO: explain that we have not observed overflows in the safe instructions.
 % TODO: explain that u-SSA does not yield noticeable performance improvements.
@@ -49,10 +49,10 @@ These limits might lead programs that manipulate large integer numbers to
 produce unexpected results due to overflows.
 There exists a plethora of works that instrument programs to track the occurrence
 of these overflows.
-In this paper we present the first algorithm that uses static range analysis to
+In this paper we present an algorithm that uses static range analysis to
 avoid this instrumentation whenever possible.
-Our range analysis contains novel techniques, such as a live range splitting
-strategy that refines the precision of our results.
+Our range analysis contains novel techniques, such as a notion of ``future"
+bounds to handle comparisons between variables.
 We have used this algorithm to avoid some checks created by a dynamic instrumentation
 library that we have implemented in LLVM.
 This framework has been used to detect overflows in hundreds of C/C++ programs.
@@ -159,26 +159,33 @@ With this support, the instrumented SPEC programs are only 1.73\% slower.
 Therefore, we show in this paper that securing programs against integer overflows
 is very cheap.
 
-\subsection{The Danger that Integer Overflows Represent}
-\label{sub:danger}
-
-% A brief overview about integer overflows.
-In addition to being a source of several bugs that are hard to identify, integer 
-overflows can represent a serious security risk.
-As pointed by Dietz {\em et al.}~\cite{Dietz12}, integer overflows are the
-sources of vulnerabilities in widely used software, such as OpenSSH and
-Firefox.
-These vulnerabilities could give an adversary the opportunity to execute
-arbitrary code in the compromised application. 
-We will demonstrate this with an example.
-The $n$-bits two's complement arithmetics wraps around at multiples of
-$2^n$.
-As an example the representation of $16 \times 16$ in 8-bits two's complement
-is $0$, because $0 \equiv (16\times16) \mod 2^8$.
-Programmers can use this well-defined behavior in benign ways.
-For instance, the wrapping arithmetics provides a cheap $\mod 2^n$ operator,
-which is used in the implementation of hash-functions or random number
-generators.
+\noindent
+\textbf{The Danger that Integer Overflows Represent: }
+Figure~\ref{fig:ex_buffer_overflow} illustrates an example of integer
+overflow vulnerability.
+This vulnerability allows an adversary to perform a buffer overrun attack
+on a program that is apparently guarded against this type of exploit.
+We will use the C datatype \texttt{char}, which represents
+signed 8-bit numbers, so that the interested reader can easily
+reconstruct this exploit.
+Examples of actual vulnerabilities, with larger primitive types, are given
+by Brumley {\em et al.}~\cite{Brumley07}, Dietz {\em et al.}~\cite{Dietz12},
+and Zhang {\em et al.}~\cite{Zhang10}.
+The function \texttt{read\_matrix} copies the linearized matrix \texttt{data}
+into \texttt{buf}, to later process it, in line 12.
+The arguments \texttt{w} and \texttt{h} determine the number of rows and
+columns in the matrix.
+If the \texttt{char} datatype could represent arbitrarily long numbers, than
+this function would be safe against buffer overruns, due to the test at
+line 3.
+However, if, for instance, we have that \texttt{w}$= 6$ and \texttt{h}$= 22$,
+then \texttt{buf\_size}$= -124$, due to the wrapping semantics of
+integer arithmetics in C.
+In this case, twelve words in the activation record of \texttt{read\_matrix}
+would be overwritten.
+By carefully crafting the contents of \texttt{data}, an adversary can, in this
+way, change the return address of \texttt{read\_matrix}, diverting program's
+execution to a system's function, such as \texttt{telnet}, for instance.
 
 \begin{figure}[t!]
 \begin{center}
@@ -187,31 +194,6 @@ generators.
 \caption{\label{fig:ex_buffer_overflow}
 An example of an exploitable integer overflow vulnerability.}
 \end{figure}
-
-% An example of vulnerability.
-Figure~\ref{fig:ex_buffer_overflow} illustrates an example of integer
-overflow vulnerability.
-This vulnerability allows an adversary to perform a buffer overrun attack
-on a program that is apparently guarded against this type of exploit.
-For simplicity, we will use the C datatype \texttt{char}, which represents
-8-bit long numbers.
-Examples of actual vulnerabilities, with larger primitive types, are given
-by Brumley {\em et al.}~\cite{Brumley07}, Dietz {\em et al.}~\cite{Dietz12}, and
-Zhang {\em et al.}~\cite{Zhang10}.
-The function \texttt{read\_matrix} reads a matrix of bytes from a file.
-This matrix is stored as a linear sequence of bytes in a vector \texttt{out}.
-The first and second bytes in the file, e.g., \texttt{w} and \texttt{h},
-determine the number of rows and columns in the matrix.
-If the \texttt{char} datatype could represent arbitrarily long numbers, than this
-function would be safe against buffer overruns, because it would only write data
-on allocated memory.
-However, if, for instance, we have that \texttt{w}$= 16$ and \texttt{h}$= 16$,
-then \texttt{s}$= 0$, as pointed before.
-In this case, a buffer of length zero would be allocated, and all the data
-stored in the file would overwrite memory in the stack of activation records.
-By carefully crafting an input file, an adversary can, in this way, overwrite
-the return address of \texttt{read\_matrix}, diverting program's execution to
-one of \texttt{libc}'s function, such as \texttt{telnet}, for instance.
 
 \section{Range Analysis}
 \label{sec:range}
@@ -276,7 +258,7 @@ Armed with these concepts, we define the range analysis problem as follows:
 \textsc{Range Analysis Problem} \\
 \textbf{Input:} a set \varset{C} of constraints ranging over a set
 \varset{V} of variables. \\
-\textbf{Output:} a mapping I such that, for any variable
+\textbf{Output:} a mapping I such that, for any
 $V \in \varset{V}$, e(V) = I[V].
 \end{definition}
 
@@ -424,8 +406,7 @@ We find the ranges of the variables in each strongly connected component in
 three phases.
 First we determine the growth pattern of each variable in the component via
 widening.
-In the second step, once we know in which directions the values stored in each
-variable might grow, we replace futures by actual bounds.
+In the second step, we replace future bounds by actual limits.
 Finally, a narrowing phase starting from conditional tests improves the
 precision of our results.
 
@@ -1338,6 +1319,12 @@ as previous work has demonstrated, we believe that our technique is still
 important, as some of these programs will be executed millions of times.
 Our entire code plus the data that we show in this paper is publicly available.
 A more extensive list of experiments is also available in our technical report.
+
+\acks
+We thank Douglas do Couto for helping us with the LLVM code base.
+We also thank the anonymous reviewers for their useful comments and
+suggestions.
+This project is supported by FAPEMIG, grant 16899*01.
 
 \bibliographystyle{plain}
 \bibliography{../references}
