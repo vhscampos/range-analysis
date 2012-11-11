@@ -59,7 +59,7 @@ This framework has been used to detect overflows in hundreds of C/C++ programs.
 As a testimony of its effectiveness, our range analysis has been able to avoid
 25\% of all the overflow checks necessary to secure the C programs in the
 LLVM test suite.
-This reduction has reduced 50\% of the runtime overhead of instrumentation.
+This reduction has decreased 50\% of the runtime overhead of instrumentation.
 \end{abstract}
 
 \category{D.3.4}{Processors}{Compilers}
@@ -626,7 +626,7 @@ program would have terminated.
 Therefore, we split the live range of $u$ past its use point $p$, producing the
 sequence $v = u + c; u' = u$, and renaming every use of $u$ that is dominated
 by $p$ to $u'$.
-We then associate $u$ with the constraint $I[U'] \sqsubseteq I[U] \sqcap [-\infty, \mathit{MaxInt} - c]$.
+We then associate $u'$ with the constraint $I[U'] \sqsubseteq I[U] \sqcap [-\infty, \mathit{MaxInt} - c]$.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1236,7 +1236,7 @@ Thus, contrary to our work, Zhang {\em et al.}'s only need to instrument
 about 10\% of the integer operations in the program.
 However, they do not use any form of range analysis to limit the number of
 checks inserted in the transformed code.
-Wang {\em et a.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}'s work are essentially different: they use symbolic execution, whereas we rely on
+Wang {\em et al.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}'s work are essentially different: they use symbolic execution, whereas we rely on
 range analysis.
 Contrary to us, they do not transform the program to prevent or detect such event dynamically.
 Still in the field of symbolic execution, Molnar
