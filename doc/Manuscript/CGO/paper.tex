@@ -37,7 +37,7 @@ Integer Overflows}
 
 \authorinfo{Raphael Ernani Rodrigues, Victor Hugo Sperle Campos,
 Fernando Magno Quint\~{a}o Pereira}
-           {Department of Computer Science -- The Federal University of Minas gerais (UFMG) -- Brazil}
+           {Department of Computer Science -- The Federal University of Minas Gerais (UFMG) -- Brazil}
            {\{raphael,victorsc,fernando\}@dcc.ufmg.br}
 
 \maketitle
@@ -59,7 +59,7 @@ This framework has been used to detect overflows in hundreds of C/C++ programs.
 As a testimony of its effectiveness, our range analysis has been able to avoid
 25\% of all the overflow checks necessary to secure the C programs in the
 LLVM test suite.
-This reduction has decreased 50\% of the runtime overhead of instrumentation.
+This optimization has reduced the runtime overhead of instrumentation by 50\%.
 \end{abstract}
 
 \category{D.3.4}{Processors}{Compilers}
@@ -82,10 +82,10 @@ Consequently, there exist numbers that cannot be represented by these types.
 In general, these programming languages resort to a {\em wrapping-arithmetics}
 semantics~\cite{Warren02} to perform integer operations.
 If a number $n$ is too large to fit into a primitive data type $T$, then $n$'s
-value wraps around, and we obtain $n \ \mbox{module} \ T_{max}$.
+value wraps around, and we obtain $n \ \mbox{modulo} \ T_{max}$.
 There are situations in which this semantics is acceptable~\cite{Dietz12}.
-For instance, programers might rely on this behavior to implement hash functions
-and random number generators.
+For instance, programmers might rely on this behavior to implement hash
+functions and random number generators.
 On the other hand, there exist also situations in which this behavior might
 lead a program to produce unexpected results.
 As an example, in 1996, the Ariane 5 rocket was lost due to an arithmetic
@@ -98,8 +98,8 @@ overflow -- a bug that resulted in a loss of more than US\$370 million~\cite{Dow
 % Why there is still the need to devise efficient methods to eliminate them.
 Programming languages such as Ada or Lisp can be customized to throw exceptions
 whenever integer overflows are detected.
-Furthermore, there exist recent work proposing to instrument binaries derived
-from C, C++ and Java programs to detect the occurrence of overflows
+Furthermore, there exist recent works proposing to instrument binaries
+derived from C, C++ and Java programs to detect the occurrence of overflows
 dynamically~\cite{Brumley07,Dietz12}.
 Thus, if an overflow happens, then the instrumented program can take some
 action, such as to log the event, or to terminate the program.
@@ -175,7 +175,7 @@ The function \texttt{read\_matrix} copies the linearized matrix \texttt{data}
 into \texttt{buf}, to later process it, in line 12.
 The arguments \texttt{w} and \texttt{h} determine the number of rows and
 columns in the matrix.
-If the \texttt{char} datatype could represent arbitrarily long numbers, than
+If the \texttt{char} datatype could represent arbitrarily long numbers, then
 this function would be safe against buffer overruns, due to the test at
 line 3.
 However, if, for instance, we have that \texttt{w}$= 6$ and \texttt{h}$= 22$,
@@ -251,16 +251,14 @@ We let the $\phi$-functions be as defined by Cytron
 definition.
 Figure~\ref{fig:eval_function}(right) defines a valuation function $e$ on the
 interval domain.
-Armed with these concepts, we define the range analysis problem as follows:
+Armed with these concepts, we define the range analysis problem as follows: \\
 
-\begin{definition}
-\label{def:rcp}
-\textsc{Range Analysis Problem} \\
+\noindent
+\textsc{Definition: Range Analysis Problem} \\
 \textbf{Input:} a set \varset{C} of constraints ranging over a set
 \varset{V} of variables. \\
 \textbf{Output:} a mapping I such that, for any
 $V \in \varset{V}$, e(V) = I[V].
-\end{definition}
 
 \begin{figure}[t!]
 \begin{center}
@@ -327,7 +325,7 @@ Figure~\ref{fig:ex_eSSA_cgo}(d).
 \end{center}
 \caption{\label{fig:ex_eSSA_cgo}
 (a) Example program.
-(b) Control Flow Graph in SSA form.
+(b) Control Flow Graph in e-SSA form.
 (c) Constraints that we extract from the program.
 (d) Possible solution to the range analysis problem.}
 \end{figure}
@@ -379,7 +377,7 @@ algorithm to solve future bounds.
 \includegraphics[width=\columnwidth]{images/ex_graph}
 \end{center}
 \caption{\label{fig:ex_graph}
-The constraint graph that we build to the program in
+The constraint graph that we build for the program in
 Figure~\ref{fig:ex_eSSA_cgo}(b).}
 \end{figure}
 
@@ -455,7 +453,8 @@ variable can only change three times, e.g., $[\bot, \bot] \rightarrow [c_1, c_2]
 $[\bot, \bot] \rightarrow [c_1, c_2] \rightarrow [-\infty, c_2]
 \rightarrow [-\infty, \infty]$.
 Therefore, we determine the growth behavior of each constraint variable in
-a strong component in linear time on the number of constraints.
+a strong component in linear time on the number of constraints in that
+component.
 Figure~\ref{fig:ex_partition_grow_crop}(b) shows the abstract state of the
 variables in the largest SCC of the graph in Figure~\ref{fig:ex_graph}.
 As we see in the figure, this step of our algorithm has been able to determine
@@ -477,7 +476,7 @@ Four snapshots of the last SCC of Figure~\ref{fig:ex_graph}.
 
 \noindent
 \textbf{Future resolution: }
-The next phase of the algorithm to determine intervals inside a strong
+the next phase of the algorithm to determine intervals inside a strong
 component consists in replacing futures by actual bounds, a task that we
 accomplish by using the rules below:
 %
@@ -506,8 +505,8 @@ Figure~\ref{fig:ex_partition_grow_crop}(c) shows the result of resolving
 futures in our running example.
 The information that we acquire from the growth analysis is essential in this
 phase.
-For instance, the growth analysis has found out that the value stored in variable
-\texttt{i}$_i$ can only increase.
+For instance, the growth analysis has found out that the value stored in
+variable \texttt{i}$_1$ can only increase.
 Given that this variable is assigned the initial value zero, we can replace
 $\fun{ft}(I_1)$ with this value.
 
@@ -530,7 +529,7 @@ I[Y] =
 \end{cases}
 \end{equation*}
 %
-Figure~\ref{fig:ex_partition_grow_crop}(d) show the result of our narrowing
+Figure~\ref{fig:ex_partition_grow_crop}(d) shows the result of our narrowing
 operator in our running example.
 Ranges improve due to the two conditional tests in the program.
 Firstly, we have that $I[I_t] = I[I_1] \sqcap [-\infty, 98]$, which gives us
@@ -590,7 +589,7 @@ and $l_f$ is the target when the condition is false.
 We split the live range of $v$ at any of these points if at least one of two
 conditions is true:
 (i) $l_f$ or $l_t$ dominate any use of $v$;
-(ii) there exist a use of $v$ at the dominance frontier of $l_f$ or $l_t$.
+(ii) there exists a use of $v$ at the dominance frontier of $l_f$ or $l_t$.
 For the notions of dominance and dominance-frontier, see Aho
 {\em et al.}~\cite[p.656]{Aho06}.
 To split the live range of $v$ at $l_f$ we insert at this
@@ -604,7 +603,7 @@ We insert, at $l_f$, $v_{1f} = v_1 \sqcap [\fun{ft}(v_2), +\infty]$,
 and $v_{2f} = v_2 \sqcap [-\infty, \fun{ft}(v_1)]$.
 Similarly, at $l_t$ we insert
 $v_{1v} = v_1 \sqcap [-\infty, \fun{ft}(v_2) - 1]$
-and $v_{2f} = v_2 \sqcap [\fun{ft}(v_1) + 1, +\infty]$.
+and $v_{2v} = v_2 \sqcap [\fun{ft}(v_1) + 1, +\infty]$.
 A variable $v$ can never be associated with a future bound to
 itself, e.g., $\fun{ft}(v)$.
 This invariant holds because whenever the e-SSA conversion associates a variable
@@ -727,7 +726,7 @@ data loss, even if this loss is benign.
 To make the dynamic checks more liberal, we give users the possibility of
 disabling tests over truncations.
 
-\paragraph{Practical Considerations: }
+\paragraph{Practical Considerations. }
 %Overview about the instrumentation technique
 Our instrumentation library inserts new instructions into
 the target program.
@@ -811,13 +810,13 @@ safe if its bounds are within the interval $[0, 255]$.
 go beyond the interval of its declared type, but the intersection between
 these two ranges is non-empty.
 For instance, the same variable $x$ would be suspicious if
-$I[x] = [0, 257]$, as $\ub{I[x]} > \ub{\mathtt{int8}}$.
+$I[x] = [0, 257]$, as $\ub{I[x]} > \ub{\mathtt{uint8}}$.
 \item \textbf{Uncertain}: we classify a variable as uncertain if at least one
 of its limits is unbounded.
 Our variable $x$ would be uncertain if $I[x] = [0, \infty]$.
 We distinguish suspicious from uncertain variables because we speculate that
 actual overflows are more common among elements in the former category.
-\item \textbf{buggy}: a variable is buggy if the intersection between its
+\item \textbf{Buggy}: a variable is buggy if the intersection between its
 inferred range and the range of its declared type is empty.
 This is a definitive case of an overflow.
 Continuing with our example, $x$ would be buggy if, for instance,
@@ -835,7 +834,7 @@ created.
 We have implemented our range analysis algorithm in LLVM 3.0, and have run
 experiments on a Intel quad core CPU with a 2.40GHz clock, and 3.6GB of RAM.
 Each core has a 4,096KB L1 cache.
-We use Linux Ubuntu 10.04.4.
+We have used Linux Ubuntu 10.04.4.
 Our implementation of range analysis has 3,958 lines of
 commented C++ code, our e/u-SSA conversion module has 672 lines, and our
 instrumentation pass has 762 lines.
@@ -931,8 +930,7 @@ analyze.
 (Upper) Comparison between static range analysis and dynamic profiler for
 upper bounds.
 (Lower) Comparison between static range analysis and dynamic profiler for
-lower bounds. The numbers above the benchmark names give the number of
-variables in each program.}
+lower bounds.}
 \end{figure}
 
 We have classified the bounds estimated by the static analysis into four
@@ -975,12 +973,12 @@ We have executed the instrumented programs of the integer benchmarks of SPEC
 2006 CPU to probe the overhead imposed by our instrumentation.
 These programs have been executed with their ``test" input sets.
 We have not been able to run the binary that LLVM produces for SPEC's
-\texttt{gcc} in our environment, even without any of our passes, due to an
-incompatible \texttt{ctype.h} header.
+\texttt{gcc} in our environment, even without any of our transformations, due
+to an incompatible \texttt{ctype.h} header.
 In addition, we have not been able to collect the statistics about
 the overflows that occurred in SPEC's \texttt{bzip2}, because the log file
 was too large.
-We verified more than 3.000.000.000  overflows in this program.
+We verified more than 3,000,000,000  overflows in this program.
 Figure~\ref{fig:unprunedTable} shows the percentage of instructions that
 we instrument, without the intervention of the range analysis.
 The number of instrumented instructions is relatively low, compared to the
@@ -996,23 +994,23 @@ On the average, 4.90\% of the instrumented sites have caused integer overflows.
 \begin{small}
 \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|}
 \hline
-Benchmark & \#I & \#II & \#II/\#I & \#O \\ \hline
-470.lbm & 13,724 & 1,142 & 8.32\% & 0 \\ \hline
-433.milc & 44,236 & 1,602 & 3.62\% & 11 \\ \hline
-444.namd & 100,276 & 3,234 & 3.23\% & 12 \\ \hline
-447.dealII & 1,381,408 & 36,157 & 2.62\% & 50 \\ \hline
-450.soplex & 136,367 & 3,158 & 2.32\% & 13 \\ \hline
-464.h264ref & 271,627 & 13,846 & 5.10\% & 167 \\ \hline
-473.astar & 19,243 & 857 & 4.45\% & 0 \\ \hline
-458.sjeng & 54,051 & 2,504 & 4.63\% & 68 \\ \hline
-429.mcf & 4,725 & 165 & 3,49\% & 8 \\ \hline
-471.omnetpp & 203,201 & 1,972 & 0.97\% & 2 \\ \hline
-403.gcc & 1,419,456 & 18,669 & 1.32\% & N/A \\ \hline
-445.gobmk & 308,475 & 14,129 & 4.58\% & 4 \\ \hline
+Benchmark      & \#I & \#II & \#II/\#I & \#O \\ \hline
+470.lbm        & 13,724 & 1,142 & 8.32\% & 0 \\ \hline
+433.milc       & 44,236 & 1,602 & 3.62\% & 11 \\ \hline
+444.namd       & 100,276 & 3,234 & 3.23\% & 12 \\ \hline
+447.dealII     & 1,381,408 & 36,157 & 2.62\% & 50 \\ \hline
+450.soplex     & 136,367 & 3,158 & 2.32\% & 13 \\ \hline
+464.h264ref    & 271,627 & 13,846 & 5.10\% & 167 \\ \hline
+473.astar      & 19,243 & 857 & 4.45\% & 0 \\ \hline
+458.sjeng      & 54,051 & 2,504 & 4.63\% & 68 \\ \hline
+429.mcf        & 4,725 & 165 & 3,49\% & 8 \\ \hline
+471.omnetpp    & 203,201 & 1,972 & 0.97\% & 2 \\ \hline
+403.gcc        & 1,419,456 & 18,669 & 1.32\% & N/A \\ \hline
+445.gobmk      & 308,475 & 14,129 & 4.58\% & 4 \\ \hline
 462.libquantum & 16,297 & 928 & 5.69\% & 7 \\ \hline
-401.bzip2 & 38,831 & 2,158 & 5.56\% & N/A \\ \hline
-456.hmmer & 114,136 & 4,001 & 3.51\% & 0 \\ \hline
-\multicolumn{1}{|r|}{Total (Average)} & 275.070 & 6.968 & 3,96\% &  \\ \hline
+401.bzip2      & 38,831 & 2,158 & 5.56\% & N/A \\ \hline
+456.hmmer      & 114,136 & 4,001 & 3.51\% & 0 \\ \hline
+\multicolumn{1}{|r|}{Total (Average)} & 275,070 & 6,968 & 3.96\% &  \\ \hline
 \end{tabular*}
 \end{small}
 \end{center}
@@ -1028,10 +1026,10 @@ avoids.
 Some results are expressive: the range analysis avoids 1,138 out of 1,142 checks in
 \texttt{470.lbm}.
 In other benchmarks, such as in \texttt{429.mcf}, we have been able to
-avoid only 1, out of 165 tests.
+avoid only 1 out of 165 tests.
 In general we fare better in programs that bound input sizes via conditional
 tests, as \texttt{lbm} does.
-Using u-SSA, instead of e-SSA adds a negligible improvement onto our results.
+Using u-SSA, instead of e-SSA, adds a negligible improvement onto our results.
 We speculate that this improvement is small because variables tend to be used
 a small number of times.
 Benoit {\em et al.}~\cite{Benoit08} have demonstrated that the vast majority
@@ -1046,24 +1044,23 @@ than once.
 \begin{small}
 \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|r|}
 \hline
-Benchmark & \#II & \#E & \%(II, E) & \#U &
-\%(II, U) \\ \hline
-lbm & 1.142 & 4 & 99,65\% & 4 & 99,65\% \\ \hline
-milc & 1.573 & 1.070 & 31,98\% & 1.065 & 32,29\% \\ \hline
-namd & 2.965 & 2.900 & 2,19\% & 2.900 & 2,19\% \\ \hline
-dealII & 37.234 & 29.870 & 19,78\% & 28.779 & 22,71\% \\ \hline
-soplex & 3.268 & 2.927 & 10,43\% & 2.897 & 11,35\% \\ \hline
-h264ref & 13.548 & 11.342 & 16,59\% & 11.301 & 16,28\% \\ \hline
-astar & 903 & 808 & 10,52\% & 806 & 10,74\% \\ \hline
-sjeng & 2.483 & 2.354 & 5,20\% & 2.190 & 11,80\% \\ \hline
-mcf & 165 & 164 & 0,61\% & 164 & 0,61\% \\ \hline
-omnetpp & 1.533 & 1.313 & 14,35\% & 1.313 & 14,35\% \\ \hline
-gcc & 16.330 & 15.282 & 6,42\% & 15.110 & 7,47\% \\ \hline
-gobmk & 13.947 & 12.563 & 9,92\% & 12.478 & 10,53\% \\ \hline
-libquantum & 943 & 820 & 13,04\% & 817 & 13,36\% \\ \hline
-bzip2 & 2.350 & 1.966 & 16,34\% & 1.966 & 16,34\% \\ \hline
-hmmer & 3.963 & 3.346 & 15,57\% & 3.304 & 16,63\% \\ \hline
-Average & 6.823 & 5.779 & 18,17\% & 5.676 & 19,09\% \\ \hline
+Benchmark  &   \#II &  \#E & \%(II, E) &  \#U & \%(II, U) \\ \hline
+lbm        &  1,142 &      4 & 99.65\% &      4 & 99.65\% \\ \hline
+milc       &  1,573 &  1,070 & 31.98\% &  1,065 & 32.29\% \\ \hline
+namd       &  2,965 &  2,900 &  2.19\% &  2,900 &  2.19\% \\ \hline
+dealII     & 37,234 & 29,870 & 19.78\% & 28,779 & 22.71\% \\ \hline
+soplex     &  3,268 &  2,927 & 10.43\% &  2,897 & 11.35\% \\ \hline
+h264ref    & 13,548 & 11,342 & 16.59\% & 11,301 & 16.28\% \\ \hline
+astar      &    903 &    808 & 10.52\% &    806 & 10.74\% \\ \hline
+sjeng      &  2,483 &  2,354 &  5.20\% &  2,190 & 11.80\% \\ \hline
+mcf        &    165 &    164 &  0.61\% &    164 &  0.61\% \\ \hline
+omnetpp    &  1,533 &  1,313 & 14.35\% &  1,313 & 14.35\% \\ \hline
+gcc        & 16,330 & 15,282 &  6.42\% & 15,110 &  7.47\% \\ \hline
+gobmk      & 13,947 & 12,563 &  9.92\% & 12,478 & 10.53\% \\ \hline
+libquantum &    943 &    820 & 13.04\% &    817 & 13.36\% \\ \hline
+bzip2      &  2,350 &  1,966 & 16.34\% &  1,966 & 16.34\% \\ \hline
+hmmer      &  3,963 &  3,346 & 15.57\% &  3,304 & 16.63\% \\ \hline
+Total      & 102,347 & 86,688 &        & 85,135 &         \\ \hline
 \end{tabular*}
 \end{small}
 \end{center}
@@ -1117,7 +1114,7 @@ hmmer   & 663  & 222  & 3082 & 0 & 0,00\% & 0 & 0,00\% \\ \hline
 \end{center}
 \caption{\label{fig:classificationTable}
 How the range analysis classified arithmetic instructions in the 
-u-SSA form program.
+u-SSA form programs.
 \#Sf: safe.
 \#S: suspicious.
 \#U: uncertain.
@@ -1133,8 +1130,8 @@ Each bar refers to a specific benchmark in the test suite.
 We only consider applications that had at least one instrumented
 instruction; the total number of benchmarks that meet this requirement is
 333.
-On the average, our range analysis avoid 24.93\% of the overflow checks.
-Considering the benchmarks in SPEC2006 only, this number is 20.57\%.
+On the average, our range analysis avoids 24.93\% of the overflow checks.
+Considering the benchmarks in SPEC 2006 only, this number is 20.57\%.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1149,7 +1146,7 @@ On average, we have eliminated 24.93\% of the checks (geomean).}
 
 Figure~\ref{fig:spec_runtime} shows the impact of our instrumentation in the
 runtime of the SPEC benchmarks.
-We run each benchmark 20 times.
+We ran each benchmark 20 times.
 The largest slowdown that we have observed, 11.83\%, happened in
 \texttt{h264ref}, the benchmark that presented the largest number of distinct
 sites where overflows happened dynamically. 
@@ -1166,6 +1163,9 @@ eliminate checks on induction variables, as our range analysis can rely on
 the loop boundaries to achieve this end.
 We have not noticed any runtime difference between programs converted to
 e-SSA form or u-SSA form.
+Surprisingly, some of the instrumented programs run faster than the original
+code.
+This behavior has also been observed by Dietz {\em et al.}~\cite{Dietz12}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1197,13 +1197,13 @@ In this work, the authors describe each arithmetic operation formally, and then
 use characteristics of the computer architecture to detect overflows at
 runtime.
 % TODO bibtex: cite Archerr: Runtime environment driven program safety.
-Contrary to these previous work, we instrument programs at LLVM's intermediate
+Contrary to these previous works, we instrument programs at LLVM's intermediate
 representation level, which is machine independent.
 Nevertheless, the performance of the programs that we instrument is on par with
 Brumley's, even without the support of the static range analysis.
-None of the above works use range analysis to eliminate overflow checks.
-This analysis, in our case, could eliminate approximately 45\% of the
-tests.
+Furthermore, our range analysis could eliminate approximately
+45\% of the tests that a naive implementation of Brumley's technique
+would insert; hence, halving down the runtime overhead of instrumentation.
 
 Dietz {\em et al.}~\cite{Dietz12} have 
 implemented a tool, IOC, that instruments the source code of C/C++ programs to
@@ -1219,7 +1219,7 @@ In this case, developers must use some form of code emulation.
 Chen {\em et al.}~\cite{Chen09}, for instance, uses a modified
 Valgrind~\cite{Nethercote07} virtual machine to detect integer overflows.
 The main drawback of emulation is performance: Chen {\em et al.} report a
-50X slowdown.
+50x slowdown.
 % TODO: cite "Brick: A  binary tool for run-time detecting and locating
 % integer-based vulnerability.
 We differ from all this previous work because we focus on generating less
@@ -1285,13 +1285,13 @@ Dense analyses map such information to pairs formed by variables and program
 points.
 Some previous analyses have achieved sparsity by using specific program
 representations, like we did.
-One of the program representation that we discuss in
+One of the program representations that we discuss in
 Section~\ref{sub:splitting} -- the {\em
 Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
 {\em et al.}~\cite{Bodik00} and Gough {\em et al.}~\cite{Gough94}.
 The other representation, which we call u-SSA, is very similar to
 the \emph{Static Single Use} form (SSU).
-There exists other variants of SSU~\cite{Lo98,Plevyak96,George03}.
+There exist other variants of SSU~\cite{Lo98,Plevyak96,George03}.
 The main difference to our representation is that our dataflow analysis
 propagates information forwardly, whereas the SSU form has been conceived for
 dataflow analyses that propagate information backwardly.
@@ -1321,7 +1321,8 @@ Our entire code plus the data that we show in this paper is publicly available.
 A more extensive list of experiments is also available in our technical report.
 
 \acks
-We thank Douglas do Couto for helping us with the LLVM code base.
+We thank Douglas do Couto and Igor Costa for helping us with the LLVM code
+base.
 We also thank the anonymous reviewers for their useful comments and
 suggestions.
 This project is supported by FAPEMIG, grant 16899*01.
