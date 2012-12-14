@@ -1,7 +1,4 @@
-\documentclass{sigplanconf}[10pt]
-
-% TODO: explain that we have not observed overflows in the safe instructions.
-% TODO: explain that u-SSA does not yield noticeable performance improvements.
+\documentclass[10pt]{cgo13}
 
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -21,17 +18,16 @@
 
 \setlength{\textfloatsep}{12.0pt plus 1.0pt minus 1.0pt}
 
-
 \begin{document}
 
-\conferenceinfo{CGO '13}{February 23 - February 27. Shenzhen, China} 
+\conferenceinfo{CGO '13}{23-27 February 2013, Shenzhen China.}
 \copyrightyear{2013}
-\copyrightdata{[to be supplied]} 
+\copyrightdata{978-1-4673-5525-4/13/\$31.00 \copyright2013 IEEE}
 
 \titlebanner{Code Generation and Optimization}        % These are ignored unless
 \preprintfooter{Overflow Elimination}   % 'preprint' option specified.
 
-\title{A fast and Low-Overhead Technique to Secure Programs Against
+\title{A Fast and Low-Overhead Technique to Secure Programs Against
 Integer Overflows}
 %\subtitle{A case study of the Dinamica EGO toolkit}
 
@@ -91,21 +87,17 @@ lead a program to produce unexpected results.
 As an example, in 1996, the Ariane 5 rocket was lost due to an arithmetic
 overflow -- a bug that resulted in a loss of more than US\$370 million~\cite{Dowson97}.
 
-% TODO We need to explain better the wrapping-arithmetics, and we need to cite it
-% properly. What could be a good (official) citation?
-
-
 % Why there is still the need to devise efficient methods to eliminate them.
 Programming languages such as Ada or Lisp can be customized to throw exceptions
 whenever integer overflows are detected.
 Furthermore, there exist recent works proposing to instrument binaries
 derived from C, C++ and Java programs to detect the occurrence of overflows
 dynamically~\cite{Brumley07,Dietz12}.
-Thus, if an overflow happens, then the instrumented program can take some
-action, such as to log the event, or to terminate the program.
-However, this safety comes with a price: arithmetic operations need to be
+Thus, the instrumented program can take some action when an overflow happens,
+such as to log the event, or to terminate the program.
+However, this safety has a price: arithmetic operations need to be
 surveilled, and the runtime checks cost time.
-Zhang {\em et al.}~\cite{Zhang10} have proposed to eliminate some of this
+Zhang {\em et al.}~\cite{Zhang10} have eliminated some of this
 overhead via a tainted flow analysis.
 We have a similar goal, yet, our approach is substantially different.
 
@@ -113,18 +105,18 @@ We have a similar goal, yet, our approach is substantially different.
 This paper describes the range analysis algorithm that
 we have developed to eliminate overflow checks in instrumented programs.
 As we show in Section~\ref{sec:range}, our algorithm has three core insights.
-Firstly, in Section~\ref{sub:micro} we propose a three-phase approach to extract
-information from comparisons between variables, e.g., $x < y$.
+Firstly, in Section~\ref{sub:prop} we show how we rely on strongly connected
+components to achieve speed and precision.
+It is well-known that this technique is effective in speeding up constraint
+resolution~\cite[Sec 6.3]{Nielson99}.
+Yet, we go beyond: given our three-phase approach, we improve precision
+by solving strong components in topological order.
+Secondly, in Section~\ref{sub:micro} we describe this three-phase approach to
+extract information from comparisons between variables, e.g., $x < y$.
 Previous algorithms either deal with these comparisons via
 expensive relational analyses~\cite{Cousot78,Lakhdar11,Mine06}, or only
 consider comparisons between variables and
 constants~\cite{Mahlke01,Patterson95,Stephenson00}.
-Secondly, in Section~\ref{sub:prop} we show how we rely on strongly connected
-components to achieve speed and precision.
-It is well-known that this technique is effective in speeding up constraint
-resolution~\cite[Sec 6.3]{Nielson99}.
-However, given our three-phase approach, we improve precision
-by solving strong components in topological order.
 Finally, in Section~\ref{sub:splitting} we propose a new program representation that
 is more precise than other intermediate forms used to solve range
 analysis sparsely.
@@ -143,7 +135,7 @@ with the program size.
 % Our experimental results.
 We use our range analysis to reduce the runtime overhead imposed by a dynamic
 instrumentation library.
-This instrumentation framework, a contribution of this paper that we describe in
+This instrumentation framework, which we describe in
 Section~\ref{sec:dyn}, has been implemented in the LLVM compiler~\cite{Lattner04}.
 We have logged overflows in a vast number of programs, and in this
 paper we focus on SPEC CPU 2006.
@@ -159,47 +151,8 @@ With this support, the instrumented SPEC programs are only 1.73\% slower.
 Therefore, we show in this paper that securing programs against integer overflows
 is very cheap.
 
-\noindent
-\textbf{The Danger that Integer Overflows Represent: }
-Figure~\ref{fig:ex_buffer_overflow} illustrates an example of integer
-overflow vulnerability.
-This vulnerability allows an adversary to perform a buffer overrun attack
-on a program that is apparently guarded against this type of exploit.
-We will use the C datatype \texttt{char}, which represents
-signed 8-bit numbers, so that the interested reader can easily
-reconstruct this exploit.
-Examples of actual vulnerabilities, with larger primitive types, are given
-by Brumley {\em et al.}~\cite{Brumley07}, Dietz {\em et al.}~\cite{Dietz12},
-and Zhang {\em et al.}~\cite{Zhang10}.
-The function \texttt{read\_matrix} copies the linearized matrix \texttt{data}
-into \texttt{buf}, to later process it, in line 12.
-The arguments \texttt{w} and \texttt{h} determine the number of rows and
-columns in the matrix.
-If the \texttt{char} datatype could represent arbitrarily long numbers, then
-this function would be safe against buffer overruns, due to the test at
-line 3.
-However, if, for instance, we have that \texttt{w}$= 6$ and \texttt{h}$= 22$,
-then \texttt{buf\_size}$= -124$, due to the wrapping semantics of
-integer arithmetics in C.
-In this case, twelve words in the activation record of \texttt{read\_matrix}
-would be overwritten.
-By carefully crafting the contents of \texttt{data}, an adversary can, in this
-way, change the return address of \texttt{read\_matrix}, diverting program's
-execution to a system's function, such as \texttt{telnet}, for instance.
-
-\begin{figure}[t!]
-\begin{center}
-\includegraphics[width=\columnwidth]{images/ex_buffer_overflow}
-\end{center}
-\caption{\label{fig:ex_buffer_overflow}
-An example of an exploitable integer overflow vulnerability.}
-\end{figure}
-
 \section{Range Analysis}
 \label{sec:range}
-
-\subsection{The Interval Lattice}
-\label{sub:lattice}
 
 % Define the lattice, the constraints and the valuation I.
 Following Gawlitza {\em et al.}'s notation~\cite{Gawlitza09}, we shall be
@@ -312,9 +265,9 @@ Figure~\ref{fig:ex_eSSA_cgo}(b) shows the same program in e-SSA
 form~\cite{Bodik00},
 and Figure~\ref{fig:ex_eSSA_cgo}(c) outlines the constraints that we extract
 from this program.
-There is a clear correspondence between instructions and constraints.
-Our analysis is sparse~\cite{Choi91}; thus, we associate one, and only one,
-constraint with each integer variable defined in the program.
+There is a correspondence between instructions and constraints.
+Our analysis is sparse~\cite{Choi91}; thus, it associates one, and only one,
+constraint with each integer variable.
 A possible solution to the range analysis problem, as obtained via the
 techniques that we will introduce in Section~\ref{sub:prop}, is given in
 Figure~\ref{fig:ex_eSSA_cgo}(d).
@@ -335,7 +288,7 @@ Figure~\ref{fig:ex_eSSA_cgo}(d).
 
 % The macro algorithm
 Our range analysis algorithm works in a number of steps.
-Firstly, we convert the program to an intermediate representation that gives
+Firstly, we convert the program to a representation that gives
 us subsidies to perform a sparse analysis.
 We have tested our algorithm with two different representations, as we discuss
 in Section~\ref{sub:splitting}.
@@ -435,7 +388,7 @@ I[Y] =
 \end{equation*}
 %
 We let $\lb{[l, u]} = l$ and $\ub{[l, u]} = u$.
-We let $\bot$ denote non-itialized intervals, so that $[\bot, \bot] \sqcup
+We let $\bot$ denote non-initialized intervals, so that $[\bot, \bot] \sqcup
 [l, u] = [l, u]$.
 This operation only happens at $\phi$-nodes, because we evaluate constraints in
 topological order.
@@ -692,13 +645,11 @@ $x = o_1 \ -_s \ o_2$ & $(o_1 < 0 \vee o_2 > 0 \vee x > 0) \ \ \vee$ \\
 $x = o_1 \ -_u \ o_2$ & $o_1 < o_2$ \\ \\
 $x = o_1 \ \times_{u/s} \ o_2$ & $x \neq 0 \Rightarrow x \div o_1 \neq o_2$ \\ \\
 $x = o_1 \ \qside \ n$ & $(o_1 > 0 \wedge x < o_1) \vee (o_1 < 0 \wedge n \neq 0)$ \\ \\
-$x = \ \downarrow_n \ o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\ \\
-$x = \ (\mbox{type}_n) o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\
+$x = \ \downarrow_n \ o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\
 \end{tabular}
 \end{center}
 \caption{\label{fig:instrumentation}Overflow checks. We use $\downarrow_n$ for
-the operation that truncates to $n$ bits, and we use $(\mbox{type}_n)$ for a
-bit-cast to $n$ bits. Both operations have the same semantics in our setting.
+the operation that truncates to $n$ bits.
 The subscript $s$ indicates a signed instruction; the subscript $u$ indicate
 an unsigned operation.}
 \end{figure}
@@ -763,7 +714,7 @@ unsigned & 4  & 2  & 6 & 2 & 3
 \end{tabular}
 \end{small}
 \caption{\label{fig:num_instructions}
-Number of instructions used in each dynamic check.}
+Number of instructions used in each check.}
 \end{center}
 \end{figure}
 
@@ -779,7 +730,7 @@ program.}
 \end{figure}
 
 Which actions are performed once the overflow is detected depends on the
-user, who has the option to overwrite the \texttt{handle\_ overflow}
+user, who has the option to overwrite the \texttt{handle\_overflow}
 function in Figure~\ref{fig:instrumented_cfg}.
 Our library gives the user three options to handle overflows. 
 First option: no-op.
@@ -882,7 +833,7 @@ The experiments also reveal that the memory consumption of our implementation
 grows linearly with the program size.
 Figure~\ref{fig:MemCorr} plots these two quantities.
 The linear correlation, in this case, is even stronger than that found in
-Figure~\ref{fig:TimeCorr}: the coefficient of determination is 0.9947.
+Figure~\ref{fig:TimeCorr}: the coefficient of determination is 0.994.
 The figure only shows our 100 largest benchmarks.
 Again, SPEC \texttt{403.gcc} is the largest benchmark, requiring
 265,588KB to run.
@@ -895,7 +846,7 @@ Memory includes stack, heap and the executable program code.
 \caption{\label{fig:MemCorr}
 Comparison between program size (number of var nodes in constraint
 graphs) and memory consumption (KB).
-Coefficient of determination = 0.9947.
+Coefficient of determination = 0.994.
 }
 \end{figure}
 
@@ -1041,7 +992,7 @@ than once.
 %Prunning analysis
 \begin{figure}[t!]
 \begin{center}
-\begin{small}
+\begin{scriptsize}
 \begin{tabular*}{\columnwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|r|}
 \hline
 Benchmark  &   \#II &  \#E & \%(II, E) &  \#U & \%(II, U) \\ \hline
@@ -1062,7 +1013,7 @@ bzip2      &  2,158 &  1,966 &  8.90\% &  1,966 &  8.90\% \\ \hline
 hmmer      &  4,001 &  3,346 & 16.37\% &  3,304 & 17.42\% \\ \hline
 Total      & 104,522 & 86,688 &        & 85,135 &         \\ \hline
 \end{tabular*}
-\end{small}
+\end{scriptsize}
 \end{center}
 \caption{\label{fig:prunningTable}
 Instrumentation library with support of static range analysis.
@@ -1236,72 +1187,13 @@ Thus, contrary to our work, Zhang {\em et al.}'s only need to instrument
 about 10\% of the integer operations in the program.
 However, they do not use any form of range analysis to limit the number of
 checks inserted in the transformed code.
-Wang {\em et al.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et a.}'s work are essentially different: they use symbolic execution, whereas we rely on
+Wang {\em et al.}~\cite{Wang09} have implemented a tool, IntScope, that combines symbolic execution and taint analysis to detect integer overflow vulnerabilities. The authors have been able to use this tool to successfully identify many vulnerabilities in industrial quality software. Our work, and Wang {\em et al.}'s work are essentially different: they use symbolic execution, whereas we rely on
 range analysis.
 Contrary to us, they do not transform the program to prevent or detect such event dynamically.
 Still in the field of symbolic execution, Molnar
 {\em et al.}~\cite{Molnar09} have implemented a tool, SmartFuzz, that analyzes
 Linux x86 binaries to find integer overflow bugs.
 They prove the existence of bugs by generating test cases for them.
-
-\noindent
-\textbf{Range Analysis and sparse representations:}
-One of the goals of this paper is to describe a state-of-the-art range analysis
-algorithm.
-Many parts of this algorithm are well-known, others are novel.
-The widening and narrowing operators from Section~\ref{sub:micro} were
-introduced by Cousot and Cousot's seminal paper~\cite{Cousot77}.
-The widening operator that we use in our implementation is well-known among
-compiler writers~\cite[p.228]{Nielson99}.
-The interval lattice from Section~\ref{sub:lattice} has been used in a
-plethora of old and recent range analysis
-solvers~\cite{Gough94,Gawlitza09,Logozzo10,Mahlke01,Oh12,Patterson95,Stephenson00,Su05}.
-The use of futures to handle comparisons between variables is a contribution
-of this paper.
-It is well-known that the use of strongly connected components speeds up
-constraint resolution systems~\cite[Sec 6.3]{Nielson99}.
-However, publicly available implementations of range analysis such as those in
-FLEX~\footnote{The MIT's FLEX/Harpoon compiler
-provides an implementation of Stephenson's algorithm~\cite{Stephenson00}, and
-is available at \texttt{http://flex.cscott. net/Harpoon/}.},
-gcc~\footnote{Gcc's VRP pass (at \texttt{http://gcc.gnu.org/svn/gcc/trunk/gcc/
-tree-vrp.c}) implements a variant of Patterson's
-algorithm~\cite{Patterson95}.} or Mozilla's IonMonkey~\footnote{\texttt{hg.mozilla.org/projects/ionmonkey/file/629d1e6251b9/js/
-src/ion/RangeAnalysis.cpp}. This code is implemented after Gough and
-Klaeren~\cite{Gough94}} do not resort to this technique.
-Furthermore, they only deal with comparisons between variables and constants.
-The only work that we are aware of that has used range analysis to avoid
-overflow checks is Sol {\em et al}'s~\cite{Sol11}; however, their algorithm
-is much more limited than ours.
-Contrary to us, Sol {\em et al.} eliminate overflow checks in
-straight-line code traces produced by a just-in-time compiler, and they use the
-runtime values of variables to improve their precision.
-
-
-In this paper we provide a {\em sparse} implementation of range analysis.
-Sparsity, in our context, means that we associate points in the lattice of
-interest -- intervals in our case -- directly to variables.
-Dense analyses map such information to pairs formed by variables and program
-points.
-Some previous analyses have achieved sparsity by using specific program
-representations, like we did.
-One of the program representations that we discuss in
-Section~\ref{sub:splitting} -- the {\em
-Extended Static Single Assignment} (e-SSA) form -- has been used by Bodik
-{\em et al.}~\cite{Bodik00} and Gough {\em et al.}~\cite{Gough94}.
-The other representation, which we call u-SSA, is very similar to
-the \emph{Static Single Use} form (SSU).
-There exist other variants of SSU~\cite{Lo98,Plevyak96,George03}.
-The main difference to our representation is that our dataflow analysis
-propagates information forwardly, whereas the SSU form has been conceived for
-dataflow analyses that propagate information backwardly.
-Thus, it requires special nodes at branches to merge information from
-different program paths.
-The SSU form programs are a subset of the programs in the so called
-{\em Static Single Information} form, a program representation proposed by
-Scott Ananian~\cite{Ananian99}.
-SSI makes sparse the dataflow analyses that propagate information both
-forwardly and backwardly.
 
 \section{Final Remarks}
 \label{sec:rem}
@@ -1316,16 +1208,18 @@ between variables, and tested different program representations to improve our
 precision.
 Although the overhead of guarding programs against integer overflows is small,
 as previous work has demonstrated, we believe that our technique is still
-important, as some of these programs will be executed millions of times.
-Our entire code plus the data that we show in this paper is publicly available.
-A more extensive list of experiments is also available in our technical report.
+important, as some of these programs will be executed millions of times. \\
+\noindent
+\textbf{Software: } Our implementation is
+publicly available at \\
+\texttt{http://code.google.com/p/range-analysis/}.
 
 \acks
 We thank Douglas do Couto and Igor Costa for helping us with the LLVM code
 base.
-We also thank the anonymous reviewers for their useful comments and
+We also thank the anonymous reviewers for comments and
 suggestions.
-This project is supported by FAPEMIG, grant 16899*01.
+This project is supported by FAPEMIG and Intel.
 
 \bibliographystyle{plain}
 \bibliography{../references}
