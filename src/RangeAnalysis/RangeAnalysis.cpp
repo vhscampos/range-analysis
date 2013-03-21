@@ -2177,7 +2177,9 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw) {
 	// Handle the rest of cases
 	for (unsigned i = 1, e = sw->getNumCases(); i < e; ++i) {
 		BasicBlock *succ = sw->getSuccessor(i);
-		const ConstantInt *constant = sw->getCaseValue(i);
+
+		SwitchInst::CaseIteratorT<const SwitchInst, const ConstantInt, std::_List_const_iterator<llvm::IntegersSubset>, BasicBlock> CI(sw, i);
+		const ConstantInt *constant = CI.getCaseValue();
 
 		APInt sigMin = constant->getValue();
 		APInt sigMax = sigMin;
