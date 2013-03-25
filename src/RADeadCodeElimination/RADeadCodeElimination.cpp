@@ -274,21 +274,49 @@ bool ::RADeadCodeElimination::solveBooleanOperation(Instruction* I) {
 	//Just a protection...
 	if (I->getNumOperands() != 2) return hasSolved;
 
+	//Only handle operations between integers with 1 bit
+	if (isConstantValue(I->getOperand(0))
+			&& isConstantValue(I->getOperand(1))
+			&& I->getOperand(1)->getType()->isIntegerTy(1)) {
 
 
+		bool op1, op2;
 
+		if ( ConstantInt* CI = dyn_cast<ConstantInt>(I->getOperand(0))  ) {
+			op1 = CI->getValue().eq(APInt(1, 1));
+		} else {
+			op1 = ra->getRange(I->getOperand(0)).getUpper().eq(APInt(1, 1));
+		}
 
-	switch(I->getOpcode()){
+		if ( ConstantInt* CI = dyn_cast<ConstantInt>(I->getOperand(1))  ) {
+			op2 = CI->getValue().eq(APInt(1, 1));
+		} else {
+			op2 = ra->getRange(I->getOperand(1)).getUpper().eq(APInt(1, 1));
+		}
 
-	case Instruction::And:
-	case Instruction::Or:
-	case Instruction::Xor:
+		switch(I->getOpcode()){
 
-		return true;
+		case Instruction::And:
+
+			if (op1 && op2) replaceAllUses(I, constTrue);
+			else replaceAllUses(I, constFalse);
+
+		case Instruction::Or:
+			if (op1 || op2) replaceAllUses(I, constTrue);
+			else replaceAllUses(I, constFalse);
+
+		case Instruction::Xor:
+
+			if (op1 xor op2) replaceAllUses(I, constTrue);
+			else replaceAllUses(I, constFalse);
+
+		}
+
+		hasSolved = true;
+
+		deadInstructions.insert(I);
 
 	}
-
-	if (hasSolved) deadInstructions.insert(I);
 
 	return hasSolved;
 
@@ -302,6 +330,18 @@ bool ::RADeadCodeElimination::removeDeadBlocks() {
 
 void ::RADeadCodeElimination::replaceAllUses(Value* valueToReplace,
 		Value* replaceWith) {
+
+	for (Value::use_iterator uit = valueToReplace->use_begin(), uend = valueToReplace->use_end(); uit != uend; ++uit) {
+
+		if (Instruction* I = dyn_cast<Instruction>(*uit)){
+
+			if (I == replaceWith) {
+				continue;
+			}
+
+			I->replaceUsesOfWith(valueToReplace, replaceWith);
+		}
+	}
 }
 
 void ::RADeadCodeElimination::init(Module &M) {
