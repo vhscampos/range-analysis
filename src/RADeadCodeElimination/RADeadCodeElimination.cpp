@@ -59,13 +59,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_SLT:
 
 			//Always true
-			if (range1.u.slt(range2.l)) {
+			if (range1.getUpper().slt(range2.getLower())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.l.sge(range2.u)) {
+			if (range1.getLower().sge(range2.getUpper())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -76,13 +76,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_ULT:
 
 			//Always true
-			if (range1.u.ult(range2.l)) {
+			if (range1.getUpper().ult(range2.getLower())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.l.uge(range2.u)) {
+			if (range1.getLower().uge(range2.getUpper())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -93,13 +93,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_SLE:
 
 			//Always true
-			if (range1.u.sle(range2.l)) {
+			if (range1.getUpper().sle(range2.getLower())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.l.sgt(range2.u)) {
+			if (range1.getLower().sgt(range2.getUpper())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -109,13 +109,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_ULE:
 
 			//Always true
-			if (range1.u.ule(range2.l)) {
+			if (range1.getUpper().ule(range2.getLower())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.l.ugt(range2.u)) {
+			if (range1.getLower().ugt(range2.getUpper())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -126,13 +126,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_SGT:
 
 			//Always true
-			if (range1.l.sgt(range2.u)) {
+			if (range1.getLower().sgt(range2.getUpper())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.u.sle(range2.l)) {
+			if (range1.getUpper().sle(range2.getLower())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -142,13 +142,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_UGT:
 
 			//Always true
-			if (range1.l.ugt(range2.u)) {
+			if (range1.getLower().ugt(range2.getUpper())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.u.ule(range2.l)) {
+			if (range1.getUpper().ule(range2.getLower())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -158,13 +158,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_SGE:
 
 			//Always true
-			if (range1.l.sge(range2.u)) {
+			if (range1.getLower().sge(range2.getUpper())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.u.slt(range2.l)) {
+			if (range1.getUpper().slt(range2.getLower())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -174,13 +174,13 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_UGE:
 
 			//Always true
-			if (range1.l.uge(range2.u)) {
+			if (range1.getLower().uge(range2.getUpper())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
 
 			//Always false
-			if (range1.u.ult(range2.l)) {
+			if (range1.getUpper().ult(range2.getLower())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
@@ -190,7 +190,7 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 		case CmpInst::ICMP_EQ:
 
 			//Always true : Two constants with the same value
-			if (range1.l.eq(range2.l) && range1.u.eq(range2.u) && range1.l.eq(range1.u)) {
+			if (range1.getLower().eq(range2.getLower()) && range1.getUpper().eq(range2.getUpper()) && range1.getLower().eq(range1.getUpper())) {
 				replaceAllUses(I, constTrue);
 				hasSolved = true;
 			}
@@ -212,14 +212,19 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 			}
 
 			//Always false : Two constants with the same value
-			if (range1.l.eq(range2.l) && range1.u.eq(range2.u) && range1.l.eq(range1.u)) {
+			if (range1.getLower().eq(range2.getLower()) && range1.getUpper().eq(range2.getUpper()) && range1.getLower().eq(range1.getUpper())) {
 				replaceAllUses(I, constFalse);
 				hasSolved = true;
 			}
 
 			break;
 
+		default:
+			break;
+
 		}
+
+
 
 	}
 
@@ -347,7 +352,7 @@ void ::RADeadCodeElimination::replaceAllUses(Value* valueToReplace,
 void ::RADeadCodeElimination::init(Module &M) {
 
 	module = &M;
-	context = module->getContext();
+	context = &(module->getContext());
 
 	constFalse = ConstantInt::get(Type::getInt1Ty(*context), 0);
 	constTrue = ConstantInt::get(Type::getInt1Ty(*context), 1);
