@@ -58,7 +58,11 @@ namespace {
         bool solveBooleanOperation(Instruction* I);
 
         void removeDeadInstructions();
+        bool removeDeadCFGEdges();
         bool removeDeadBlocks();
+        bool ConstantFoldTerminator(BasicBlock *BB);
+        void setUnconditionalDest(BranchInst *BI, BasicBlock *Destination);
+
 
         void replaceAllUses(Value* valueToReplace, Value* replaceWith);
 
@@ -72,6 +76,8 @@ namespace {
         bool isConstantValue(Value* V);
 
 		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
+			AU.addRequiredTransitive<DominatorTree>();
+
 			AU.addRequired<InterProceduralRA<Cousot> >();
 		}
 
