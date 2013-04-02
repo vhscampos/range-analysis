@@ -4,8 +4,14 @@
  *  Created on: Mar 21, 2013
  *      Author: raphael
  */
+#define DEBUG_TYPE "RADeadCodeElimination"
 
 #include "RADeadCodeElimination.h"
+
+STATISTIC(InstructionsEliminated, "Number of instructions eliminated");
+STATISTIC(BasicBlocksEliminated,  "Number of basic blocks entirely eliminated");
+STATISTIC(ICmpInstructionsSolved, "Number of ICmp instructions solved");
+STATISTIC(LogicalInstructionsSolved, "Number of binary logical instructions solved");
 
 bool RADeadCodeElimination::runOnFunction(Function &F) {
 
@@ -23,13 +29,14 @@ bool RADeadCodeElimination::runOnFunction(Function &F) {
 	bool hasChange = false;
 
 	hasChange = solveICmpInstructions();
-	hasChange = solveBooleanOperations() 	|| hasChange;
+
+	while (solveBooleanOperations()) hasChange = true;
 
 	removeDeadInstructions();
 
 	hasChange = removeDeadCFGEdges() 		|| hasChange;
 	hasChange = removeDeadBlocks() 			|| hasChange;
-//	hasChange = mergeBlocks() 				|| hasChange;
+	hasChange = mergeBlocks() 				|| hasChange;
 
 	return hasChange;
 }
@@ -238,7 +245,10 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 
 	}
 
-	if (hasSolved) deadInstructions.insert(I);
+	if (hasSolved) {
+		ICmpInstructionsSolved++;
+		deadInstructions.insert(I);
+	}
 
 	return hasSolved;
 
@@ -326,7 +336,7 @@ bool ::RADeadCodeElimination::solveBooleanOperation(Instruction* I) {
 		}
 
 		hasSolved = true;
-
+		LogicalInstructionsSolved++;
 		deadInstructions.insert(I);
 
 	}
@@ -407,6 +417,9 @@ bool ::RADeadCodeElimination::removeDeadBlocks() {
 		hasChange = true;
 
 		for( std::set<BasicBlock*>::iterator i = deadBlocks.begin(), end = deadBlocks.end(); i != end; i++){
+
+			BasicBlocksEliminated++;
+
 			(*i)->eraseFromParent();
 		}
 
@@ -414,14 +427,6 @@ bool ::RADeadCodeElimination::removeDeadBlocks() {
 	}
 
 	return hasChange;
-
-}
-
-
-void ::RADeadCodeElimination::setUnconditionalDest(BranchInst *BI, BasicBlock *Destination){
-
-	BranchInst::Create(Destination, BI);
-	BI->eraseFromParent();
 
 }
 
@@ -441,17 +446,12 @@ void ::RADeadCodeElimination::replaceAllUses(Value* valueToReplace,
 	}
 }
 
-bool ::RADeadCodeElimination::doInitialization(Module &M) {
-
-
-
-	return true;
-}
 
 void ::RADeadCodeElimination::removeDeadInstructions() {
 
 	for( std::set<Instruction*>::iterator i = deadInstructions.begin(), end = deadInstructions.end(); i != end; i++){
 		RecursivelyDeleteTriviallyDeadInstructions(*i, NULL);
+		InstructionsEliminated++;
 	}
 
 	deadInstructions.clear();
@@ -494,19 +494,18 @@ BasicBlock* getSingleSuccessor(BasicBlock* BB){
 
 bool ::RADeadCodeElimination::mergeBlocks() {
 
-
 	bool hasChange = false;
 
 	for (Function::iterator BBit = function->begin(), BBend = function->end(); BBit != BBend; BBit++){
 
-		//For each basic block, simplify the CFG if the basic block has only one predecessor
+		//For each basic block, simplify the CFG if the basic block has only one predecessor and the predecessor has only one successor
 		if (BasicBlock* Test = BBit->getSinglePredecessor()) {
+
 			if (getSingleSuccessor(Test)) {
 				llvm::MergeBasicBlockIntoOnlyPred(BBit, NULL);
 				hasChange = true;
 			}
 		}
-
 	}
 
 	return hasChange;

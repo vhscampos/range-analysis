@@ -46,8 +46,6 @@ namespace {
 		static char ID;
 		RADeadCodeElimination() : FunctionPass(ID), function(NULL), context(NULL), constTrue(NULL), constFalse(NULL), ra(NULL) {};
 
-
-		virtual bool doInitialization(Module &M);
 		virtual bool runOnFunction(Function &F);
 
 
@@ -62,7 +60,6 @@ namespace {
         void removeDeadInstructions();
         bool removeDeadCFGEdges();
         bool removeDeadBlocks();
-        void setUnconditionalDest(BranchInst *BI, BasicBlock *Destination);
 
         bool mergeBlocks();
 
