@@ -18,6 +18,7 @@
 #include "llvm/Constants.h"
 #include "llvm/Operator.h"
 #include "llvm/DerivedTypes.h"
+#include "llvm/Analysis/Dominators.h"
 #include "llvm/Function.h"
 #include "llvm/InstrTypes.h"
 #include "llvm/Instructions.h"
@@ -28,6 +29,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "../uSSA/uSSA.h"
 #include <vector>
 #include <set>
@@ -40,13 +42,13 @@ using namespace llvm;
 
 namespace {
 
-	struct RADeadCodeElimination : public ModulePass {
+	struct RADeadCodeElimination : public FunctionPass {
 		static char ID;
-		RADeadCodeElimination() : ModulePass(ID), module(NULL), context(NULL), constTrue(NULL), constFalse(NULL), ra(NULL) {};
+		RADeadCodeElimination() : FunctionPass(ID), function(NULL), context(NULL), constTrue(NULL), constFalse(NULL), ra(NULL) {};
 
-        virtual bool runOnModule(Module &M);
-        void init(Module &M);
 
+		virtual bool doInitialization(Module &M);
+		virtual bool runOnFunction(Function &F);
 
 
         bool solveICmpInstructions();
@@ -60,8 +62,9 @@ namespace {
         void removeDeadInstructions();
         bool removeDeadCFGEdges();
         bool removeDeadBlocks();
-        bool ConstantFoldTerminator(BasicBlock *BB);
         void setUnconditionalDest(BranchInst *BI, BasicBlock *Destination);
+
+        bool mergeBlocks();
 
 
         void replaceAllUses(Value* valueToReplace, Value* replaceWith);
@@ -76,13 +79,13 @@ namespace {
         bool isConstantValue(Value* V);
 
 		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
-			AU.addRequiredTransitive<DominatorTree>();
-
 			AU.addRequired<InterProceduralRA<Cousot> >();
+
+			AU.addRequired<DominatorTree>();
 		}
 
 
-        Module* module;
+		Function* function;
         llvm::LLVMContext* context;
         Constant* constTrue;
         Constant* constFalse;

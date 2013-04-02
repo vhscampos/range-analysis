@@ -7,19 +7,29 @@
 
 #include "RADeadCodeElimination.h"
 
-bool RADeadCodeElimination::runOnModule(Module &M) {
+bool RADeadCodeElimination::runOnFunction(Function &F) {
 
-	init(M);
+	function = &F;
+
+	context = &(function->getParent()->getContext());
+
+	constFalse = ConstantInt::get(Type::getInt1Ty(*context), 0);
+	constTrue = ConstantInt::get(Type::getInt1Ty(*context), 1);
+
+	ra = &getAnalysis<InterProceduralRA<Cousot> >();
+	Min = ra->getMin();
+	Max = ra->getMax();
 
 	bool hasChange = false;
 
-	hasChange = hasChange || solveICmpInstructions();
-	hasChange = hasChange || solveBooleanOperations();
+	hasChange = solveICmpInstructions();
+	hasChange = solveBooleanOperations() 	|| hasChange;
 
 	removeDeadInstructions();
 
-	hasChange = hasChange || removeDeadCFGEdges();
-	hasChange = hasChange || removeDeadBlocks();
+	hasChange = removeDeadCFGEdges() 		|| hasChange;
+	hasChange = removeDeadBlocks() 			|| hasChange;
+//	hasChange = mergeBlocks() 				|| hasChange;
 
 	return hasChange;
 }
@@ -28,19 +38,17 @@ bool ::RADeadCodeElimination::solveICmpInstructions() {
 
 	bool hasChange = false;
 
-	for (Module::iterator Fit = module->begin(), Fend = module->end(); Fit != Fend; Fit++){
-		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; BBit++){
-			for (BasicBlock::iterator Iit = BBit->begin(), Iend = BBit->end(); Iit != Iend; Iit++){
+	for (Function::iterator BBit = function->begin(), BBend = function->end(); BBit != BBend; BBit++){
+		for (BasicBlock::iterator Iit = BBit->begin(), Iend = BBit->end(); Iit != Iend; Iit++){
 
-				if (ICmpInst* CI = dyn_cast<ICmpInst>(Iit)){
+			if (ICmpInst* CI = dyn_cast<ICmpInst>(Iit)){
 
-					//We are only dealing with scalar values.
-					if (CI->getOperand(0)->getType()->isIntegerTy())
-						hasChange = hasChange || solveICmpInstruction(CI);
-
-				}
+				//We are only dealing with scalar values.
+				if (CI->getOperand(0)->getType()->isIntegerTy())
+					hasChange = solveICmpInstruction(CI) || hasChange;
 
 			}
+
 		}
 	}
 
@@ -51,6 +59,7 @@ bool ::RADeadCodeElimination::solveICmpInstruction(ICmpInst* I) {
 
 	Range range1 = ra->getRange(I->getOperand(0));
 	Range range2 = ra->getRange(I->getOperand(1));
+
 	bool hasSolved = false;
 
 	if (isLimited(range1) && isLimited(range2)) {
@@ -256,17 +265,15 @@ bool ::RADeadCodeElimination::solveBooleanOperations() {
 
 	bool hasChange = false;
 
-	for (Module::iterator Fit = module->begin(), Fend = module->end(); Fit != Fend; Fit++){
-		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; BBit++){
-			for (BasicBlock::iterator Iit = BBit->begin(), Iend = BBit->end(); Iit != Iend; Iit++){
+	for (Function::iterator BBit = function->begin(), BBend = function->end(); BBit != BBend; BBit++){
+		for (BasicBlock::iterator Iit = BBit->begin(), Iend = BBit->end(); Iit != Iend; Iit++){
 
-				if (isValidBooleanOperation(dyn_cast<Instruction>(Iit))){
+			if (isValidBooleanOperation(dyn_cast<Instruction>(Iit))){
 
-					hasChange = hasChange || solveBooleanOperation(dyn_cast<Instruction>(Iit));
-
-				}
+				hasChange = solveBooleanOperation(dyn_cast<Instruction>(Iit)) || hasChange;
 
 			}
+
 		}
 	}
 
@@ -338,13 +345,11 @@ bool ::RADeadCodeElimination::removeDeadCFGEdges() {
 	 */
 	bool hasChange = false;
 
-	for (Module::iterator Fit = module->begin(), Fend = module->end(); Fit != Fend; Fit++){
-		for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; BBit++){
+	for (Function::iterator BBit = function->begin(), BBend = function->end(); BBit != BBend; BBit++){
 
-			//For each basic block, simplify the CFG if the terminator instruction relies on a constant
-			hasChange = hasChange || ConstantFoldTerminator(BBit);
+		//For each basic block, simplify the CFG if the terminator instruction relies on a constant
+		hasChange = llvm::ConstantFoldTerminator(BBit, true, NULL) || hasChange;
 
-		}
 	}
 
 	return hasChange;
@@ -365,40 +370,36 @@ bool ::RADeadCodeElimination::removeDeadBlocks() {
 	bool hasChange = false;
 	unsigned int numDeadBlocks = deadBlocks.size();
 
-	for (Module::iterator Fit = module->begin(), Fend = module->end(); Fit != Fend; Fit++){
+	DominatorTree &DT = getAnalysis<DominatorTree>();
 
-		DominatorTree &DT = getAnalysis<DominatorTree>(*Fit);
+	do {
+		numDeadBlocks = deadBlocks.size();
 
-		do {
-			numDeadBlocks = deadBlocks.size();
+		for (Function::iterator BBit = function->begin(), BBend = function->end(); BBit != BBend; BBit++){
 
-			for (Function::iterator BBit = Fit->begin(), BBend = Fit->end(); BBit != BBend; BBit++){
-
-				//We never remove the entry block
-				if (&(Fit->getEntryBlock()) == BBit) continue;
+			//We never remove the entry block
+			if (&(function->getEntryBlock()) == BBit) continue;
 
 
-				bool dead = true;
+			bool dead = true;
 
-				for (pred_iterator PI = pred_begin(BBit), E = pred_end(BBit); PI != E; ++PI) {
+			for (pred_iterator PI = pred_begin(BBit), E = pred_end(BBit); PI != E; ++PI) {
 
-					BasicBlock *PredBB = *PI;
+				BasicBlock *PredBB = *PI;
 
-					//If we find some predecessor not dominated by the block that still alive, the block still alive as well
-					if ( !DT.dominates(BBit, PredBB) && deadBlocks.count(PredBB) == 0 ) {
-						dead = false;
-						break;
-					}
-
+				//If we find some predecessor not dominated by the block that still alive, the block still alive as well
+				if ( !DT.dominates(BBit, PredBB) && deadBlocks.count(PredBB) == 0 ) {
+					dead = false;
+					break;
 				}
-
-				if (dead) deadBlocks.insert(BBit);
 
 			}
 
-		} while (numDeadBlocks != deadBlocks.size());
+			if (dead) deadBlocks.insert(BBit);
 
-	}
+		}
+
+	} while (numDeadBlocks != deadBlocks.size());
 
 
 	if (deadBlocks.size() > 0) {
@@ -414,134 +415,6 @@ bool ::RADeadCodeElimination::removeDeadBlocks() {
 
 	return hasChange;
 
-}
-
-bool ::RADeadCodeElimination::ConstantFoldTerminator(BasicBlock *BB) {
-	TerminatorInst *T = BB->getTerminator();
-
-	// Branch - See if we are conditional jumping on constant
-	if (BranchInst *BI = dyn_cast<BranchInst>(T)) {
-		if (BI->isUnconditional()) return false;  // Can't optimize uncond branch
-		BasicBlock *Dest1 = BI->getSuccessor(0);
-		BasicBlock *Dest2 = BI->getSuccessor(1);
-
-		if (ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
-			// Are we branching on constant?
-			// YES.  Change to unconditional branch...
-			BasicBlock *Destination = Cond->getZExtValue() ? Dest1 : Dest2;
-			BasicBlock *OldDest     = Cond->getZExtValue() ? Dest2 : Dest1;
-
-			//cerr << "Function: " << T->getParent()->getParent()
-			//     << "\nRemoving branch from " << T->getParent()
-			//     << "\n\nTo: " << OldDest << endl;
-
-			// Let the basic block know that we are letting go of it.  Based on this,
-			// it will adjust it's PHI nodes.
-			assert(BI->getParent() && "Terminator not inserted in block!");
-			OldDest->removePredecessor(BI->getParent());
-
-			// Set the unconditional destination, and change the insn to be an
-			// unconditional branch.
-			setUnconditionalDest(BI, Destination);
-			return true;
-		} else if (Dest2 == Dest1) {       // Conditional branch to same location?
-			// This branch matches something like this:
-			//     br bool %cond, label %Dest, label %Dest
-			// and changes it into:  br label %Dest
-
-			// Let the basic block know that we are letting go of one copy of it.
-			assert(BI->getParent() && "Terminator not inserted in block!");
-			Dest1->removePredecessor(BI->getParent());
-
-			// Change a conditional branch to unconditional.
-			setUnconditionalDest(BI, Dest1);
-			return true;
-		}
-	}
-
-	//TODO: Handle Switch Instructions
-
-//	else if (SwitchInst *SI = dyn_cast<SwitchInst>(T)) {
-//		// If we are switching on a constant, we can convert the switch into a
-//		// single branch instruction!
-//		if (ConstantInt *CI = dyn_cast<ConstantInt>(SI->getCondition())) {
-//			BasicBlock *TheOnlyDest = SI->getSuccessor(0);  // The default dest
-//			BasicBlock *DefaultDest = TheOnlyDest;
-//			assert(TheOnlyDest == SI->getDefaultDest() &&
-//				   "Default destination is not successor #0?");
-//
-//			// Figure out which case it goes to...
-//			for (unsigned i = 1, e = SI->getNumSuccessors(); i != e; ++i) {
-//				// Found case matching a constant operand?
-//				if (SI->getSuccessorValue(i) == CI) {
-//					TheOnlyDest = SI->getSuccessor(i);
-//					break;
-//				}
-//
-//				// Check to see if this branch is going to the same place as the default
-//				// dest.  If so, eliminate it as an explicit compare.
-//				if (SI->getSuccessor(i) == DefaultDest) {
-//					// Remove this entry...
-//					DefaultDest->removePredecessor(SI->getParent());
-//					SI->removeCase(i);
-//					--i; --e;  // Don't skip an entry...
-//					continue;
-//				}
-//
-//				// Otherwise, check to see if the switch only branches to one destination.
-//				// We do this by reseting "TheOnlyDest" to null when we find two non-equal
-//				// destinations.
-//				if (SI->getSuccessor(i) != TheOnlyDest) TheOnlyDest = 0;
-//			}
-//
-//			if (CI && !TheOnlyDest) {
-//				// Branching on a constant, but not any of the cases, go to the default
-//				// successor.
-//				TheOnlyDest = SI->getDefaultDest();
-//			}
-//
-//			// If we found a single destination that we can fold the switch into, do so
-//			// now.
-//			if (TheOnlyDest) {
-//				// Insert the new branch..
-//				BranchInst::Create(TheOnlyDest, SI);
-//				BasicBlock *BB = SI->getParent();
-//
-//				// Remove entries from PHI nodes which we no longer branch to...
-//				for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
-//				// Found case matching a constant operand?
-//				BasicBlock *Succ = SI->getSuccessor(i);
-//				if (Succ == TheOnlyDest)
-//					TheOnlyDest = 0;  // Don't modify the first branch to TheOnlyDest
-//				else
-//					Succ->removePredecessor(BB);
-//				}
-//
-//				// Delete the old switch...
-//				SI->eraseFromParent();
-//				return true;
-//			} else if (SI->getNumSuccessors() == 2) {
-//				// Otherwise, we can fold this switch into a conditional branch
-//				// instruction if it has only one non-default destination.
-//				Value *Cond = new ICmpInst(ICmpInst::ICMP_EQ, SI->getCondition(),
-//										 SI->getSuccessorValue(1), "cond", SI);
-//				// Insert the new branch...
-//				BranchInst::Create(SI->getSuccessor(1), SI->getSuccessor(0), Cond, SI);
-//
-//				// Delete the old switch...
-//				SI->eraseFromParent();
-//				return true;
-//			}
-//		} else {
-//
-//
-//
-//
-//
-//
-//		}
-//	}
-	return false;
 }
 
 
@@ -568,23 +441,17 @@ void ::RADeadCodeElimination::replaceAllUses(Value* valueToReplace,
 	}
 }
 
-void ::RADeadCodeElimination::init(Module &M) {
+bool ::RADeadCodeElimination::doInitialization(Module &M) {
 
-	module = &M;
-	context = &(module->getContext());
 
-	constFalse = ConstantInt::get(Type::getInt1Ty(*context), 0);
-	constTrue = ConstantInt::get(Type::getInt1Ty(*context), 1);
 
-	ra = &getAnalysis<InterProceduralRA<Cousot> >();
-	Min = ra->getMin();
-	Max = ra->getMax();
+	return true;
 }
 
 void ::RADeadCodeElimination::removeDeadInstructions() {
 
 	for( std::set<Instruction*>::iterator i = deadInstructions.begin(), end = deadInstructions.end(); i != end; i++){
-		(*i)->eraseFromParent();
+		RecursivelyDeleteTriviallyDeadInstructions(*i, NULL);
 	}
 
 	deadInstructions.clear();
@@ -596,5 +463,52 @@ bool ::RADeadCodeElimination::isConstantValue(Value* V) {
 
 	Range r = ra->getRange(V);
 	return (isLimited(r) && r.getUpper().eq(r.getLower()));
+
+}
+
+char RADeadCodeElimination::ID = 0;
+static RegisterPass<RADeadCodeElimination>
+X("ra-dce",
+		"Dead Code Elimination based in Range Analysis");
+
+
+BasicBlock* getSingleSuccessor(BasicBlock* BB){
+
+	BasicBlock* result = NULL;
+
+
+	for (succ_iterator SI = succ_begin(BB), E = succ_end(BB); SI != E; ++SI) {
+
+		if (result)
+			//More than one successor. Return NULL
+			return NULL;
+
+		//First successor
+		result = *SI;
+
+	}
+
+	return result;
+
+}
+
+bool ::RADeadCodeElimination::mergeBlocks() {
+
+
+	bool hasChange = false;
+
+	for (Function::iterator BBit = function->begin(), BBend = function->end(); BBit != BBend; BBit++){
+
+		//For each basic block, simplify the CFG if the basic block has only one predecessor
+		if (BasicBlock* Test = BBit->getSinglePredecessor()) {
+			if (getSingleSuccessor(Test)) {
+				llvm::MergeBasicBlockIntoOnlyPred(BBit, NULL);
+				hasChange = true;
+			}
+		}
+
+	}
+
+	return hasChange;
 
 }
