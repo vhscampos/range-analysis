@@ -1,0 +1,10 @@
+digraph "CFG for 'fact' function" {
+	Node0xe03ee0 [shape=record,label="{%0:\l  br label %1\l}"];
+	Node0xe03ee0 -> Node0xe03480;
+	Node0xe03480 [shape=record,label="{%1:\l\l  %r.0 = phi i32 [ 1, %0 ], [ %4, %3 ]\l  %i.0 = phi i32 [ 2, %0 ], [ %5, %3 ]\l  %2 = icmp sle i32 %i.0, %n\l  br i1 %2, label %3, label %6\l|{<s0>T|<s1>F}}"];
+	Node0xe03480:s0 -> Node0xe034b0;
+	Node0xe03480:s1 -> Node0xe034e0;
+	Node0xe034b0 [shape=record,label="{%3:\l\l  %4 = mul nsw i32 %r.0, %i.0\l  %5 = add nsw i32 %i.0, 1\l  br label %1\l}"];
+	Node0xe034b0 -> Node0xe03480;
+	Node0xe034e0 [shape=record,label="{%6:\l\l  ret i32 %r.0\l}"];
+}
