@@ -1,6 +1,6 @@
 \documentclass{llncs}
 
-\usepackage[applemac]{inputenc}
+\usepackage[utf8]{inputenc}
 \usepackage[brazil]{babel}
 
 \usepackage{proof}
@@ -13,11 +13,11 @@
 
 \begin{document}
 
-\title{Prevenção Automática de Ataques de Não-Terminação}
+\title{Preven√ß√£o Autom√°tica de Ataques de N√£o-Termina√ß√£o}
 
-\author{Raphael Ernani Rodrigues and Fernando Magno Quintão Pereira}
+\author{Raphael Ernani Rodrigues and Fernando Magno Quint√£o Pereira}
 
-\institute{Departamento de Ciência da Computação -- UFMG -- Brasil
+\institute{Departamento de Ci√™ncia da Computa√ß√£o -- UFMG -- Brasil
 \email{\{raphael,fernando\}@dcc.ufmg.br}
 }
 
@@ -26,17 +26,25 @@
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \begin{abstract}
-Dizemos que um programa é vulnerável a um ataque de não terminação quando
-um adversário pode lhe fornecer valores de entrada que façam algum de seus laços iterar para sempre.
-A prevenção de ataques desse tipo é difícil, pois eles não se originam de bugs que infringem a semântica da linguagem em que o programa foi feito.
-Ao contrário, essas vulnerabilidades têm origem na aritmética modular inteira de linguagens como C, C++ e Java, a qual possui semântica bem definida.
-Neste artigo nós apresentamos uma ferramenta que detecta tais problemas, e que saneia código vulnerável.
-A detecção da vulnerabilidade dá-se via uma análise de fluxo de informação;
-a sua cura decorre de guardas que nosso compilador insere no código vulnerável.
-Nós implementamos esse arcabouço em LLVM, um compilador de qualidade industrial, e testa-mo-no em um conjunto de programas que compraz mais de
-2.5 milhões de linhas de código escrito em C.
-Descobrimos que, em média, caminhos em que informação perigosa trafega são pequenos, sendo compostos por não mais que 10 instruções assembly.
-A instrumentação que inserimos para prevenir ataques de não terminação aumenta o tamanho do programa saneado em cerca de 5\% em média, e torna-os menos que 2\% mais lentos.
+Dizemos que um programa √© vulner√°vel a um ataque de n√£o termina√ß√£o quando
+um advers√°rio pode lhe fornecer valores de entrada que fa√ßam algum de seus la√ßos 
+iterar para sempre.
+A preven√ß√£o de ataques desse tipo √© dif√≠cil, pois eles n√£o se originam de bugs 
+que infringem a sem√¢ntica da linguagem em que o programa foi feito.
+Ao contr√°rio, essas vulnerabilidades t√™m origem na aritm√©tica modular inteira de 
+linguagens como C, C++ e Java, a qual possui sem√¢ntica bem definida.
+Neste artigo n√≥s apresentamos uma ferramenta que detecta tais problemas, 
+e que saneia c√≥digo vulner√°vel.
+A detec√ß√£o da vulnerabilidade d√°-se via uma an√°lise de fluxo de informa√ß√£o;
+a sua cura decorre de guardas que nosso compilador insere no c√≥digo vulner√°vel.
+N√≥s implementamos esse arcabou√ßo em LLVM, um compilador de qualidade industrial, 
+e testa-mo-no em um conjunto de programas que compraz mais de
+2.5 milh√µes de linhas de c√≥digo escrito em C.
+Descobrimos que, em m√©dia, caminhos em que informa√ß√£o perigosa trafega s√£o 
+pequenos, sendo compostos por n√£o mais que 10 instru√ß√µes assembly.
+A instrumenta√ß√£o que inserimos para prevenir ataques de n√£o termina√ß√£o aumenta o 
+tamanho do programa saneado em cerca de 5\% em m√©dia, e torna-os menos que 2\% 
+mais lentos.
 \end{abstract}
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
@@ -57,279 +65,279 @@ loop conditions that may not terminate due to integer overflows.
 We have implemented our framework in the LLVM compiler, and have tested it on
 a benchmark suite containing over 2.5 million lines of C code.
 We have found out that the typical path from inputs to loop conditions is,
-on the average, XX instructions long.
-Our instrumentation that prevents this kind of attacks adds less than XX\%
+on the average, less than 10 instructions long.
+Our instrumentation that prevents this kind of attacks adds less than 5\%
 extra code on the secured program.
-The final, protected code, is, on the average, less than XX\% slower than the
+The final, protected code, is, on the average, less than 2\% slower than the
 original, unprotected program.
 \end{abstract}
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
-\section{Introdução}
+\section{Introdu√ß√£o}
 \label{sec:int}
 
-Um ataque de Negação de Serviços ({\em Denial-of-Service -- DoS}) consiste
-em sobrecarregar um servidor com uma quantidade de falsas requisições grande o
+Um ataque de Nega√ß√£o de Servi√ßos ({\em Denial-of-Service -- DoS}) consiste
+em sobrecarregar um servidor com uma quantidade de falsas requisi√ß√µes grande o
 suficiente para lhe comprometer a capacidade de atender contatos
-legítimos.
+leg√≠timos.
 Existem hoje diversas maneiras diferentes de detectar e reduzir a efetividade
 desse tipo de ataque~\cite{Moore06}.
-Neste artigo, contudo, descreveremos uma forma de negação de serviço que é de
-difícil detecção: {\em os ataques de não-terminação}.
-Um adversário realiza um ataque desse tipo fornecendo ao programa alvo entradas
-cuidadosamente produzidas para forçar iterações eternas sobre um laço
-vulnerável.
-Um ataque de não terminação demanda conhecimento do código fonte do sistema
+Neste artigo, contudo, descreveremos uma forma de nega√ß√£o de servi√ßo que √© de
+dif√≠cil detec√ß√£o: {\em os ataques de n√£o-termina√ß√£o}.
+Um advers√°rio realiza um ataque desse tipo fornecendo ao programa alvo entradas
+cuidadosamente produzidas para for√ßar itera√ß√µes eternas sobre um la√ßo
+vulner√°vel.
+Um ataque de n√£o termina√ß√£o demanda conhecimento do c√≥digo fonte do sistema
 a ser abordado.
-Não obstante tal limitação, esse tipo de ataque pode ser muito efetivo,
-pois bastam algumas requisições para comprometer o sistema alvo.
-Uma vez que essa quantidade de incursões é pequena, os métodos tradicionais
-de detecção de negação de serviço não podem ser usados para reconhecer ataques
-de não-terminação.
-Além disso, dada a vasta quantidade de código aberto usado nos mais diversos
-ramos da indústria de {\em software}, usuários maliciosos têm a sua
-disposição um vasto campo de ação.
+N√£o obstante tal limita√ß√£o, esse tipo de ataque pode ser muito efetivo,
+pois bastam algumas requisi√ß√µes para comprometer o sistema alvo.
+Uma vez que essa quantidade de incurs√µes √© pequena, os m√©todos tradicionais
+de detec√ß√£o de nega√ß√£o de servi√ßo n√£o podem ser usados para reconhecer ataques
+de n√£o-termina√ß√£o.
+Al√©m disso, dada a vasta quantidade de c√≥digo aberto usado nos mais diversos
+ramos da ind√∫stria de {\em software}, usu√°rios maliciosos t√™m a sua
+disposi√ß√£o um vasto campo de a√ß√£o.
 
-A detecção de código vulnerável a ataques de não-terminação é difícil.
-Tal dificuldade existe, sobretudo, porque esse tipo de ataque não decorre de
-deficiências de tipagem fraca, normalmente presentes em programas escritos em
+A detec√ß√£o de c√≥digo vulner√°vel a ataques de n√£o-termina√ß√£o √© dif√≠cil.
+Tal dificuldade existe, sobretudo, porque esse tipo de ataque n√£o decorre de
+defici√™ncias de tipagem fraca, normalmente presentes em programas escritos em
 C ou C++.
 Programas escritos em linguagens fortemente tipadas, como Java, por exemplo,
-também apresentam a principal fonte de vulnerabilidades a ataques de
-não terminação: a {\em aritmética modular inteira}.
-Em outras palavras, uma operação como \texttt{a + 1}, em Java, C ou C++, pode
-resultar em um valor menor que aquele inicialmente encontrado na variável
+tamb√©m apresentam a principal fonte de vulnerabilidades a ataques de
+n√£o termina√ß√£o: a {\em aritm√©tica modular inteira}.
+Em outras palavras, uma opera√ß√£o como \texttt{a + 1}, em Java, C ou C++, pode
+resultar em um valor menor que aquele inicialmente encontrado na vari√°vel
 \texttt{a}.
-Esse fenômeno ocorrerá quando a variável \texttt{a} guardar o maior inteiro
+Esse fen√¥meno ocorrer√° quando a vari√°vel \texttt{a} guardar o maior inteiro
 presente em cada uma dessas linguagens.
-Nesse caso, ao fim da operação, \texttt{a + 1} representará o menor inteiro
-possível em complemento de dois.
-Em outras palavras, um laço como \texttt{for (i = 0; i <= N; i++)} nunca
-terminará se \texttt{N} for \texttt{MAX\_INT}, o maior inteiro da linguagem.
+Nesse caso, ao fim da opera√ß√£o, \texttt{a + 1} representar√° o menor inteiro
+poss√≠vel em complemento de dois.
+Em outras palavras, um la√ßo como \texttt{for (i = 0; i <= N; i++)} nunca
+terminar√° se \texttt{N} for \texttt{MAX\_INT}, o maior inteiro da linguagem.
 
-Este artigo traz duas contribuições relacionadas a ataques de não-terminação.
-Em primeiro lugar, ele descreve uma técnica que descobre vulnerabilidades
+Este artigo traz duas contribui√ß√µes relacionadas a ataques de n√£o-termina√ß√£o.
+Em primeiro lugar, ele descreve uma t√©cnica que descobre vulnerabilidades
 relacionadas a esse tipo de ataque.
-Em segundo lugar, o artigo mostra como código pode ser protegido contra tais
+Em segundo lugar, o artigo mostra como c√≥digo pode ser protegido contra tais
 ataques.
-A nossa técnica de detecção de vulnerabilidades é baseada em análise de
+A nossa t√©cnica de detec√ß√£o de vulnerabilidades √© baseada em an√°lise de
 fluxo contaminado.
-Tal análise é parte do arcabouço teórico de rastreamento de informação
+Tal an√°lise √© parte do arcabou√ßo te√≥rico de rastreamento de informa√ß√£o
 inicialmente proposto por Denning e Denning nos anos setenta~\cite{Denning77}.
 Um ataque de fluxo contaminado pode ser efetivo somente em programas cujas
-operações críticas dependam de dados de entrada.
-Em nosso contexto, uma operação crítica é o teste de controle de laço.
-Em conjunto com o algoritmo de detecção de vulnerabilidades, nós propomos
-também uma técnica para sanear programas contra ataques de não-terminação.
-Nossa estratégia consiste na inserção de verificações sobre as
-operações aritméticas realizadas pelo programa alvo.
-Essas verificações ocorrem durante a execução do programa, e invocam código de
-segurança sempre que estouros de precisão em variáveis inteira são percebidos.
-Nós instrumentamos somente código que controla o número de iterações em laços.
-Consequentemente, o arcabouço que propomos incorre em uma perda de
-desempenho muito pequena, e, em nossa opinião, completamente justificável em
-decurso do benefício que assegura.
+opera√ß√µes cr√≠ticas dependam de dados de entrada.
+Em nosso contexto, uma opera√ß√£o cr√≠tica √© o teste de controle de la√ßo.
+Em conjunto com o algoritmo de detec√ß√£o de vulnerabilidades, n√≥s propomos
+tamb√©m uma t√©cnica para sanear programas contra ataques de n√£o-termina√ß√£o.
+Nossa estrat√©gia consiste na inser√ß√£o de verifica√ß√µes sobre as
+opera√ß√µes aritm√©ticas realizadas pelo programa alvo.
+Essas verifica√ß√µes ocorrem durante a execu√ß√£o do programa, e invocam c√≥digo de
+seguran√ßa sempre que estouros de precis√£o em vari√°veis inteira s√£o percebidos.
+N√≥s instrumentamos somente c√≥digo que controla o n√∫mero de itera√ß√µes em la√ßos.
+Consequentemente, o arcabou√ßo que propomos incorre em uma perda de
+desempenho muito pequena, e, em nossa opini√£o, completamente justific√°vel em
+decurso do benef√≠cio que assegura.
 
-Nós implementamos todas as idéias que discutimos neste artigo em LLVM,
+N√≥s implementamos todas as id√©ias que discutimos neste artigo em LLVM,
 um compilador de qualidade industrial~\cite{Lattner04}.
-Na seção~\ref{sec:exp} descreveremos uma série de experimentos que
-validam nossa análise.
-Ao analisar os programas presentes na coleção SPEC CPU 2006, fomos capazes
-de descobrir XX laços que são influenciados por dados provenientes de
-entradas públicas, isto é, que podem ser manipuladas por um adversário.
-Dentre esses laços, pelo menos XX estão sujeitos à não terminação.
-Para obter esse número, utilizamos um padrão muito simples: procuramos por
-laços cujo teste de parada é do tipo \texttt{i <= N}, sendo \texttt{N}
+Na se√ß√£o~\ref{sec:exp} descreveremos uma s√©rie de experimentos que
+validam nossa an√°lise.
+Ao analisar os programas presentes na cole√ß√£o SPEC CPU 2006, fomos capazes
+de descobrir XX la√ßos que s√£o influenciados por dados provenientes de
+entradas p√∫blicas, isto √©, que podem ser manipuladas por um advers√°rio.
+Dentre esses la√ßos, pelo menos XX est√£o sujeitos √† n√£o termina√ß√£o.
+Para obter esse n√∫mero, utilizamos um padr√£o muito simples: procuramos por
+la√ßos cujo teste de parada √© do tipo \texttt{i <= N}, sendo \texttt{N}
 dependente da entrada.
-Uma vez que nos atemos a esse tipo de condição de parada, especulamos que
-a quantidade de laços vulneráveis presente nos programas de SPEC CPU 2006
+Uma vez que nos atemos a esse tipo de condi√ß√£o de parada, especulamos que
+a quantidade de la√ßos vulner√°veis presente nos programas de SPEC CPU 2006
 seja bem maior que o valor que apuramos.
-A nossa instrumentação -- usada para impedir os ataques de não-terminação --
+A nossa instrumenta√ß√£o -- usada para impedir os ataques de n√£o-termina√ß√£o --
 mostra-se extremamente eficiente.
-Os testes que inserimos antes de cada operação aritmética que pode levar a
-um ataque de não terminação custa-nos uma perda de desempenho de menos que
+Os testes que inserimos antes de cada opera√ß√£o aritm√©tica que pode levar a
+um ataque de n√£o termina√ß√£o custa-nos uma perda de desempenho de menos que
 XX\%.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
-\section{Ataques de Não-Terminação}
+\section{Ataques de N√£o-Termina√ß√£o}
 \label{sec:bkg}
 
-De acordo com Appel e Palsberg~\cite[p.376]{Appel02}, um laço natural é um
+De acordo com Appel e Palsberg~\cite[p.376]{Appel02}, um la√ßo natural √© um
 conjunto de nodos $S$ do grafo de fluxo de controle de um programa (CFG),
-includindo um nodo cabeçalho $H$, com as seguintes três propriedades:
+includindo um nodo cabe√ßalho $H$, com as seguintes tr√™s propriedades:
 %
 \begin{itemize}
 \item a partir de qualquer nodo em $S$ existe um caminho que chega a $H$;
-\item existe um caminho de $H$ até qualquer nodo que faz parte de $S$;
-\item não existe caminho que não contenha $H$ de qualquer nodo fora de $S$ para
+\item existe um caminho de $H$ at√© qualquer nodo que faz parte de $S$;
+\item n√£o existe caminho que n√£o contenha $H$ de qualquer nodo fora de $S$ para
 qualquer nodo em $S$.
 \end{itemize}
 %
-A {\em condição de parada} de um laço é uma expressão booleana
+A {\em condi√ß√£o de parada} de um la√ßo √© uma express√£o booleana
 $E = f(e_1, e_2, \ldots, e_n)$, sendo cada $e_j, 1 \leq j \leq n$ um valor que
-contribui para a computação de $E$.
-Seja $P$ um programa que possui um laço $L$ limitado por uma condição
+contribui para a computa√ß√£o de $E$.
+Seja $P$ um programa que possui um la√ßo $L$ limitado por uma condi√ß√£o
 de parada $E = f(e_1, e_2, \ldots, e_n)$.
-Dizemos que $P$ é vulnerável a um ataque de não
-terminação quando as duas condições abaixo são verdadeiras sobre ele:
+Dizemos que $P$ √© vulner√°vel a um ataque de n√£o
+termina√ß√£o quando as duas condi√ß√µes abaixo s√£o verdadeiras sobre ele:
 \begin{enumerate}
 \item existe um subconjunto $E' \subseteq \{e_1, e_2, \ldots, e_n\}$ de
 valores que dependem de um conjunto $I = \{i_1, i_2, \ldots, i_m\}$ de
 dados lidos a partir da entrada do programa.
-\item existe uma atribuição de valores $i_1 \mapsto v_1,
+\item existe uma atribui√ß√£o de valores $i_1 \mapsto v_1,
 i_2 \mapsto v_2, \ldots, i_m \mapsto v_m$ que, ao influenciar $E'$, faz com
-que o laço $L$ não termine.
+que o la√ßo $L$ n√£o termine.
 \end{enumerate}
-Note que a nossa definição de vulnerabilidade de não-terminação requer a
-noção de dependência de dados.
-Se um programa $P$ possui uma instrução que usa a variável $u$ e define a
-variável $v$, então $v$ {\em depende} de $u$.
-Dependências de dados são transitivas, e embora possam ser cíclicas, não
-são necessariamente comutativas.
+Note que a nossa defini√ß√£o de vulnerabilidade de n√£o-termina√ß√£o requer a
+no√ß√£o de depend√™ncia de dados.
+Se um programa $P$ possui uma instru√ß√£o que usa a vari√°vel $u$ e define a
+vari√°vel $v$, ent√£o $v$ {\em depende} de $u$.
+Depend√™ncias de dados s√£o transitivas, e embora possam ser c√≠clicas, n√£o
+s√£o necessariamente comutativas.
 
-Ilustraremos ataques de não terminação via o programa mostrado na
+Ilustraremos ataques de n√£o termina√ß√£o via o programa mostrado na
 Figura~\ref{fig:fact}(a).
-Esse programa calcula o fatorial de um número inteiro na linguagem C.
-O padrão que rege essa linguagem de programação não determina o tamanho do
+Esse programa calcula o fatorial de um n√∫mero inteiro na linguagem C.
+O padr√£o que rege essa linguagem de programa√ß√£o n√£o determina o tamanho do
 tipo \texttt{int}.
-Essa informação depende da implementação do compilador usado.
-Entretanto, é usual que inteiros sejam representados como números de 32
+Essa informa√ß√£o depende da implementa√ß√£o do compilador usado.
+Entretanto, √© usual que inteiros sejam representados como n√∫meros de 32
 bits em complemento de dois. 
-Nesse caso, o maior inteiro representável é
+Nesse caso, o maior inteiro represent√°vel √©
 $\mathit{MAX\_INT} = 2^{31} - 1 = 2,147,483,647$.
-Se o parâmetro \texttt{n} for igual a $\mathit{MAX\_INT}$, então a condição
-da linha 4 sempre será verdadeira, e o laço nunca terminará.
-A não-terminação ocorre porque quando \texttt{i} finalmente chega a
-$\mathit{MAX\_INT}$, a soma $i + 1$ nos retorna o menor inteiro possível, isto
-é, $- 2^{31}$.
+Se o par√¢metro \texttt{n} for igual a $\mathit{MAX\_INT}$, ent√£o a condi√ß√£o
+da linha 4 sempre ser√° verdadeira, e o la√ßo nunca terminar√°.
+A n√£o-termina√ß√£o ocorre porque quando \texttt{i} finalmente chega a
+$\mathit{MAX\_INT}$, a soma $i + 1$ nos retorna o menor inteiro poss√≠vel, isto
+√©, $- 2^{31}$.
 
 \begin{figure}[t!]
 \begin{center}
 \includegraphics[width=1\textwidth]{images/fact}
-\caption{(a) Uma função em C, que calcula o fatorial de um número inteiro.
-(b) O CFG da função \texttt{fact}.
-(c) Exemplo de laço cuja condição de parada depende de valores de entrada
+\caption{(a) Uma fun√ß√£o em C, que calcula o fatorial de um n√∫mero inteiro.
+(b) O CFG da fun√ß√£o \texttt{fact}.
+(c) Exemplo de la√ßo cuja condi√ß√£o de parada depende de valores de entrada
 mas que sempre termina.}
 \label{fig:fact}
 \end{center}
 \end{figure}
 
-O programa da figura~\ref{fig:fact}(a) é vulnerável a ataques de
-não-terminação.
+O programa da figura~\ref{fig:fact}(a) √© vulner√°vel a ataques de
+n√£o-termina√ß√£o.
 Para explicitar tal fato, a figura~\ref{fig:fact}(b) mostra o grafo de
 fluxo de controle do programa.
-Os blocos básicos que começam nos rótulos 3 e 7 formam um laço natural,
-segundo a definição de Appel e Palsberg.
-Esse laço é controlado pela condição de parada $i_1 \leq n$.
-A variável $n$, o limite do laço, é dependente da entrada.
-Existe um valor de $n$, a saber $\mathit{MAX\_INT}$, que força o laço a
-não-terminar.
+Os blocos b√°sicos que come√ßam nos r√≥tulos 3 e 7 formam um la√ßo natural,
+segundo a defini√ß√£o de Appel e Palsberg.
+Esse la√ßo √© controlado pela condi√ß√£o de parada $i_1 \leq n$.
+A vari√°vel $n$, o limite do la√ßo, √© dependente da entrada.
+Existe um valor de $n$, a saber $\mathit{MAX\_INT}$, que for√ßa o la√ßo a
+n√£o-terminar.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
-\section{Detecção e Prevenção de Não-Terminações}
+\section{Detec√ß√£o e Preven√ß√£o de N√£o-Termina√ß√µes}
 \label{sec:sol}
 
-Nesta seção descreveremos nossa técnica para detectar vulnerabilidades de
-não-terminação.
-Esse algoritmo de detecção fornece os subsídios necessários a uma segunda
-técnica que introduzimos neste artigo: o {\em saneamento de laços}.
+Nesta se√ß√£o descreveremos nossa t√©cnica para detectar vulnerabilidades de
+n√£o-termina√ß√£o.
+Esse algoritmo de detec√ß√£o fornece os subs√≠dios necess√°rios a uma segunda
+t√©cnica que introduzimos neste artigo: o {\em saneamento de la√ßos}.
 
-\subsection{Detecção Automática de Não-Terminação}
+\subsection{Detec√ß√£o Autom√°tica de N√£o-Termina√ß√£o}
 \label{sub:det}
 
-Dizemos que um laço é {\em potencialmente vulnerável} a ataque de não
-terminação quando as condições que o controlam usam valores que dependem de
+Dizemos que um la√ßo √© {\em potencialmente vulner√°vel} a ataque de n√£o
+termina√ß√£o quando as condi√ß√µes que o controlam usam valores que dependem de
 dados de entrada do programa.
-Note que uma vulnerabilidade potencial não implica em uma vulnerabilidade
+Note que uma vulnerabilidade potencial n√£o implica em uma vulnerabilidade
 real.
-A título de exemplo, o programa da Figura~\ref{fig:fact}(c), uma sutil
-alteração da função \texttt{fact} inicialmente vista na
+A t√≠tulo de exemplo, o programa da Figura~\ref{fig:fact}(c), uma sutil
+altera√ß√£o da fun√ß√£o \texttt{fact} inicialmente vista na
 figura~\ref{fig:fact}(a), termina para qualquer entrada.
-A fim de detectar vulnerabilidades potenciais, nós utilizamos o
-{\em grafo de dependências de dados}.
-Esse grafo é definido da seguinte forma:
-para cada variável $v$ no programa, nós criamos um nodo $n_v$, e para cada
-instrução $i$ no programa, nós criamos um nodo $n_i$.
-Para cada instrução $i: v = f(\ldots, u, \ldots)$ que define uma variável $v$ e
-usa uma variável $u$ n\'{o}s criamos duas areastas: $n_u \leftarrow n_i$ e
+A fim de detectar vulnerabilidades potenciais, n√≥s utilizamos o
+{\em grafo de depend√™ncias de dados}.
+Esse grafo √© definido da seguinte forma:
+para cada vari√°vel $v$ no programa, n√≥s criamos um nodo $n_v$, e para cada
+instru√ß√£o $i$ no programa, n√≥s criamos um nodo $n_i$.
+Para cada instru√ß√£o $i: v = f(\ldots, u, \ldots)$ que define uma vari√°vel $v$ e
+usa uma vari√°vel $u$ n\'{o}s criamos duas areastas: $n_u \leftarrow n_i$ e
 $n_i \leftarrow n_v$.
-O grafo de dependências que extraímos a partir d CFG visto na
-figura~\ref{fig:fact}(b) é mostrado na figura~\ref{fig:depGraph}.
+O grafo de depend√™ncias que extra√≠mos a partir d CFG visto na
+figura~\ref{fig:fact}(b) √© mostrado na figura~\ref{fig:depGraph}.
 
 \begin{figure}[t!]
 \begin{center}
 %\includegraphics[width=1\textwidth]{images/depGraph}
 \includegraphics{images/depGraph}
-\caption{(a) Grafo de dependências da função \texttt{fact}, construído a
+\caption{(a) Grafo de depend√™ncias da fun√ß√£o \texttt{fact}, constru√≠do a
 partir do CFG visto na figura~\ref{fig:fact}(b).}
 \label{fig:depGraph}
 \end{center}
 \end{figure}
 
-Um caminho entre uma entrada do programa, e o predicado que controla o laço
+Um caminho entre uma entrada do programa, e o predicado que controla o la√ßo
 indica uma vulnerabilidade potencial.
-O grafo de dependências de nosso exemplo possui uma tal vulnerabilidade:
-existe um caminho que une o nodo correspondente ao parâmetro \texttt{n}, uma
+O grafo de depend√™ncias de nosso exemplo possui uma tal vulnerabilidade:
+existe um caminho que une o nodo correspondente ao par√¢metro \texttt{n}, uma
 entrada, ao nodo que corresponde a \texttt{p}, o predicado de controle do
-laço.
-Esse tipo de caminho, uma vez contruído o grafo, pode ser encontrado em
-tempo linear no número de arestas do grafo - normalmente proporcional ao
-número de nodos - via a simples busca em profundidade ou largura.
+la√ßo.
+Esse tipo de caminho, uma vez contru√≠do o grafo, pode ser encontrado em
+tempo linear no n√∫mero de arestas do grafo - normalmente proporcional ao
+n√∫mero de nodos - via a simples busca em profundidade ou largura.
 
-\subsection{Saneamento de Laços}
+\subsection{Saneamento de La√ßos}
 \label{sub:san}
 
-Uma vez encontrado um caminho vulnerável, passamos à fase de saneamento de
-laços.
-Um laço pode ser saneado via a inserção de testes que detectam e tratam a
-ocorrência de estouros de precisão inteira.
-Nós inserimos tais testes sobre as operações aritméticas {\em internas} que
-controlam a condição de parada do laço.
-Se $S$ é o conjunto de blocos básicos que fazem parte do laço, uma operação é
+Uma vez encontrado um caminho vulner√°vel, passamos √† fase de saneamento de
+la√ßos.
+Um la√ßo pode ser saneado via a inser√ß√£o de testes que detectam e tratam a
+ocorr√™ncia de estouros de precis√£o inteira.
+N√≥s inserimos tais testes sobre as opera√ß√µes aritm√©ticas {\em internas} que
+controlam a condi√ß√£o de parada do la√ßo.
+Se $S$ √© o conjunto de blocos b√°sicos que fazem parte do la√ßo, uma opera√ß√£o √©
 dita interna quando ela ocorre nalgum bloco em $S$.
-Continuando com o nosso exemplo, o laço alvo possui dois blocos básicos:
-o primeiro começa no rótulo três, e o segundo começa no rótulo sete.
-O laço possui duas operações aritméticas internas, todas ocorrendo no segundo
-bloco básico.
-Dentre essas operações, aquela no rótulo sete é inofensiva: ela define a
-variável $r_2$, que não participa da condição de parada do laço.
-Por outro lado, a operação no rótulo oito, que define a variável $i_2$, é
-usada no cálculo daquela condição, e precisa ser instrumentada.
+Continuando com o nosso exemplo, o la√ßo alvo possui dois blocos b√°sicos:
+o primeiro come√ßa no r√≥tulo tr√™s, e o segundo come√ßa no r√≥tulo sete.
+O la√ßo possui duas opera√ß√µes aritm√©ticas internas, todas ocorrendo no segundo
+bloco b√°sico.
+Dentre essas opera√ß√µes, aquela no r√≥tulo sete √© inofensiva: ela define a
+vari√°vel $r_2$, que n√£o participa da condi√ß√£o de parada do la√ßo.
+Por outro lado, a opera√ß√£o no r√≥tulo oito, que define a vari√°vel $i_2$, √©
+usada no c√°lculo daquela condi√ß√£o, e precisa ser instrumentada.
 
-Novamente, o grafo de dependências ajuda-nos a encontrar quais operações
-precisam ser instrumentadas para sanear um laço controlado por um
+Novamente, o grafo de depend√™ncias ajuda-nos a encontrar quais opera√ß√µes
+precisam ser instrumentadas para sanear um la√ßo controlado por um
 predicado $p$.
-Nesse caso, usamos o seguinte critério para determinar se uma operação
+Nesse caso, usamos o seguinte crit√©rio para determinar se uma opera√ß√£o
 $i : v = f(v_1, \ldots, v_n)$ precisa ser instrumentada:
 %
 \begin{itemize}
-\item existe um caminho no nodo $n_i$ até o nodo $n_p$.
+\item existe um caminho no nodo $n_i$ at√© o nodo $n_p$.
 \item O nodo $n_i$ encontra-se em um ciclo.
 \end{itemize}
 %
-A título de exemplo, a operação de incremento $++$ no grafo de dependências
+A t√≠tulo de exemplo, a opera√ß√£o de incremento $++$ no grafo de depend√™ncias
 visto na figura~\ref{fig:depGraph} precisa ser instrumentada.
-Em primeiro lugar, porque essa operação encontra-se em um ciclo.
-Em segundo lugar, porque existe um caminho do nodo $n_{++}$ até o nodo
+Em primeiro lugar, porque essa opera√ß√£o encontra-se em um ciclo.
+Em segundo lugar, porque existe um caminho do nodo $n_{++}$ at√© o nodo
 $n_p$.
 
-\paragraph{Instrumentação de Saneamento. }
-A fim de garantir que estouros de precisão inteiros não venham a causar
-a não-terminação de laços, nós inserimos testes no código binário do
+\paragraph{Instrumenta√ß√£o de Saneamento. }
+A fim de garantir que estouros de precis√£o inteiros n√£o venham a causar
+a n√£o-termina√ß√£o de la√ßos, n√≥s inserimos testes no c√≥digo bin√°rio do
 programa alvo.
-O código que constitui cada um desses testes é formado por uma guarda, mas
+O c√≥digo que constitui cada um desses testes √© formado por uma guarda, mas
 um tratador de eventos.
-Nossas guardas usam as condições mostradas na figura~\ref{fig:ovfCheck} para
-verificar a ocorrência de estouros de precisão.
-Atualmente instrumentamos quatro tipos diferentes de instrução:
-adição, subtração, multiplicação e arredamentos para a esquerda.
-As operações de adição, subtração e multiplicação podem ser com ou sem sinal
-aritmético.
+Nossas guardas usam as condi√ß√µes mostradas na figura~\ref{fig:ovfCheck} para
+verificar a ocorr√™ncia de estouros de precis√£o.
+Atualmente instrumentamos quatro tipos diferentes de instru√ß√£o:
+adi√ß√£o, subtra√ß√£o, multiplica√ß√£o e arredamentos para a esquerda.
+As opera√ß√µes de adi√ß√£o, subtra√ß√£o e multiplica√ß√£o podem ser com ou sem sinal
+aritm√©tico.
 
 \begin{figure}[t!]
 \begin{center}
 \begin{tabular}{ll}
-Instrução & Verificação \\ \\
+Instru√ß√£o & Verifica√ß√£o \\ \\
 $x = o_1 \ +_s \ o_2$ & $(o_1 > 0 \wedge o_2 > 0 \wedge x < 0) \ \ \vee$ \\
                       & $(o_1 < 0 \wedge o_2 < 0 \wedge x > 0)$ \\ \\
 $x = o_1 \ +_u \ o_2$ & $x < o_1 \vee x < o_2$ \\ \\
@@ -342,30 +350,30 @@ $x = \ \downarrow_n \ o_1$ & $\mbox{cast}(x, \mbox{type}(o_1)) \neq o_1$ \\
 \end{tabular}
 \end{center}
 \caption{\label{fig:ovfCheck}Overflow checks. Usamos $\downarrow_n$ para
-descrever a operação que trunca em $n$ bits.
-O subscrito $s$ indica uma operação aritmética com sinal, e o subscrito $u$
-indica uma operação sem sinal.}
+descrever a opera√ß√£o que trunca em $n$ bits.
+O subscrito $s$ indica uma opera√ß√£o aritm√©tica com sinal, e o subscrito $u$
+indica uma opera√ß√£o sem sinal.}
 \end{figure}
 
-Os testes são implementados como sequências de operações binárias, executados
-logo após a instrução guardada.
+Os testes s√£o implementados como sequ√™ncias de opera√ß√µes bin√°rias, executados
+logo ap√≥s a instru√ß√£o guardada.
 Para ilustrar esse ponto, mostramos, na figura~\ref{fig:instrumented_cfg},
-o código necessário para instrumentar uma soma com sinal de duas variáveis.
-Essa figura mostra código no formato intermediário usado por LLVM, o compilador
-que utilizamos para implementar as idéias descritas neste artigo.
-Omitimos, nesse exemplo, o código do tratador de evento de estouro, pois ele
+o c√≥digo necess√°rio para instrumentar uma soma com sinal de duas vari√°veis.
+Essa figura mostra c√≥digo no formato intermedi√°rio usado por LLVM, o compilador
+que utilizamos para implementar as id√©ias descritas neste artigo.
+Omitimos, nesse exemplo, o c√≥digo do tratador de evento de estouro, pois ele
 simplesmente chamada uma rotina implementada em uma biblioteca
 dinamicamente compartilhada.
-Conforme podemos observar pela figura, uma guarda aumenta o código instrumentado
+Conforme podemos observar pela figura, uma guarda aumenta o c√≥digo instrumentado
 substancialmente.
-Nesse exemplo em particular a verificação requer a inserção de 14 novas
-instruções no programa guardado.
-Embora tal crescimento a princípio possa parecer proibitivamente grande,
-os experimentos que mostraremos na seção~\ref{sec:exp} indicam que somente
-uma parcela muito pequena das instruções do programa alvo precisam ser
+Nesse exemplo em particular a verifica√ß√£o requer a inser√ß√£o de 14 novas
+instru√ß√µes no programa guardado.
+Embora tal crescimento a princ√≠pio possa parecer proibitivamente grande,
+os experimentos que mostraremos na se√ß√£o~\ref{sec:exp} indicam que somente
+uma parcela muito pequena das instru√ß√µes do programa alvo precisam ser
 guardadas.
-Consequentemente, o custo, em termos de crescimento de código e perda de
-desempenho, é negligível.
+Consequentemente, o custo, em termos de crescimento de c√≥digo e perda de
+desempenho, √© neglig√≠vel.
 
 \begin{figure}[t!]
 \begin{center}
@@ -384,33 +392,32 @@ desempenho, é negligível.
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
-Benchmark & Num. Laços & Alcançáveis & Vulneráveis &
+Benchmark & Num. La√ßos & Alcan√ß√°veis & Vulner√°veis &
 Caminhos \\ \hline
-470.lbm        & & & &  \\ \hline
-433.milc       & & & &  \\ \hline
-444.namd       & & & &  \\ \hline
-447.dealII     & & & &  \\ \hline
-450.soplex     & & & &  \\ \hline
-464.h264ref    & & & &  \\ \hline
-473.astar      & & & &  \\ \hline
-458.sjeng      & & & &  \\ \hline
-429.mcf        & & & &  \\ \hline
-471.omnetpp    & & & &  \\ \hline
-403.gcc        & & & &  \\ \hline
-445.gobmk      & & & &  \\ \hline
-462.libquantum & & & &  \\ \hline
-401.bzip2      & & & &  \\ \hline
-456.hmmer      & & & &  \\ \hline
+433.milc	&	326	&	8	&	4	&	3   \\ \hline
+444.namd	&	508	&	7	&	1	&	2  \\ \hline
+447.dealII	&	4657	&	540	&	225	&	3  \\ \hline
+450.soplex	&	547	&	21	&	12	&	3  \\ \hline
+470.lbm		&	17	&	0	&	0	&	- \\ \hline
+401.bzip2	&	205	&	1	&	1	&	3  \\ \hline
+403.gcc		&	3853	&	109	&	59	&	4  \\ \hline
+429.mcf		&	38	&	2	&	0	&	2  \\ \hline
+445.gobmk	&	1073	&	37	&	19	&	4  \\ \hline
+456.hmmer	&	687	&	133	&	48	&	2  \\ \hline
+458.sjeng	&	235	&	9	&	3	&	4  \\ \hline
+462.libquantum	&	67	&	2	&	1	&	4  \\ \hline
+464.h264ref	&	1586	&	27	&	22	&	15  \\ \hline
+473.astar	&	86	&	7	&	7	&	18  \\ \hline
 \end{tabular*}
 \end{center}
-\caption{Informações estáticas inferidas pela análise de não-terminação.
-Num. laços: número de laços no programa.
-Alcançáveis: quantidade de laços que são dependentes de dados produzidos a
+\caption{Informa√ß√µes est√°ticas inferidas pela an√°lise de n√£o-termina√ß√£o.
+Num. la√ßos: n√∫mero de la√ßos no programa.
+Alcan√ß√°veis: quantidade de la√ßos que s√£o dependentes de dados produzidos a
 partir de canais de entrada.
-Vulneráveis: número de laços que preenchem nossos requisitos de
+Vulner√°veis: n√∫mero de la√ßos que preenchem nossos requisitos de
 vulnerabilidade.
-Caminhos: tamanho médio do menor caminho de dependência de dados da entrada
-até a operação de controle do laço.}
+Caminhos: tamanho m√©dio do menor caminho de depend√™ncia de dados da entrada
+at√© a opera√ß√£o de controle do la√ßo.}
 \label{fig:staticLoopData}
 \end{figure}
 
@@ -419,30 +426,29 @@ até a operação de controle do laço.}
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
-Benchmark & Num. Instruções & Num. Arit. & Instrumentação &
+Benchmark & Num. Instru√ß√µes & Num. Arit. & Instrumenta√ß√£o &
 Crescimento \\ \hline
-470.lbm        & & & &  \\ \hline
-433.milc       & & & &  \\ \hline
-444.namd       & & & &  \\ \hline
-447.dealII     & & & &  \\ \hline
-450.soplex     & & & &  \\ \hline
-464.h264ref    & & & &  \\ \hline
-473.astar      & & & &  \\ \hline
-458.sjeng      & & & &  \\ \hline
-429.mcf        & & & &  \\ \hline
-471.omnetpp    & & & &  \\ \hline
-403.gcc        & & & &  \\ \hline
-445.gobmk      & & & &  \\ \hline
-462.libquantum & & & &  \\ \hline
-401.bzip2      & & & &  \\ \hline
-456.hmmer      & & & &  \\ \hline
+433.milc	&	22615	&	1165	&	7	&	0,50\%   \\ \hline
+444.namd	&	65045	&	3136	&	1	&	0,03\%   \\ \hline
+447.dealII	&	415756	&	14948	&	279	&	0,58\%   \\ \hline
+450.soplex	&	60772	&	1815	&	19	&	0,46\%   \\ \hline
+470.lbm	&	3614	&	1130	&	0	&	0,00\%   \\ \hline
+401.bzip2	&	16359	&	1688	&	1	&	0,10\%   \\ \hline
+403.gcc	&	792039	&	14853	&	92	&	0,14\%   \\ \hline
+429.mcf	&	2541	&	158	&	0	&	0,00\%   \\ \hline
+445.gobmk	&	130183	&	12158	&	54	&	0,63\%   \\ \hline
+456.hmmer	&	61908	&	3585	&	86	&	2,00\%   \\ \hline
+458.sjeng	&	27708	&	2438	&	20	&	1,10\%   \\ \hline
+462.libquantum	&	5848	&	593	&	6	&	1,04\%   \\ \hline
+464.h264ref	&	131905	&	13413	&	248	&	2,28\%   \\ \hline
+473.astar	&	8261	&	639	&	9	&	1,73\%   \\ \hline
 \end{tabular*}
 \end{center}
-\caption{Impacto da instrumentação no código saneado.
-Num. Instruções: número de instruções no benchmark.
-Num. Arit: número de instruções que podem causar estouro de precisão inteira.
-Instrumentação: quantidade de testes inseridos para sanear o programa.
-Crescimento: razão entre o tamanho do programa instrumentado e o tamanho do
+\caption{Impacto da instrumenta√ß√£o no c√≥digo saneado.
+Num. Instru√ß√µes: n√∫mero de instru√ß√µes no benchmark.
+Num. Arit: n√∫mero de instru√ß√µes que podem causar estouro de precis√£o inteira.
+Instrumenta√ß√£o: quantidade de testes inseridos para sanear o programa.
+Crescimento: raz√£o entre o tamanho do programa instrumentado e o tamanho do
 programa original.}
 \label{fig:instImpact}
 \end{figure}
@@ -450,7 +456,7 @@ programa original.}
 \begin{figure}[t!]
 \begin{center}
 \includegraphics[width=\textwidth]{images/Runtime}
-\caption{Variação no tempo de execução dos benchmarks devido à instrumentação
+\caption{Varia√ß√£o no tempo de execu√ß√£o dos benchmarks devido √† instrumenta√ß√£o
 de saneamento.}
 \label{fig:Runtime}
 \end{center}
@@ -460,97 +466,97 @@ de saneamento.}
 \section{Trabalhos Relacionados}
 \label{sec:rel}
 
-Este trabalho aborda temas relacionados a diferentes áreas da análise estática
-e dinâmica de programas, a saber: teoria de fluxo de informação, detecção de
-estouros de precisão inteira e análise de não-terminação.
-Além disso, este trabalho utiliza o conceito de {\em grafos de dependências},
+Este trabalho aborda temas relacionados a diferentes √°reas da an√°lise est√°tica
+e din√¢mica de programas, a saber: teoria de fluxo de informa√ß√£o, detec√ß√£o de
+estouros de precis√£o inteira e an√°lise de n√£o-termina√ß√£o.
+Al√©m disso, este trabalho utiliza o conceito de {\em grafos de depend√™ncias},
 inicialmente proposto por Ferrante {\em et al.}~\cite{Ferrante87}.
-Em nosso caso, o grafo de dependência dá-nos a estrutura de dados básica sobre
-a qual caminhos que levam à não-terminação podem ser encontrados.
-Esses grafos, contudo, historicamente vêm se prestando a muitos outros
-propósitos, como escalonamento de instruções, detecção de condições de corrida e
-propagação de constantes, por exemplo.
+Em nosso caso, o grafo de depend√™ncia d√°-nos a estrutura de dados b√°sica sobre
+a qual caminhos que levam √† n√£o-termina√ß√£o podem ser encontrados.
+Esses grafos, contudo, historicamente v√™m se prestando a muitos outros
+prop√≥sitos, como escalonamento de instru√ß√µes, detec√ß√£o de condi√ß√µes de corrida e
+propaga√ß√£o de constantes, por exemplo.
 
-Neste artigo usamos o grafo de dependências para rastrear o fluxo de
-informação contaminada.
-O rastreamento de fluxo de informação é uma grande sub-área dentro do campo de
-análise estática de programas~\cite{Denning77}.
-Existem duas formas principais de rastrear a informação.
-Pode-se traçar o fluxo de dados a partir de operações sigilosas até entradas
-que um adversário pode ler.
-Esse modo de rastreamento é popularmente conhecido como detecção de vazamento
+Neste artigo usamos o grafo de depend√™ncias para rastrear o fluxo de
+informa√ß√£o contaminada.
+O rastreamento de fluxo de informa√ß√£o √© uma grande sub-√°rea dentro do campo de
+an√°lise est√°tica de programas~\cite{Denning77}.
+Existem duas formas principais de rastrear a informa√ß√£o.
+Pode-se tra√ßar o fluxo de dados a partir de opera√ß√µes sigilosas at√© entradas
+que um advers√°rio pode ler.
+Esse modo de rastreamento √© popularmente conhecido como detec√ß√£o de vazamento
 de segredos~\cite{Hammer06}.
-E, no sentido inverso, pode-se traçar o fluxo de informação de entradas que
-um adversário pode manipular até operações críticas dentro do
+E, no sentido inverso, pode-se tra√ßar o fluxo de informa√ß√£o de entradas que
+um advers√°rio pode manipular at√© opera√ß√µes cr√≠ticas dentro do
 programa~\cite{Tripp09}.
-Essa categoria inclui nosso trabalho, além de diversos outros tipos de
-vulnerabilidades, tais como {\em Injeção de Código SQL}~\cite{Wassermann07},
-{\em Injeção de Scripts}~\cite{Rimsa10} e {\em Ataques de Estouro de
+Essa categoria inclui nosso trabalho, al√©m de diversos outros tipos de
+vulnerabilidades, tais como {\em Inje√ß√£o de C√≥digo SQL}~\cite{Wassermann07},
+{\em Inje√ß√£o de Scripts}~\cite{Rimsa10} e {\em Ataques de Estouro de
 Buffer}~\cite{Levy96}.
 
-Nós instrumentamos código considerado vulnerável para detectar estouros de
-precisão que podem levar à não-terminação.
-Esses mesmos testes já foram usados com vários outros objetivos em trabalhos
+N√≥s instrumentamos c√≥digo considerado vulner√°vel para detectar estouros de
+precis√£o que podem levar √† n√£o-termina√ß√£o.
+Esses mesmos testes j√° foram usados com v√°rios outros objetivos em trabalhos
 anteriores.
-O mais importante trabalho nessa área deve-se, provavelmente, a Brumley
+O mais importante trabalho nessa √°rea deve-se, provavelmente, a Brumley
 {\em et al.}~\cite{Brumley07}.
 O grupo de David Brumley desenvolveu uma ferramenta, RICH, que instrumenta
-cada operação aritmética passível de estouro de precisão inteira em um programa
+cada opera√ß√£o aritm√©tica pass√≠vel de estouro de precis√£o inteira em um programa
 C.
-A principal conclusão daquele trabalho foi que esse tipo de instrumentação
-não compromete sobremaneira o desempenho do programa modificado.
-RICH, por exemplo, aumenta o tempo de execução dos programas instrumentados
-em menos que 6\% em média.
+A principal conclus√£o daquele trabalho foi que esse tipo de instrumenta√ß√£o
+n√£o compromete sobremaneira o desempenho do programa modificado.
+RICH, por exemplo, aumenta o tempo de execu√ß√£o dos programas instrumentados
+em menos que 6\% em m√©dia.
 Outro trabalho importante nesse campo foi publicado por Dietz
 {\em et al.}~\cite{Dietz12}.
 Esse grupo implementou IOC, uma ferramenta que, assim como RICH, detecta a
-ocorrência de estouros de precisão em operações aritméticas inteiras.
-Porém, ao contrário de Brumley {\em et al.}, Dietz {\em et al.} usaram sua
-ferramenta para desenvolver um amplo estudo sobre a ocorrência de estouros
+ocorr√™ncia de estouros de precis√£o em opera√ß√µes aritm√©ticas inteiras.
+Por√©m, ao contr√°rio de Brumley {\em et al.}, Dietz {\em et al.} usaram sua
+ferramenta para desenvolver um amplo estudo sobre a ocorr√™ncia de estouros
 em programas reais.
-Nosso trabalho difere desses outros em propósito: estamos interessados em
-prevenir ataques de não terminação; e em método: nós instrumentamos somente uma
+Nosso trabalho difere desses outros em prop√≥sito: estamos interessados em
+prevenir ataques de n√£o termina√ß√£o; e em m√©todo: n√≥s instrumentamos somente uma
 pequena parte dos programas alvo.
 
-Finalmente, nosso trabalho relaciona-se com outros que também procuram
-detectar, estaticamente, a não-terminação de programas.
-A maior parte desses trabalhos utilizam análise simbólica de código para criar
-expressões que levem um laço à não terminação.
+Finalmente, nosso trabalho relaciona-se com outros que tamb√©m procuram
+detectar, estaticamente, a n√£o-termina√ß√£o de programas.
+A maior parte desses trabalhos utilizam an√°lise simb√≥lica de c√≥digo para criar
+express√µes que levem um la√ßo √† n√£o termina√ß√£o.
 Exemplos desse tipo de pesquisa incluem os trabalhos de Burnim
 {\em et al.}~\cite{Burnim09}, Brockschmidt {\em et al}~\cite{Brockschmidt11} e
 Veroyen {\em et al.}~\cite{Velroyen08}.
-Esses trabalhos não levam em consideração possibilidade de não-terminação
-devido à estouros de precisão, tampouco procuram detectar possíveis
-vulnerabilidades baseadas em negação de serviço.
-Existem, contudo, trabalhos na linha de detecção de não-terminação que são
-bastante próximos do nosso.
+Esses trabalhos n√£o levam em considera√ß√£o possibilidade de n√£o-termina√ß√£o
+devido √† estouros de precis√£o, tampouco procuram detectar poss√≠veis
+vulnerabilidades baseadas em nega√ß√£o de servi√ßo.
+Existem, contudo, trabalhos na linha de detec√ß√£o de n√£o-termina√ß√£o que s√£o
+bastante pr√≥ximos do nosso.
 
-Um trabalho que prova não-terminação, mesmo em face de estouros de precisão
-deve-se à Gupta {\em et al.}~\cite{Gupta08}.
-Gupta, assim como os trabalhos anteriormente relacionados, utiliza análise
-simbólica para provar a não-terminação de programas.
-A ferramenta implementada por Gupta {\em et al.}, denominada TNT, é capaz de
-encontrar uma expressão algébrica que leva um laço de programa a iterar
+Um trabalho que prova n√£o-termina√ß√£o, mesmo em face de estouros de precis√£o
+deve-se √† Gupta {\em et al.}~\cite{Gupta08}.
+Gupta, assim como os trabalhos anteriormente relacionados, utiliza an√°lise
+simb√≥lica para provar a n√£o-termina√ß√£o de programas.
+A ferramenta implementada por Gupta {\em et al.}, denominada TNT, √© capaz de
+encontrar uma express√£o alg√©brica que leva um la√ßo de programa a iterar
 para sempre.
-Porém, TNT não aponta quais laços podem ser controlados a partir da entrada
+Por√©m, TNT n√£o aponta quais la√ßos podem ser controlados a partir da entrada
 do programa.
 Por outro lado, a ferramenta  SAFERPHP, proposta por Son
 {\em et al.}~\cite{Son11} possui exatamente esse objetivo.
-SAFERPHP analisa o código de programas escritos em PHP, procurando por laços
-que um adversário pode controlar, com o propósito, justamente, de evitar
-ataques de não-terminação.
-A principal diferença entre nosso trabalho, e aquele de Son {\em et al.}, é
-que, enquanto nossa ferramenta busca detectar a não-terminação devido à
-estouros de precisão inteira, SAFERPHP considera a aritmética de
-precisão infinita.
-Além disso, tanto SAFERPHP quanto TNT utilizam execução simbólica sobre caminhos
-possíveis no programa alvo.
-Essa abordagem, em nossa opinião, não é prática.
-Testemunho disso é o fato de tais ferramentas terem sido usadas, até a presente
+SAFERPHP analisa o c√≥digo de programas escritos em PHP, procurando por la√ßos
+que um advers√°rio pode controlar, com o prop√≥sito, justamente, de evitar
+ataques de n√£o-termina√ß√£o.
+A principal diferen√ßa entre nosso trabalho, e aquele de Son {\em et al.}, √©
+que, enquanto nossa ferramenta busca detectar a n√£o-termina√ß√£o devido √†
+estouros de precis√£o inteira, SAFERPHP considera a aritm√©tica de
+precis√£o infinita.
+Al√©m disso, tanto SAFERPHP quanto TNT utilizam execu√ß√£o simb√≥lica sobre caminhos
+poss√≠veis no programa alvo.
+Essa abordagem, em nossa opini√£o, n√£o √© pr√°tica.
+Testemunho disso √© o fato de tais ferramentas terem sido usadas, at√© a presente
 data, somente para analisar programas muito pequenos.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
-\section{Conclusão}
+\section{Conclus√£o}
 \label{sec:con}
 
 
