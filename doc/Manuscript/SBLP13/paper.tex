@@ -226,6 +226,10 @@ O programa da figura~\ref{fig:fact}(a) é vulnerável a ataques de
 não-terminação.
 Para explicitar tal fato, a figura~\ref{fig:fact}(b) mostra o grafo de
 fluxo de controle do programa.
+Esse CFG está convertido para o formato de atribuição estática única
+(SSA)~\cite{Cytron91}.
+Usaremos essa representação de programas porque ela facilita a nossa análise
+de dependência de dados.
 Os blocos básicos que começam nos rótulos 3 e 7 formam um laço natural,
 segundo a definição de Appel e Palsberg.
 Esse laço é controlado pela condição de parada $i_1 \leq n$.
@@ -245,15 +249,13 @@ técnica que introduzimos neste artigo: o {\em saneamento de laços}.
 \subsection{Detecção Automática de Não-Terminação}
 \label{sub:det}
 
-Dizemos que um laço é {\em potencialmente vulnerável} a ataque de não
-terminação quando as condições que o controlam usam valores que dependem de
-dados de entrada do programa.
-Note que uma vulnerabilidade potencial não implica em uma vulnerabilidade
-real.
+Dizemos que um laço é {\em alcançável} quando as condições que o controlam
+usam valores que dependem de dados de entrada do programa.
+Note que um laço alcançável não é necessariamente vulnerável.
 A título de exemplo, o programa da Figura~\ref{fig:fact}(c), uma sutil
 alteração da função \texttt{fact} inicialmente vista na
 figura~\ref{fig:fact}(a), termina para qualquer entrada.
-A fim de detectar vulnerabilidades potenciais, nós utilizamos o
+A fim de determinar quais laços são alcançáveis, nós utilizamos o
 {\em grafo de dependências de dados}.
 Esse grafo é definido da seguinte forma:
 para cada variável $v$ no programa, nós criamos um nodo $n_v$, e para cada
@@ -274,15 +276,42 @@ partir do CFG visto na figura~\ref{fig:fact}(b).}
 \end{center}
 \end{figure}
 
-Um caminho entre uma entrada do programa, e o predicado que controla o laço
-indica uma vulnerabilidade potencial.
-O grafo de dependências de nosso exemplo possui uma tal vulnerabilidade:
+Um caminho entre uma entrada do programa, e o predicado que controla o laço é
+uma condição necessária para um ataque de não-terminação.
+O grafo de dependências de nosso exemplo apresenta tal condição:
 existe um caminho que une o nodo correspondente ao parâmetro \texttt{n}, uma
 entrada, ao nodo que corresponde a \texttt{p}, o predicado de controle do
 laço.
 Esse tipo de caminho, uma vez contruído o grafo, pode ser encontrado em
 tempo linear no número de arestas do grafo - normalmente proporcional ao
 número de nodos - via a simples busca em profundidade ou largura.
+
+Diremos que um laço é {\em vulnerável} quando ele é alcançável, e, além disso,
+sua condição de parada é dependente de alguma operação {\em cíclica}
+passível de estouro de precisão.
+Seguindo a definição de laços de Appel e Palsberg, uma operação cíclica é
+qualquer instrução que ocorre no corpo $S$ do laço.
+Por exemplo, no CFG da figura~\ref{fig:fact}(b), as instruções
+$i_2 = i_1 + 1$ e $r_2 = r_1 \times i_1$ são cíclicas.
+O laço daquele exemplo encaixa-se em nossa definição de vulnerabilidade,
+pois sua condição de parada é alcançável a partir da entrada, e depende de
+uma instrução cíclica passível de estouro de precisão: $i_2 = i_1 + 1$.
+
+A nossa definição de vulnerabilidade inclui muitos laços que não são, de fato,
+vulneráveis, tais como aquele visto na figura~\ref{fig:fact}(c).
+Seria possível utilizar técnicas computacionalmente intensivas, tais como
+algoritmos de satisfabilidade, para refinar a nossa definição, eliminando
+alguns desses falsos positivos.
+Tal abordagem já foi utilizada em trabalhos anteriores ao
+nosso~\cite{Brockschmidt11,Burnim09,Gupta08,Son11,Velroyen08}.
+Por outro lado, os próprios autores desses trabalhos reportam que dificilmente
+suas técnicas poderiam lidar com programas muito grandes.
+Nós optamos por usar uma definição mais conservadora de laço vulnerável para
+termos uma ferramenta prática.
+Nós sanearemos todo laço considerado perigoso, inclusive aqueles que, devido
+à nossa definição liberal de vulnerabilidade, de fato não o são.
+Ainda assim, conforme mostraremos na seção~\ref{sec:exp}, o impacto dessa
+instrumentação é negligível.
 
 \subsection{Saneamento de Laços}
 \label{sub:san}
@@ -388,6 +417,48 @@ desempenho, é negligível.
 \section{Resultados Experimentais}
 \label{sec:exp}
 
+Nós implementamos as técnicas descritas neste artigo em LLVM versão X.X.
+Nossa implementação foi testada em uma máquina Intel XX, com XX Gigabtyes de
+RAM, e XX GHz de Clock.
+Executamos nossa análise com sucesso sobre o arcabouço de testes de LLVM,
+um conjunto de programas com mais de 4.3 milhões de linhas de código C.
+No restante desta seção mostraremos somente resultados obtidos sobre os
+programas de SPEC CPU 2006.
+
+\noindent
+\textbf{Definição de Entrada de Dados: } nos experimentos apresentados nesta
+seção, consideraremos como entrada de dados os seguintes valores:
+\begin{itemize}
+\item os argumentos do método \texttt{main};
+\item o resultado retornado por funções {\em externas};
+\item ponteiros passados como argumento de funções {\em externas}.
+\end{itemize}
+As funções externas são a união dos seguintes três conjuntos:
+\begin{itemize}
+\item funções que não foram declaradas em nenhum dos arquivos que compõem
+o programa compilado;
+\item funções sem corpo;
+\item funções que podem ser chamadas via um ponteiro de funções.
+\end{itemize}
+
+\paragraph{Laços Alcançáveis e Vulneráveis. }
+A figura~\ref{fig:staticLoopData} mostra a quantidade de laços alcançáveis e
+vulneráveis que encontramos por programa.
+Estamos considerando, nesse caso, somente dependências de dados que não
+envolvam memória.
+Em outras palavras, todos os nodos do grafo de dependência são valores que
+podem residir em registradores.
+Essa versão de nosso detector não é segura: podemos deixar de marcar alguns
+laços vulneráveis como tal.
+Por outro lado, ela nos dá um número mínimo de laços que precisaríamos marcar,
+de acordo com a definição de laços alcançáveis da seção~\ref{sub:det}.
+Vemos, pela figura, que entre 1.3\% e 19.3\% de todos os laços do programa
+são alcançáveis.
+Aproximadamente a metade dos laços alcançáveis é vulnerável.
+Os laços que não são considerados vulneráveis em geral usam condições de
+paradas que comparam valores via igualdade, por exemplo,
+\verb^while(a[i] != '\0') {i++;}^.
+
 \begin{figure}[t!]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
@@ -411,12 +482,12 @@ Caminhos \\ \hline
 \end{tabular*}
 \end{center}
 \caption{Informações estáticas inferidas pela análise de não-terminação.
-Num. laços: número de laços no programa.
-Alcançáveis: quantidade de laços que são dependentes de dados produzidos a
+{\bf Num. laços}: número de laços no programa.
+{\bf Alcançáveis}: quantidade de laços que são dependentes de dados produzidos a
 partir de canais de entrada.
-Vulneráveis: número de laços que preenchem nossos requisitos de
+{\bf Vulneráveis}: número de laços que preenchem nossos requisitos de
 vulnerabilidade.
-Caminhos: tamanho médio do menor caminho de dependência de dados da entrada
+{\bf Caminhos}: tamanho médio do menor caminho de dependência de dados da entrada
 até a operação de controle do laço.}
 \label{fig:staticLoopData}
 \end{figure}
@@ -445,10 +516,10 @@ Crescimento \\ \hline
 \end{tabular*}
 \end{center}
 \caption{Impacto da instrumentação no código saneado.
-Num. Instruções: número de instruções no benchmark.
-Num. Arit: número de instruções que podem causar estouro de precisão inteira.
-Instrumentação: quantidade de testes inseridos para sanear o programa.
-Crescimento: razão entre o tamanho do programa instrumentado e o tamanho do
+{\bf Num. Instruções}: número de instruções no benchmark.
+{\bf Num. Arit}: número de instruções que podem causar estouro de precisão inteira.
+{\bf Instrumentação}: quantidade de testes inseridos para sanear o programa.
+{\bf Crescimento}: razão entre o tamanho do programa instrumentado e o tamanho do
 programa original.}
 \label{fig:instImpact}
 \end{figure}
