@@ -13,7 +13,8 @@
 
 \begin{document}
 
-\title{Prevenção Automática de Ataques de Não-Terminação}
+\title{Prevenção de Ataques de Não-Terminação baseados em
+Estouros de Precisão}
 
 \author{Raphael Ernani Rodrigues and Fernando Magno Quintão Pereira}
 
@@ -163,14 +164,14 @@ XX\%.
 \label{sec:bkg}
 
 De acordo com Appel e Palsberg~\cite[p.376]{Appel02}, um laço natural é um
-conjunto de nodos $S$ do grafo de fluxo de controle de um programa (CFG),
+conjunto de nodos $S$ do grafo de fluxo de controle (CFG) de um programa,
 includindo um nodo cabeçalho $H$, com as seguintes três propriedades:
 %
 \begin{itemize}
 \item a partir de qualquer nodo em $S$ existe um caminho que chega a $H$;
 \item existe um caminho de $H$ até qualquer nodo que faz parte de $S$;
-\item não existe caminho que não contenha $H$ de qualquer nodo fora de $S$ para
-qualquer nodo em $S$.
+\item qualquer caminho de um nodo fora de $S$ para um nodo em $S$
+contém $H$.
 \end{itemize}
 %
 A {\em condição de parada} de um laço é uma expressão booleana
@@ -254,9 +255,10 @@ usam valores que dependem de dados de entrada do programa.
 Note que um laço alcançável não é necessariamente vulnerável.
 A título de exemplo, o programa da Figura~\ref{fig:fact}(c), uma sutil
 alteração da função \texttt{fact} inicialmente vista na
-figura~\ref{fig:fact}(a), termina para qualquer entrada.
-A fim de determinar quais laços são alcançáveis, nós utilizamos o
-{\em grafo de dependências de dados}.
+figura~\ref{fig:fact}(a), termina para qualquer entrada, embora ele contenha
+um laço alcançável.
+Utilizamos o {\em grafo de dependências de dados} para determinar laços
+alcançáveis.
 Esse grafo é definido da seguinte forma:
 para cada variável $v$ no programa, nós criamos um nodo $n_v$, e para cada
 instrução $i$ no programa, nós criamos um nodo $n_i$.
@@ -297,8 +299,8 @@ O laço daquele exemplo encaixa-se em nossa definição de vulnerabilidade,
 pois sua condição de parada é alcançável a partir da entrada, e depende de
 uma instrução cíclica passível de estouro de precisão: $i_2 = i_1 + 1$.
 
-A nossa definição de vulnerabilidade inclui muitos laços que não são, de fato,
-vulneráveis, tais como aquele visto na figura~\ref{fig:fact}(c).
+A nossa definição de vulnerabilidade inclui muitos laços que não são
+concretamente vulneráveis, tais como aquele visto na figura~\ref{fig:fact}(c).
 Seria possível utilizar técnicas computacionalmente intensivas, tais como
 algoritmos de satisfabilidade, para refinar a nossa definição, eliminando
 alguns desses falsos positivos.
@@ -320,13 +322,11 @@ Uma vez encontrado um caminho vulnerável, passamos à fase de saneamento de
 laços.
 Um laço pode ser saneado via a inserção de testes que detectam e tratam a
 ocorrência de estouros de precisão inteira.
-Nós inserimos tais testes sobre as operações aritméticas {\em internas} que
+Nós inserimos tais testes sobre as operações aritméticas cíclicas que
 controlam a condição de parada do laço.
-Se $S$ é o conjunto de blocos básicos que fazem parte do laço, uma operação é
-dita interna quando ela ocorre nalgum bloco em $S$.
 Continuando com o nosso exemplo, o laço alvo possui dois blocos básicos:
 o primeiro começa no rótulo três, e o segundo começa no rótulo sete.
-O laço possui duas operações aritméticas internas, todas ocorrendo no segundo
+O laço possui duas operações aritméticas cíclicas, todas ocorrendo no segundo
 bloco básico.
 Dentre essas operações, aquela no rótulo sete é inofensiva: ela define a
 variável $r_2$, que não participa da condição de parada do laço.
@@ -351,9 +351,8 @@ Em segundo lugar, porque existe um caminho do nodo $n_{++}$ até o nodo
 $n_p$.
 
 \paragraph{Instrumentação de Saneamento. }
-A fim de garantir que estouros de precisão inteiros não venham a causar
-a não-terminação de laços, nós inserimos testes no código binário do
-programa alvo.
+Para evitar que estouros de precisão venham a causar a não-terminação
+de laços, nós inserimos testes no código binário do programa alvo.
 O código que constitui cada um desses testes é formado por uma guarda, mas
 um tratador de eventos.
 Nossas guardas usam as condições mostradas na figura~\ref{fig:ovfCheck} para
@@ -391,7 +390,7 @@ o código necessário para instrumentar uma soma com sinal de duas variáveis.
 Essa figura mostra código no formato intermediário usado por LLVM, o compilador
 que utilizamos para implementar as idéias descritas neste artigo.
 Omitimos, nesse exemplo, o código do tratador de evento de estouro, pois ele
-simplesmente chamada uma rotina implementada em uma biblioteca
+simplesmente invoca uma rotina implementada em uma biblioteca
 dinamicamente compartilhada.
 Conforme podemos observar pela figura, uma guarda aumenta o código instrumentado
 substancialmente.
@@ -407,7 +406,11 @@ desempenho, é negligível.
 \begin{figure}[t!]
 \begin{center}
 \includegraphics[width=1\textwidth]{images/instrumented_cfg}
-\caption{(a) }
+\caption{(a) Programa que será instrumentado.
+(b) Representação do programa em bytecodes LLVM.
+(c) Operação que está sendo instrumentada.
+(d) Teste de detecção de estouro de precisão.
+(e) Programa instrumentado, em bytecodes LLVM.}
 \label{fig:instrumented_cfg}
 \end{center}
 \end{figure}
@@ -429,7 +432,8 @@ programas de SPEC CPU 2006.
 \textbf{Definição de Entrada de Dados: } nos experimentos apresentados nesta
 seção, consideraremos como entrada de dados os seguintes valores:
 \begin{itemize}
-\item os argumentos do método \texttt{main};
+\item os argumentos do método \texttt{main}, isto é, as variáveis \texttt{argc}
+e \texttt{argv};
 \item o resultado retornado por funções {\em externas};
 \item ponteiros passados como argumento de funções {\em externas}.
 \end{itemize}
@@ -449,7 +453,8 @@ envolvam memória.
 Em outras palavras, todos os nodos do grafo de dependência são valores que
 podem residir em registradores.
 Essa versão de nosso detector não é segura: podemos deixar de marcar alguns
-laços vulneráveis como tal.
+laços vulneráveis que são controlados por dado contaminado que tenha sido
+armazenado em memória.
 Por outro lado, ela nos dá um número mínimo de laços que precisaríamos marcar,
 de acordo com a definição de laços alcançáveis da seção~\ref{sub:det}.
 Vemos, pela figura, que entre 1.3\% e 19.3\% de todos os laços do programa
@@ -458,6 +463,16 @@ Aproximadamente a metade dos laços alcançáveis é vulnerável.
 Os laços que não são considerados vulneráveis em geral usam condições de
 paradas que comparam valores via igualdade, por exemplo,
 \verb^while(a[i] != '\0') {i++;}^.
+A figura também reporta o tamanho médio dos caminhos vulneráveis.
+Um caminho vulnerável é a sequência de instruções que precisa ser executada
+para que a expressão de controle do laço seja influenciada por algum valor de
+entrada.
+Conforme vemos pela figura, esses caminhos são geralmente pequenos.
+Os dois caminhos vulneráveis em \texttt{429.mcf}, por exemplo, possuem somente
+duas instruções cada um.
+Concluí-se que o desenvolvedor, ao procurar por possíveis vulnerabilidades
+a ataques de não terminação, teria de ater-se a uma quantidade muito pequena
+de nodos do grafo de dependência do programa.
 
 \begin{figure}[t!]
 \begin{center}
@@ -474,7 +489,7 @@ Caminhos \\ \hline
 403.gcc		&	3853	&	109	&	59	&	4  \\ \hline
 429.mcf		&	38	&	2	&	0	&	2  \\ \hline
 445.gobmk	&	1073	&	37	&	19	&	4  \\ \hline
-456.hmmer	&	687	&	133	&	48	&	2  \\ \hline
+456.hmmer	&	687	&	133	&	48	&	3  \\ \hline
 458.sjeng	&	235	&	9	&	3	&	4  \\ \hline
 462.libquantum	&	67	&	2	&	1	&	4  \\ \hline
 464.h264ref	&	1586	&	27	&	22	&	15  \\ \hline
@@ -492,6 +507,20 @@ até a operação de controle do laço.}
 \label{fig:staticLoopData}
 \end{figure}
 
+A figura~\ref{fig:instImpact} mostra o impacto da instrumentação que inserimos
+no tamanho do programa.
+Em média, cada laço vulnerável custou-nos a criação de 1.44 guardas, como
+aquela vista na figura~\ref{fig:instrumented_cfg}(e).
+O aumento de tamanho do programa guardado é negligível, conforme podemos
+observar na última coluna da figura~\ref{fig:instImpact}.
+O maior crescimento, observado em \texttt{464.h264ref}, foi de 2.28\%.
+Uma vez que o número de guardas inseridas nos programas é tão pequeno, o
+crescimento de seu tempo de execução também é pequeno.
+Executamos todos os programas instrumentados, passando-lhes suas entradas de
+referência, conforme especificado no manual de uso de SPEC CPU 2006, e as
+diferenças de tempo de execução ficaram dentro da margem de erro dos benchmarks.
+Em outras palavras, não pudemos perceber quaisquer diferenças, em termos de
+tempo de execução, entre os programas originais e instrumentados.
 
 \begin{figure}[t!]
 \begin{center}
@@ -524,14 +553,7 @@ programa original.}
 \label{fig:instImpact}
 \end{figure}
 
-\begin{figure}[t!]
-\begin{center}
-\includegraphics[width=\textwidth]{images/Runtime}
-\caption{Variação no tempo de execução dos benchmarks devido à instrumentação
-de saneamento.}
-\label{fig:Runtime}
-\end{center}
-\end{figure}
+% Describe which programs were aborted once you tried to execute them.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Trabalhos Relacionados}
@@ -630,6 +652,38 @@ data, somente para analisar programas muito pequenos.
 \section{Conclusão}
 \label{sec:con}
 
+Neste artigo nós descrevemos uma forma de ataque de negação de serviço que
+busca levar o programa alvo à não-terminação.
+Ao contrário da literatura relacionada, ate-mo-nos a ataques baseados em
+estouro de precisão de aritmética de inteiros.
+Esse tipo de fenômeno caracteriza linguagens de programação como Java, C e
+C++.
+Nós definimos algumas propriedades necessárias para a efetiva realização de
+um ataque de não-terminação, a saber, condição de controle controlada por
+adversário, e por operações cíclicas passíveis de estouro de precisão.
+Em seguida, mostramos como eliminar a última dessas condições via guardas
+inseridas pelo compilador.
+Finalmente, mostramos experimentalmente que nossas guardas, ainda que inseridas
+conservadoramente, não comprometem o tempo de execução do programa
+instrumentado.
+Demonstramos assim que a prevenção de ataques de não-terminação baseados em
+estouros de precisão é barata e efetiva.
+
+Neste trabalho nós adotamos uma definição muito conservadora de laços
+vulneráveis.
+De fato, muitos dos laços que indicamos como vulneráveis, em nossos
+experimentos, de fato não o são.
+Nossa decisão foi fruto de um compromisso entre a precisão e a eficiência:
+instrumentamos todos os laços possivelmente vulneráveis, mesmo aqueles que
+não são perigosos, e ainda assim mantivemos estável o tempo de execução dos
+programas.
+Por outro lado, é nossa intenção, em trabalho futuro, estreitar essa definição
+de laço vulnerável, a fim de fornecer a desenvolvedores uma ferramenta que lhes
+auxilie na descoberta de exemplos de vulnerabilidades.
+
+\noindent
+\textbf{Software: } nossas técnicas foram todas implementadas em LLVM, e estão
+disponíveis publicamente na URL \texttt{http://code.google.com/p/range-analysis/}.
 
 \bibliographystyle{plain}
 \bibliography{references}
