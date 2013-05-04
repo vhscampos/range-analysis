@@ -10,8 +10,12 @@
 
 using namespace std;
 
-#define InsertAborts true
+#define InsertAborts false
 #define TruncInstrumentation true
+
+
+static cl::opt<bool, false>
+OnlySLE("only-SLE", cl::desc("Only consider SLE, ULE, SGE and UGE as loop conditions."), cl::NotHidden);
 
 //Table 1
 STATISTIC(NrLoops					, "Number of Loops");
@@ -218,7 +222,7 @@ bool ::OverflowSanitizer::runOnModule(Module& M) {
 
 				Value* loopCondition = BI->getCondition();
 
-				std::pair<GraphNode*,int> nearestDependency = depGraph.depGraph->getNearestDependency(loopCondition, inputValues, true);
+				std::pair<GraphNode*,int> nearestDependency = depGraph.depGraph->getNearestDependency(loopCondition, inputValues, false);
 
 				if(nearestDependency.first){
 
@@ -244,35 +248,40 @@ bool ::OverflowSanitizer::runOnModule(Module& M) {
 	for (std::list<Value*>::iterator Cit = inpDepLoopConditions.begin(), Cend = inpDepLoopConditions.end(); Cit != Cend; Cit++){
 
 
-//		//The ICmpInst has 2 operands: X comes from input. Y is updated inside the loop. We must make sure that Y will never overflow.
-//		if (ICmpInst* CI = dyn_cast<ICmpInst>(*Cit)) {
-//
-//			BasicBlock* parentBB = CI->getParent();
-//			BasicBlock* loopHeader = loopHeaders[loopBlocks[parentBB]];
-//
-//			switch (CI->getPredicate()){
-//
-//                case CmpInst::ICMP_SLE:
-//                case CmpInst::ICMP_ULE:
-//                case CmpInst::ICMP_SGE:
-//                case CmpInst::ICMP_UGE:
-//
-//        			lookForValuesToSafe(CI, loopHeader);
-//
-//                	break;
-//                default:
-//                	break;
-//			}
-//
-//		}
+		if (OnlySLE) {
 
+			//The ICmpInst has 2 operands: X comes from input. Y is updated inside the loop. We must make sure that Y will never overflow.
+			if (ICmpInst* CI = dyn_cast<ICmpInst>(*Cit)) {
 
-		if (Instruction* Inst = dyn_cast<Instruction>(*Cit)) {
+				BasicBlock* parentBB = CI->getParent();
+				BasicBlock* loopHeader = loopHeaders[loopBlocks[parentBB]];
 
-			BasicBlock* parentBB = Inst->getParent();
-			BasicBlock* loopHeader = loopHeaders[loopBlocks[parentBB]];
+				switch (CI->getPredicate()){
 
-			lookForValuesToSafe(Inst, loopHeader);
+					case CmpInst::ICMP_SLE:
+					case CmpInst::ICMP_ULE:
+					case CmpInst::ICMP_SGE:
+					case CmpInst::ICMP_UGE:
+
+						lookForValuesToSafe(CI, loopHeader);
+
+						break;
+					default:
+						break;
+				}
+
+			}
+
+		} else {
+
+			if (Instruction* Inst = dyn_cast<Instruction>(*Cit)) {
+
+				BasicBlock* parentBB = Inst->getParent();
+				BasicBlock* loopHeader = loopHeaders[loopBlocks[parentBB]];
+
+				lookForValuesToSafe(Inst, loopHeader);
+
+			}
 
 		}
 
@@ -301,12 +310,8 @@ bool ::OverflowSanitizer::runOnModule(Module& M) {
 			CallInst *abort = CallInst::Create(AbortF, Twine(), AbortBB);
 
 			// Add attributes to the abort call instruction: no return and no unwind
-			llvm::Attributes::AttrVal attributes[2];
-			attributes[0] = Attributes::NoReturn;
-			attributes[1] = Attributes::NoUnwind;
-			ArrayRef<llvm::Attributes::AttrVal> X(attributes, 2);
-			llvm::Attributes A = llvm::Attributes::get(*context, X);
-			abort->addAttribute(~0, A);
+			abort->addAttribute(~0, Attribute::NoReturn);
+			abort->addAttribute(~0, Attribute::NoUnwind);
 
 			// Unreachable instruction
 			new UnreachableInst(*context, AbortBB);

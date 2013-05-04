@@ -480,20 +480,15 @@ de nodos do grafo de dependência do programa.
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
 Benchmark & Num. Laços & Alcançáveis & Vulneráveis &
 Caminhos \\ \hline
-433.milc	&	326	&	8	&	4	&	3   \\ \hline
-444.namd	&	508	&	7	&	1	&	2  \\ \hline
-447.dealII	&	4657	&	540	&	225	&	3  \\ \hline
-450.soplex	&	547	&	21	&	12	&	3  \\ \hline
-470.lbm		&	17	&	0	&	0	&	- \\ \hline
-401.bzip2	&	205	&	1	&	1	&	3  \\ \hline
-403.gcc		&	3853	&	109	&	59	&	4  \\ \hline
-429.mcf		&	38	&	2	&	0	&	2  \\ \hline
-445.gobmk	&	1073	&	37	&	19	&	4  \\ \hline
-456.hmmer	&	687	&	133	&	48	&	3  \\ \hline
-458.sjeng	&	235	&	9	&	3	&	4  \\ \hline
-462.libquantum	&	67	&	2	&	1	&	4  \\ \hline
-464.h264ref	&	1586	&	27	&	22	&	15  \\ \hline
-473.astar	&	86	&	7	&	7	&	18  \\ \hline
+433.milc 		&	339		&	150		&	139		&	25	\\ \hline
+444.namd	 		&	490		&	444		&	409		&	9	\\ \hline
+447.dealII		&	4747		&	3482		&	2653		&	12	\\ \hline
+450.soplex		&	535		&	506		&	453		&	14	\\ \hline
+470.lbm			&	19		&	0		&	0		&	0	\\ \hline
+445.gobmk		&	1068		&	574		&	497		&	17	\\ \hline
+458.sjeng		&	232		&	140		&	110		&	15	\\ \hline
+462.libquantum	&	75		&	44		&	41		&	10	\\ \hline
+464.h264ref		&	1624 	&	194		&	164		&	17	\\ \hline
 \end{tabular*}
 \end{center}
 \caption{Informações estáticas inferidas pela análise de não-terminação.
@@ -528,20 +523,15 @@ tempo de execução, entre os programas originais e instrumentados.
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
 Benchmark & Num. Instruções & Num. Arit. & Instrumentação &
 Crescimento \\ \hline
-433.milc	&	22615	&	1165	&	7	&	0,50\%   \\ \hline
-444.namd	&	65045	&	3136	&	1	&	0,03\%   \\ \hline
-447.dealII	&	415756	&	14948	&	279	&	0,58\%   \\ \hline
-450.soplex	&	60772	&	1815	&	19	&	0,46\%   \\ \hline
-470.lbm	&	3614	&	1130	&	0	&	0,00\%   \\ \hline
-401.bzip2	&	16359	&	1688	&	1	&	0,10\%   \\ \hline
-403.gcc	&	792039	&	14853	&	92	&	0,14\%   \\ \hline
-429.mcf	&	2541	&	158	&	0	&	0,00\%   \\ \hline
-445.gobmk	&	130183	&	12158	&	54	&	0,63\%   \\ \hline
-456.hmmer	&	61908	&	3585	&	86	&	2,00\%   \\ \hline
-458.sjeng	&	27708	&	2438	&	20	&	1,10\%   \\ \hline
-462.libquantum	&	5848	&	593	&	6	&	1,04\%   \\ \hline
-464.h264ref	&	131905	&	13413	&	248	&	2,28\%   \\ \hline
-473.astar	&	8261	&	639	&	9	&	1,73\%   \\ \hline
+433.milc 		&	24971	&	1101		&	150		&	9.49\%	\\ \hline
+444.namd	 		&	77922	&	3136		&	937		&	15.73\%	\\ \hline
+447.dealII		&	483614	&	14910	&	3772		&	6.42\%	\\ \hline
+450.soplex		&	67808	&	1779		&	762		&	17.63\%	\\ \hline
+470.lbm			&	3788		&	1130		&	0		&	0.00\%	\\ \hline
+445.gobmk		&	146298	&	11856	&	939		&	9.80\%	\\ \hline
+458.sjeng		&	25473	&	2138		&	167		&	9.97\%	\\ \hline
+462.libquantum	&	6562		&	593		&	66		&	14.04\%	\\ \hline
+464.h264ref		&	141772	&	13398	&	469		&	4.26\%	\\ \hline
 \end{tabular*}
 \end{center}
 \caption{Impacto da instrumentação no código saneado.
@@ -551,6 +541,31 @@ Crescimento \\ \hline
 {\bf Crescimento}: razão entre o tamanho do programa instrumentado e o tamanho do
 programa original.}
 \label{fig:instImpact}
+\end{figure}
+
+
+\begin{figure}[t!]
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
+Benchmark & Num. Op. & Num. Var. & Num. Mem. & Num. Arestas \\ \hline
+433.milc			&	24799	&	20435	&	6901		&	74599	\\ \hline
+444.namd			&	78043	&	72866	&	10468	&	232792	\\ \hline
+447.dealII		&	512373	&	441576	&	131986	&	1516203	\\ \hline
+450.soplex		&	69861	&	56172	&	21764	&	204126	\\ \hline
+470.lbm			&	3787		&	3490		&	626		&	10859	\\ \hline
+445.gobmk		&	152342	&	167197	&	21146	&	458405	\\ \hline
+458.sjeng		&	25169	&	26313	&	2522		&	73355	\\ \hline
+462.libquantum	&	6552		&	5845		&	940		&	19142	\\ \hline
+464.h264ref		&	141606	&	106292	&	45223	&	409813	\\ \hline
+\end{tabular*}
+\end{center}
+\caption{Dados do grafo de dependência dos programas analisados}.
+{\bf Num. Op.}: número de nós de operação.
+{\bf Num. Var.}: número de nós de variáveis e constantes.
+{\bf Num. Var.}: número de nós de memória.
+{\bf Num. Arestas}: número de arestas do grafo.}
+\label{fig:tblDepGraph}
 \end{figure}
 
 % Describe which programs were aborted once you tried to execute them.
