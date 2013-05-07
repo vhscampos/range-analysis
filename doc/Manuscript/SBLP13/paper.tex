@@ -44,7 +44,7 @@ e testa-mo-no em um conjunto de programas que compraz mais de
 Descobrimos que, em média, caminhos em que informação perigosa trafega são 
 pequenos, sendo compostos por não mais que 10 instruções assembly.
 A instrumentação que inserimos para prevenir ataques de não terminação aumenta o 
-tamanho do programa saneado em cerca de 5\% em média, e torna-os menos que 2\% 
+tamanho do programa saneado em cerca de 10\% em média, e torna-os menos que 2\% 
 mais lentos.
 \end{abstract}
 
@@ -67,8 +67,8 @@ We have implemented our framework in the LLVM compiler, and have tested it on
 a benchmark suite containing over 2.5 million lines of C code.
 We have found out that the typical path from inputs to loop conditions is,
 on the average, less than 10 instructions long.
-Our instrumentation that prevents this kind of attacks adds less than 5\%
-extra code on the secured program.
+Our instrumentation that prevents this kind of attacks adds in average less than 
+10\% extra code on the secured program.
 The final, protected code, is, on the average, less than 2\% slower than the
 original, unprotected program.
 \end{abstract}
@@ -139,7 +139,7 @@ Consequentemente, o arcabouço que propomos incorre em uma perda de
 desempenho muito pequena, e, em nossa opinião, completamente justificável em
 decurso do benefício que assegura.
 
-Nós implementamos todas as idéias que discutimos neste artigo em LLVM,
+Nós implementamos todas as ideias que discutimos neste artigo em LLVM,
 um compilador de qualidade industrial~\cite{Lattner04}.
 Na seção~\ref{sec:exp} descreveremos uma série de experimentos que
 validam nossa análise.
@@ -353,12 +353,12 @@ $n_p$.
 \paragraph{Instrumentação de Saneamento. }
 Para evitar que estouros de precisão venham a causar a não-terminação
 de laços, nós inserimos testes no código binário do programa alvo.
-O código que constitui cada um desses testes é formado por uma guarda, mas
+O código que constitui cada um desses testes é formado por uma guarda, mais
 um tratador de eventos.
 Nossas guardas usam as condições mostradas na figura~\ref{fig:ovfCheck} para
 verificar a ocorrência de estouros de precisão.
 Atualmente instrumentamos quatro tipos diferentes de instrução:
-adição, subtração, multiplicação e arredamentos para a esquerda.
+adição, subtração, multiplicação e arredamentos para a esquerda, conhecidos como {\em shift left}.
 As operações de adição, subtração e multiplicação podem ser com ou sem sinal
 aritmético.
 
@@ -560,7 +560,7 @@ Benchmark & Num. Op. & Num. Var. & Num. Mem. & Num. Arestas \\ \hline
 464.h264ref		&	141606	&	106292	&	45223	&	409813	\\ \hline
 \end{tabular*}
 \end{center}
-\caption{Dados do grafo de dependência dos programas analisados}.
+\caption{Dados do grafo de dependência dos programas analisados.
 {\bf Num. Op.}: número de nós de operação.
 {\bf Num. Var.}: número de nós de variáveis e constantes.
 {\bf Num. Var.}: número de nós de memória.
