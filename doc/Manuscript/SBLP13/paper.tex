@@ -477,18 +477,26 @@ de nodos do grafo de dependência do programa.
 \begin{figure}[t!]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
-Benchmark & Num. Laços & Alcançáveis & Vulneráveis &
-Caminhos \\ \hline
-433.milc 		&	339		&	150		&	139		&	25	\\ \hline
-444.namd	 		&	490		&	444		&	409		&	9	\\ \hline
-447.dealII		&	4747		&	3482		&	2653		&	12	\\ \hline
-450.soplex		&	535		&	506		&	453		&	14	\\ \hline
-470.lbm			&	19		&	0		&	0		&	0	\\ \hline
-445.gobmk		&	1068		&	574		&	497		&	17	\\ \hline
-458.sjeng		&	232		&	140		&	110		&	15	\\ \hline
-462.libquantum	&	75		&	44		&	41		&	10	\\ \hline
-464.h264ref		&	1624 	&	194		&	164		&	17	\\ \hline
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|r|r|} \hline
+Benchmark 		& Inst. 			& Entr. 		& Nós Op. 		& Nós Var. 		& Nós Mem. 		& Arestas 		\\ \hline
+433.milc			&	24,971		&	3,995	&	24,799		&	20,435		&	6,901		&	74,599		\\ \hline
+444.namd			&	77,922		&	15,964	&	78,043		&	72,866		&	10,468		&	232,792		\\ \hline
+447.dealII		&	483,614		&	98,180	&	512,374		&	441,576		&	131,986		&	1,516,202	\\ \hline
+450.soplex		&	67,808		&	11,182	&	69,870		&	56,172		&	21,764		&	204,159		\\ \hline
+470.lbm			&	3,788		&	239		&	3,787		&	3,490		&	626			&	10,859		\\ \hline
+400.perlbench	&	288,429		&	25,224	&	287,050		&	230,982		&	98,886		&	819,872		\\ \hline
+401.bzip2		&	17,999		&	1,862	&	18,007		&	15,019		&	4,423		&	53,414		\\ \hline
+403.gcc			&	830,861		&	65,118	&	830,054		&	660,772		&	321,279		&	2,440,279	\\ \hline
+429.mcf			&	2,851		&	373		&	2,897		&	2,354		&	905			&	8,608		\\ \hline
+445.gobmk		&	146,298		&	21,420	&	152,342		&	167,197		&	21,146		&	458,405		\\ \hline
+456.hmmer		&	62,704		&	8,487	&	63,004		&	51,549		&	20,727		&	182,736		\\ \hline
+458.sjeng		&	25,473		&	2,610	&	25,169		&	26,313		&	2,522		&	73,355		\\ \hline
+462.libquantum	&	6,562		&	921		&	6,552		&	5,845		&	940			&	19,142		\\ \hline
+464.h264ref		&	141,772		&	11,995	&	141,606		&	106,292		&	45,219		&	409,813		\\ \hline
+471.omnetpp		&	96,929		&	15,989	&	101,197		&	88,819		&	31,686		&	305,170		\\ \hline
+473.astar		&	9,386		&	1,506	&	9,476		&	8,199		&	1,982		&	28,067		\\ \hline
+483.xalancbmk	&	648,941		&	132,976	&	689,176		&	569,780		&	244,874		&	1,971,945	\\ \hline
+Total			&	2,936,308	&	418,041	&	3,015,403	&	2,527,660	&	966,334		&	8,809,417	\\ \hline
 \end{tabular*}
 \end{center}
 \caption{Informações estáticas inferidas pela análise de não-terminação.
