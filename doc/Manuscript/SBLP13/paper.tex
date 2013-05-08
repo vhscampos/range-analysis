@@ -9,6 +9,8 @@
 \usepackage{graphicx}
 \usepackage{skak}
 
+\usepackage{booktabs}
+
 \sloppy
 
 \begin{document}
@@ -42,9 +44,9 @@ Nós implementamos esse arcabouço em LLVM, um compilador de qualidade industria
 e testa-mo-no em um conjunto de programas que compraz mais de
 2.5 milhões de linhas de código escrito em C.
 Descobrimos que, em média, caminhos em que informação perigosa trafega são 
-pequenos, sendo compostos por não mais que 10 instruções assembly.
+pequenos, sendo compostos por não mais que 13 instruções assembly.
 A instrumentação que inserimos para prevenir ataques de não terminação aumenta o 
-tamanho do programa saneado em cerca de 10\% em média, e torna-os menos que 2\% 
+tamanho do programa saneado em cerca de 5\% em média, e torna-os menos que 2\% 
 mais lentos.
 \end{abstract}
 
@@ -66,9 +68,9 @@ loop conditions that may not terminate due to integer overflows.
 We have implemented our framework in the LLVM compiler, and have tested it on
 a benchmark suite containing over 2.5 million lines of C code.
 We have found out that the typical path from inputs to loop conditions is,
-on the average, less than 10 instructions long.
+on the average, less than 13 instructions long.
 Our instrumentation that prevents this kind of attacks adds in average less than 
-10\% extra code on the secured program.
+5\% extra code on the secured program.
 The final, protected code, is, on the average, less than 2\% slower than the
 original, unprotected program.
 \end{abstract}
@@ -144,9 +146,9 @@ um compilador de qualidade industrial~\cite{Lattner04}.
 Na seção~\ref{sec:exp} descreveremos uma série de experimentos que
 validam nossa análise.
 Ao analisar os programas presentes na coleção SPEC CPU 2006, fomos capazes
-de descobrir XX laços que são influenciados por dados provenientes de
+de descobrir 12.304 laços que são influenciados por dados provenientes de
 entradas públicas, isto é, que podem ser manipuladas por um adversário.
-Dentre esses laços, pelo menos XX estão sujeitos à não terminação.
+Dentre esses laços, pelo menos 920 estão sujeitos à não terminação.
 Para obter esse número, utilizamos um padrão muito simples: procuramos por
 laços cujo teste de parada é do tipo \texttt{i <= N}, sendo \texttt{N}
 dependente da entrada.
@@ -420,10 +422,10 @@ desempenho, é negligível.
 \section{Resultados Experimentais}
 \label{sec:exp}
 
-Nós implementamos as técnicas descritas neste artigo em LLVM versão X.X.
-Nossa implementação foi testada em uma máquina Intel XX, com XX Gigabtyes de
-RAM, e XX GHz de Clock.
-Executamos nossa análise com sucesso sobre o arcabouço de testes de LLVM,
+Nós implementamos as técnicas descritas neste artigo em LLVM versão 3.3.
+Nossa implementação foi testada em uma máquina Intel\textsuperscript{®} Core™ i7-3770, com 16 Gigabtyes de
+RAM, e 3.40 GHz de Clock.
+Executamos nossa análise com sucesso sobre o arcabouço de testes do LLVM,
 um conjunto de programas com mais de 4.3 milhões de linhas de código C.
 No restante desta seção mostraremos somente resultados obtidos sobre os
 programas de SPEC CPU 2006.
@@ -445,135 +447,185 @@ o programa compilado;
 \item funções que podem ser chamadas via um ponteiro de funções.
 \end{itemize}
 
+
+\paragraph{Grafo de dependências de dados. }
+A figura~\ref{fig:tblDepGraph} mostra informações estáticas a respeito da
+estrutura dos programas analisados.
+Essa estrutura compreende o tamanho absoluto do programa, em número de 
+instruções e as informações do grafo de dependências de dados extraído de cada 
+programa.
+É possível observar que em média 14\% dos valores podem conter informações 
+vindas da entrada de dados. Esse numero é influenciado por todas as chamadas a 
+funções externas ao código fonte avaliado, para as quais não há como saber se 
+há ou não acesso a dados externos.
+Outra informação importante é que há mais nós de operação no grafo do que instruções no programa.
+Esse fato acontece pois nossa análise é interprocedural e é preciso inserir nós 
+de operação para ligar parâmetros formais a parâmetros reais e também para ligar
+valores de retorno aos valores que recebem o resultado de funções.
+Além disso, a tabela apresenta a quantidade de nós de memória, que são vértices do grafo que
+agrupam variáveis que contém ponteiros e que podem apontar
+para a mesma região de memória. Para identificar quais variáveis pertencem a cada vértice de memória, 
+é necessária a realização de uma análise de ponteiros seguida da criação de 
+conjuntos disjuntos de áreas de memória.
+Finalmente, o número de arestas dos grafos gerados indica que no caso médio, o grafo é esparso.
+Nos programas do SPEC, a relação é de 1,38 arestas por vértice, em média.
+Essa característica é evidenciada pela média de relação de 1,38 arestas por vértice, nos programas do SPEC; 
+e pela correlação de XX entre o número de vértices e o número de arestas de cada grafo, considerando 
+os 100 maiores casos de teste padrão do LLVM.
+
+
+\begin{figure}[t!]
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrr} \toprule
+Benchmark 		& Num. Inst. 	& Entr.		& Num. Op. 		& Num. Var. 		& Num. Mem. 		& Num. Arestas 		\\ \midrule
+433.milc			&	24,971		&	3,995	&	24,799		&	20,435		&	6,901		&	74,599		\\ 
+444.namd			&	77,922		&	15,964	&	78,043		&	72,866		&	10,468		&	232,792		\\ 
+447.dealII		&	483,614		&	98,180	&	512,374		&	441,576		&	131,986		&	1,516,202	\\ 
+450.soplex		&	67,808		&	11,182	&	69,870		&	56,172		&	21,764		&	204,159		\\ 
+470.lbm			&	3,788		&	239		&	3,787		&	3,490		&	626			&	10,859		\\ 
+400.perlbench	&	288,429		&	25,224	&	287,050		&	230,982		&	98,886		&	819,872		\\ 
+401.bzip2		&	17,999		&	1,862	&	18,007		&	15,019		&	4,423		&	53,414		\\ 
+403.gcc			&	830,861		&	65,118	&	830,054		&	660,772		&	321,279		&	2,440,279	\\ 
+429.mcf			&	2,851		&	373		&	2,897		&	2,354		&	905			&	8,608		\\ 
+445.gobmk		&	146,298		&	21,420	&	152,342		&	167,197		&	21,146		&	458,405		\\ 
+456.hmmer		&	62,704		&	8,487	&	63,004		&	51,549		&	20,727		&	182,736		\\ 
+458.sjeng		&	25,473		&	2,610	&	25,169		&	26,313		&	2,522		&	73,355		\\ 
+462.libquantum	&	6,562		&	921		&	6,552		&	5,845		&	940			&	19,142		\\ 
+464.h264ref		&	141,772		&	11,995	&	141,606		&	106,292		&	45,219		&	409,813		\\ 
+471.omnetpp		&	96,929		&	15,989	&	101,197		&	88,819		&	31,686		&	305,170		\\ 
+473.astar		&	9,386		&	1,506	&	9,476		&	8,199		&	1,982		&	28,067		\\ 
+483.xalancbmk	&	648,941		&	132,976	&	689,176		&	569,780		&	244,874		&	1,971,945	\\ \midrule
+Total			&	2,936,308	&	418,041	&	3,015,403	&	2,527,660	&	966,334		&	8,809,417	\\ \bottomrule
+\end{tabular*}
+\end{center}
+\caption{Dados do grafo de dependência dos programas analisados.
+{\bf Num. Inst.}: número de instruções do programa.
+{\bf Entr.}: número de valores que podem representar entradas de dados.
+{\bf Num. Op.}: número de nós de operação.
+{\bf Num. Var.}: número de nós de variáveis e constantes.
+{\bf Num. Var.}: número de nós de memória.
+{\bf Num. Arestas}: número de arestas do grafo.}
+\label{fig:tblDepGraph}
+\end{figure}
+
 \paragraph{Laços Alcançáveis e Vulneráveis. }
 A figura~\ref{fig:staticLoopData} mostra a quantidade de laços alcançáveis e
 vulneráveis que encontramos por programa.
-Estamos considerando, nesse caso, somente dependências de dados que não
-envolvam memória.
-Em outras palavras, todos os nodos do grafo de dependência são valores que
-podem residir em registradores.
-Essa versão de nosso detector não é segura: podemos deixar de marcar alguns
-laços vulneráveis que são controlados por dado contaminado que tenha sido
-armazenado em memória.
 Por outro lado, ela nos dá um número mínimo de laços que precisaríamos marcar,
 de acordo com a definição de laços alcançáveis da seção~\ref{sub:det}.
-Vemos, pela figura, que entre 1.3\% e 19.3\% de todos os laços do programa
+Vemos, pela figura, que Aproximadamente 70\% de todos os laços do programa
 são alcançáveis.
 Aproximadamente a metade dos laços alcançáveis é vulnerável.
-Os laços que não são considerados vulneráveis em geral usam condições de
-paradas que comparam valores via igualdade, por exemplo,
-\verb^while(a[i] != '\0') {i++;}^.
-A figura também reporta o tamanho médio dos caminhos vulneráveis.
-Um caminho vulnerável é a sequência de instruções que precisa ser executada
-para que a expressão de controle do laço seja influenciada por algum valor de
-entrada.
-Conforme vemos pela figura, esses caminhos são geralmente pequenos.
-Os dois caminhos vulneráveis em \texttt{429.mcf}, por exemplo, possuem somente
-duas instruções cada um.
-Concluí-se que o desenvolvedor, ao procurar por possíveis vulnerabilidades
+Dos laços vulneráveis, aproximadamente 12\% são controlados por comparações do 
+tipo \texttt{i <= N};
+Conforme vemos pela figura, os caminhos entre as entradas de dados e as condições 
+de parada dos loops são geralmente pequenos.
+Os dez caminhos vulneráveis em \texttt{429.mcf}, por exemplo, possuem somente
+sete instruções, em média.
+Conclui-se que o desenvolvedor, ao procurar por possíveis vulnerabilidades
 a ataques de não terminação, teria de ater-se a uma quantidade muito pequena
 de nodos do grafo de dependência do programa.
 
 \begin{figure}[t!]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|r|r|} \hline
-Benchmark 		& Inst. 			& Entr. 		& Nós Op. 		& Nós Var. 		& Nós Mem. 		& Arestas 		\\ \hline
-433.milc			&	24,971		&	3,995	&	24,799		&	20,435		&	6,901		&	74,599		\\ \hline
-444.namd			&	77,922		&	15,964	&	78,043		&	72,866		&	10,468		&	232,792		\\ \hline
-447.dealII		&	483,614		&	98,180	&	512,374		&	441,576		&	131,986		&	1,516,202	\\ \hline
-450.soplex		&	67,808		&	11,182	&	69,870		&	56,172		&	21,764		&	204,159		\\ \hline
-470.lbm			&	3,788		&	239		&	3,787		&	3,490		&	626			&	10,859		\\ \hline
-400.perlbench	&	288,429		&	25,224	&	287,050		&	230,982		&	98,886		&	819,872		\\ \hline
-401.bzip2		&	17,999		&	1,862	&	18,007		&	15,019		&	4,423		&	53,414		\\ \hline
-403.gcc			&	830,861		&	65,118	&	830,054		&	660,772		&	321,279		&	2,440,279	\\ \hline
-429.mcf			&	2,851		&	373		&	2,897		&	2,354		&	905			&	8,608		\\ \hline
-445.gobmk		&	146,298		&	21,420	&	152,342		&	167,197		&	21,146		&	458,405		\\ \hline
-456.hmmer		&	62,704		&	8,487	&	63,004		&	51,549		&	20,727		&	182,736		\\ \hline
-458.sjeng		&	25,473		&	2,610	&	25,169		&	26,313		&	2,522		&	73,355		\\ \hline
-462.libquantum	&	6,562		&	921		&	6,552		&	5,845		&	940			&	19,142		\\ \hline
-464.h264ref		&	141,772		&	11,995	&	141,606		&	106,292		&	45,219		&	409,813		\\ \hline
-471.omnetpp		&	96,929		&	15,989	&	101,197		&	88,819		&	31,686		&	305,170		\\ \hline
-473.astar		&	9,386		&	1,506	&	9,476		&	8,199		&	1,982		&	28,067		\\ \hline
-483.xalancbmk	&	648,941		&	132,976	&	689,176		&	569,780		&	244,874		&	1,971,945	\\ \hline
-Total			&	2,936,308	&	418,041	&	3,015,403	&	2,527,660	&	966,334		&	8,809,417	\\ \hline
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrr} \toprule
+Benchmark			&	Num. Laços (L)	&	Alcançáveis	&	Caminhos	&	\multicolumn{2}{c}{Vulneráveis} &	\% (II/L) \\ 
+                                                                     \cmidrule{5-6} 
+{}				&	{}		&	{}			&	{}				&	I		&	II	&	{}	\\ \midrule
+433.milc			&	329		&	146			&	25				&	138		&	0	&	0.00\%	\\ 
+444.namd			&	484		&	438			&	9				&	408		&	2	&	0.41\%	\\ 
+447.dealII		&	4,759	&	3,493		&	12				&	2,657	&	73	&	1.53\%	\\ 
+450.soplex		&	542		&	513			&	14				&	453		&	175	&	32.29\%	\\ 
+470.lbm			&	18		&	0			&	0				&	0		&	0	&	0.00\%	\\ 
+400.perlbench	&	1,160	&	1,034		&	14				&	315		&	72	&	6.21\%	\\ 
+401.bzip2		&	211		&	151			&	19				&	95		&	24	&	11.37\%	\\ 
+403.gcc			&	3,824	&	2,966		&	24				&	1,297	&	310	&	8.11\%	\\ 
+429.mcf			&	39		&	10			&	7				&	2		&	0	&	0.00\%	\\
+445.gobmk		&	1,082	&	588			&	17				&	499		&	25	&	2.31\%	\\ 
+456.hmmer		&	681		&	376			&	8				&	255		&	84	&	12.33\%	\\ 
+458.sjeng		&	235		&	139			&	15				&	109		&	2	&	0.85\%	\\ 
+462.libquantum	&	79		&	44			&	10				&	41		&	3	&	3.80\%	\\ 
+464.h264ref		&	1,614	&	193			&	17				&	161		&	9	&	0.56\%	\\ 
+471.omnetpp		&	363		&	280			&	8				&	201		&	41	&	11.29\%	\\ 
+473.astar		&	88		&	53			&	8				&	50		&	18	&	20.45\%	\\ 
+483.xalancbmk	&	2,212	&	1,880		&	10				&	1,061	&	82	&	3.71\%	\\ \midrule
+Total			&	17,720	&	12,304		&	13				&	7,742	&	920	&	5.19\%	\\ \bottomrule
+
+
 \end{tabular*}
 \end{center}
 \caption{Informações estáticas inferidas pela análise de não-terminação.
-{\bf Num. laços}: número de laços no programa.
+{\bf Num. Laços}: número de laços no programa.
 {\bf Alcançáveis}: quantidade de laços que são dependentes de dados produzidos a
 partir de canais de entrada.
+{\bf Caminhos}: tamanho médio do menor caminho de dependência de dados da entrada
+até a operação de controle do laço.
 {\bf Vulneráveis}: número de laços que preenchem nossos requisitos de
 vulnerabilidade.
-{\bf Caminhos}: tamanho médio do menor caminho de dependência de dados da entrada
-até a operação de controle do laço.}
+{\bf I}: análise considerando todas as condições de parada de loop potencialmente vulneráveis.
+{\bf II}: análise considerando somente as condições de parada de loop controlados por comparações do tipo \texttt{i <= N}.}
 \label{fig:staticLoopData}
 \end{figure}
 
+
+
+\paragraph{Instrumentação. }
 A figura~\ref{fig:instImpact} mostra o impacto da instrumentação que inserimos
 no tamanho do programa.
-Em média, cada laço vulnerável custou-nos a criação de 1.44 guardas, como
+Em média, cada laço vulnerável custou-nos a criação de 1.7 guardas, como
 aquela vista na figura~\ref{fig:instrumented_cfg}(e).
-O aumento de tamanho do programa guardado é negligível, conforme podemos
-observar na última coluna da figura~\ref{fig:instImpact}.
-O maior crescimento, observado em \texttt{464.h264ref}, foi de 2.28\%.
-Uma vez que o número de guardas inseridas nos programas é tão pequeno, o
-crescimento de seu tempo de execução também é pequeno.
+O aumento de tamanho do programa guardado é pequeno, conforme podemos
+observar nas duas últimas colunas da figura~\ref{fig:instImpact}.
+O maior crescimento, observado em \texttt{450.soplex}, foi de 17.83\%.
+Na média, entretanto, os programas cresceram apenas 5\% em número de instruções.
+Uma vez que o número de instruções inseridas nos programas é tão pequeno, o
+crescimento de seu tempo de execução também é pequeno, pois nenhuma das 
+instruções realiza operações demoradas, como acesso a memórias lentas.
 Executamos todos os programas instrumentados, passando-lhes suas entradas de
 referência, conforme especificado no manual de uso de SPEC CPU 2006, e as
 diferenças de tempo de execução ficaram dentro da margem de erro dos benchmarks.
+% XX - Melhorar esse final de parágrafo, colocando os resultados do teste dinâmico
 Em outras palavras, não pudemos perceber quaisquer diferenças, em termos de
 tempo de execução, entre os programas originais e instrumentados.
 
 \begin{figure}[t!]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
-Benchmark & Num. Instruções & Num. Arit. & Instrumentação &
-Crescimento \\ \hline
-433.milc 		&	24971	&	1101		&	150		&	9.49\%	\\ \hline
-444.namd	 		&	77922	&	3136		&	937		&	15.73\%	\\ \hline
-447.dealII		&	483614	&	14910	&	3772		&	6.42\%	\\ \hline
-450.soplex		&	67808	&	1779		&	762		&	17.63\%	\\ \hline
-470.lbm			&	3788		&	1130		&	0		&	0.00\%	\\ \hline
-445.gobmk		&	146298	&	11856	&	939		&	9.80\%	\\ \hline
-458.sjeng		&	25473	&	2138		&	167		&	9.97\%	\\ \hline
-462.libquantum	&	6562		&	593		&	66		&	14.04\%	\\ \hline
-464.h264ref		&	141772	&	13398	&	469		&	4.26\%	\\ \hline
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrr} \toprule
+Benchmark		&	Num. Inst.	&	Num. Arit.	&	\multicolumn{2}{c}{Instrumentação}		&	\multicolumn{2}{c}{Crescimento}			\\ 
+													\cmidrule{4-5} 			\cmidrule{6-7}
+{}				&	{}			&	{}			&	I		&	II		&	I		&	II		\\ \midrule
+433.milc			&	24,971		&	1,101		&	150		&	0		&	9.49\%	&	0.00\%	\\
+444.namd			&	77,922		&	3,136		&	932		&	2		&	15.75\%	&	0.04\%	\\
+447.dealII		&	483,614		&	14,910		&	3,762	&	77		&	6.40\%	&	0.21\%	\\
+450.soplex		&	67,808		&	1,779		&	771		&	261		&	17.83\%	&	6.09\%	\\
+470.lbm			&	3,788		&	1,130		&	0		&	0		&	0.00\%	&	0.00\%	\\
+400.perlbench	&	288,429		&	7,983		&	655		&	226		&	2.92\%	&	1.09\%	\\
+401.bzip2		&	17,999		&	1,684		&	240		&	56		&	17.20\%	&	4.61\%	\\
+403.gcc			&	830,861		&	14,338		&	2,072	&	473		&	3.26\%	&	0.83\%	\\
+429.mcf			&	2,851		&	158			&	4		&	0		&	2.00\%	&	0.00\%	\\
+445.gobmk		&	146,298		&	11,856		&	932		&	76		&	9.73\%	&	0.78\%	\\
+456.hmmer		&	62,704		&	3,210		&	419		&	143		&	10.08\%	&	3.37\%	\\
+458.sjeng		&	25,473		&	2,138		&	167		&	22		&	9.97\%	&	1.31\%	\\
+462.libquantum	&	6,562		&	593			&	68		&	4		&	14.49\%	&	0.98\%	\\
+464.h264ref		&	141,772		&	13,398		&	411		&	102		&	3.81\%	&	0.88\%	\\
+471.omnetpp		&	96,929		&	2,029		&	249		&	46		&	3.91\%	&	0.73\%	\\
+473.astar		&	9,386		&	639			&	99		&	37		&	16.46\%	&	6.13\%	\\
+483.xalancbmk	&	648,941		&	12,528		&	1,562	&	116		&	2.52\%	&	0.24\%	\\ \midrule
+Total			&	2,936,308	&	92,610		&	12,493	&	1,641	&	5.02\%	&	0.81\%	\\ \bottomrule
 \end{tabular*}
 \end{center}
 \caption{Impacto da instrumentação no código saneado.
-{\bf Num. Instruções}: número de instruções no benchmark.
-{\bf Num. Arit}: número de instruções que podem causar estouro de precisão inteira.
+{\bf Num. Inst.}: número de instruções no benchmark.
+{\bf Num. Arit.}: número de instruções que podem causar estouro de precisão inteira.
 {\bf Instrumentação}: quantidade de testes inseridos para sanear o programa.
 {\bf Crescimento}: razão entre o tamanho do programa instrumentado e o tamanho do
-programa original.}
+programa original.
+{\bf I}: análise considerando todas as condições de parada de loop potencialmente vulneráveis.
+{\bf II}: análise considerando somente as condições de parada de loop controlados por comparações do tipo \texttt{i <= N}.}
 \label{fig:instImpact}
-\end{figure}
-
-
-\begin{figure}[t!]
-\begin{center}
-\renewcommand{\arraystretch}{1.2}
-\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}|l|r|r|r|r|} \hline
-Benchmark & Num. Op. & Num. Var. & Num. Mem. & Num. Arestas \\ \hline
-433.milc			&	24799	&	20435	&	6901		&	74599	\\ \hline
-444.namd			&	78043	&	72866	&	10468	&	232792	\\ \hline
-447.dealII		&	512373	&	441576	&	131986	&	1516203	\\ \hline
-450.soplex		&	69861	&	56172	&	21764	&	204126	\\ \hline
-470.lbm			&	3787		&	3490		&	626		&	10859	\\ \hline
-445.gobmk		&	152342	&	167197	&	21146	&	458405	\\ \hline
-458.sjeng		&	25169	&	26313	&	2522		&	73355	\\ \hline
-462.libquantum	&	6552		&	5845		&	940		&	19142	\\ \hline
-464.h264ref		&	141606	&	106292	&	45223	&	409813	\\ \hline
-\end{tabular*}
-\end{center}
-\caption{Dados do grafo de dependência dos programas analisados.
-{\bf Num. Op.}: número de nós de operação.
-{\bf Num. Var.}: número de nós de variáveis e constantes.
-{\bf Num. Var.}: número de nós de memória.
-{\bf Num. Arestas}: número de arestas do grafo.}
-\label{fig:tblDepGraph}
 \end{figure}
 
 % Describe which programs were aborted once you tried to execute them.
@@ -679,7 +731,7 @@ Neste artigo nós descrevemos uma forma de ataque de negação de serviço que
 busca levar o programa alvo à não-terminação.
 Ao contrário da literatura relacionada, ate-mo-nos a ataques baseados em
 estouro de precisão de aritmética de inteiros.
-Esse tipo de fenômeno caracteriza linguagens de programação como Java, C e
+Esse tipo de fenômeno é característico de linguagens de programação como Java, C e
 C++.
 Nós definimos algumas propriedades necessárias para a efetiva realização de
 um ataque de não-terminação, a saber, condição de controle controlada por
