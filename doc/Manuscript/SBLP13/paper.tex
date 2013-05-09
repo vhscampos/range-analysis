@@ -450,36 +450,22 @@ o programa compilado;
 \item funções que podem ser chamadas via um ponteiro de funções.
 \end{itemize}
 
-
-\paragraph{Grafo de dependências de dados. }
-A figura~\ref{fig:tblDepGraph} mostra informações estáticas a respeito da
-estrutura dos programas analisados.
-Mostramos o tamanho absoluto do programa, em número de 
-instruções e as informações sobre o seu grafo de dependências.
-Em média 14\% dos valores que o programa manipula podem
+\noindent
+\textbf{Grafo de dependências de dados. }
+A figura~\ref{fig:tblDepGraph} mostra informações estáticas a respeito dos
+grafos de dependências dos programas analisados.
+Como ponto de referência, mostramos o tamanho absoluto de cada programa, em
+número de  instruções.
+Em média 14\% dos valores que cada programa manipula podem
 conter informações vindas da entrada de dados.
 Esses valores são produzidos por funções externas, para as quais não é
-possível saber se há ou não acesso a dados externos.
+possível saber se há ou não contaminação por dados externos.
 Observa-se que existem mais nós de operação no grafo do que instruções no
 programa.
 Esse fato verifica-se porque nossa análise é interprocedural.
 Assim, inserimos nós de operação para criar dependências entre parâmetros
 formais a parâmetros reais e também para ligar valores de retorno aos valores
 que recebem o resultado de funções.
-A tabela também apresenta a quantidade de nós de memória.
-Esses nós são vértices do grafo de dependência que representam os ponteiros
-e os blocos de memória alocados no código do programa.
-A fim de determinar se dois ponteiros são sinônimos ou não, implementamos
-a análise de apontadores de Andersen~\cite{Andersen94}.
-Sinônimos são agrupados em um mesmo nó de memória.
-Analisando a figura~\ref{fig:tblDepGraph}, constatamos que os grafos de
-dependências são esparsos.
-Nos programas de SPEC CPU 2006, a razão entre o número de vértices e o número
-de arestas é 1.38.
-Essa relação fica ainda mais evidente quando extraímos o coeficiente de
-determinação entre essas duas grandezas -- número de vértices e arestas.
-Obtemos o valor de 0.99, o que indica uma forte correlação linear entre os
-dois valores.
 
 \begin{figure}[t!]
 \begin{center}
@@ -515,29 +501,38 @@ Total			&	2,936,308	&	418,041	&	3,015,403	&	2,527,660	&	966,334		&	8,809,417	\\ 
 {\bf Arestas}: número de arestas do grafo.}
 \end{figure}
 
-\paragraph{Laços Alcançáveis e Vulneráveis. }
-A figura~\ref{fig:staticLoopData} mostra a quantidade de laços alcançáveis e
-vulneráveis que encontramos por programa.
-Por outro lado, ela nos dá um número mínimo de laços que precisaríamos marcar,
-de acordo com a definição de laços alcançáveis da seção~\ref{sub:det}.
-Vemos, pela figura, que Aproximadamente 70\% de todos os laços do programa
-são alcançáveis.
-Aproximadamente a metade dos laços alcançáveis é vulnerável.
-Dos laços vulneráveis, aproximadamente 12\% são controlados por comparações do 
-tipo \texttt{i <= N};
-Conforme vemos pela figura, os caminhos entre as entradas de dados e as condições 
-de parada dos loops são geralmente pequenos.
-Os dez caminhos vulneráveis em \texttt{429.mcf}, por exemplo, possuem somente
-sete instruções, em média.
-Conclui-se que o desenvolvedor, ao procurar por possíveis vulnerabilidades
-a ataques de não terminação, teria de ater-se a uma quantidade muito pequena
-de nodos do grafo de dependência do programa.
+A figura~\ref{fig:tblDepGraph} também apresenta a quantidade de nós de memória.
+Esses nós são vértices do grafo de dependência que representam os ponteiros
+e os blocos de memória alocados no código do programa.
+A fim de determinar se dois ponteiros são sinônimos ou não, implementamos
+a análise de apontadores de Andersen~\cite{Andersen94}.
+Sinônimos, isto é, apontadores que indicam regiões de memória sobrepostas, são
+agrupados em um mesmo nó.
+Quanto mais precisa a análise de ponteiros, menores os conjuntos contidos em
+cada uma dessas unidades.
+A análise de Andersen é um compromisso entre eficiência e precisão.
+
+Analisando a figura~\ref{fig:tblDepGraph}, constatamos que os grafos de
+dependências são esparsos.
+Nos programas de SPEC CPU 2006, a razão entre o número de vértices e o número
+de arestas é 1.38.
+Essa relação fica ainda mais evidente quando extraímos o coeficiente de
+determinação entre essas duas grandezas -- número de vértices e arestas.
+Obtemos o valor de 0.99, o que indica uma forte correlação linear entre os
+dois valores.
+Essa baixa densidade ocorre porque programas reais variáveis tendem a ser
+usadas um número baixo de vezes.
+Boissinot {\em et al.}~\cite{Benoit08} demonstraram, empiricamente, que
+a maior parte das variáveis é usada somente uma vez no programa, e mais de
+99\% das variáveis são usadas menos que cinco vezes.
+Assim, a maior parte dos vértices que representam variáveis em nossos grafos de
+dependências possuem grau de saída inferior a cinco.
 
 \begin{figure}[t!]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrr} \toprule
-Benchmark			&	Num. Laços (L)	&	Alcançáveis	&	Caminhos	&	\multicolumn{2}{c}{Vulneráveis} &	\% (II/L) \\ 
+Benchmark			&		Laços (L)	&	Alcançáveis	&	Caminhos	&	\multicolumn{2}{c}{Vulneráveis} &	\% (II/L) \\ 
                                                                      \cmidrule{5-6} 
 {}				&	{}		&	{}			&	{}				&	I		&	II	&	{}	\\ \midrule
 433.milc			&	329		&	146			&	25				&	138		&	0	&	0.00\%	\\ 
@@ -563,44 +558,49 @@ Total			&	17,720	&	12,304		&	13				&	7,742	&	920	&	5.19\%	\\ \bottomrule
 \end{tabular*}
 \end{center}
 \caption{Informações estáticas inferidas pela análise de não-terminação.
-{\bf Num. Laços}: número de laços no programa.
+{\bf Laços}: número de laços no programa.
 {\bf Alcançáveis}: quantidade de laços que são dependentes de dados produzidos a
 partir de canais de entrada.
 {\bf Caminhos}: tamanho médio do menor caminho de dependência de dados da entrada
 até a operação de controle do laço.
 {\bf Vulneráveis}: número de laços que preenchem nossos requisitos de
 vulnerabilidade.
-{\bf I}: análise considerando todas as condições de parada de loop potencialmente vulneráveis.
-{\bf II}: análise considerando somente as condições de parada de loop controlados por comparações do tipo \texttt{i <= N}.}
+{\bf I}: laços vulneráveis segundo a definição da seção~\ref{sub:det}.
+{\bf II}: laços vulneráveis controlados por comparações do tipo
+\texttt{i <= N}.}
 \label{fig:staticLoopData}
 \end{figure}
 
 
-
-\paragraph{Instrumentação. }
-A figura~\ref{fig:instImpact} mostra o impacto da instrumentação que inserimos
-no tamanho do programa.
-Em média, cada laço vulnerável custou-nos a criação de 1.7 guardas, como
-aquela vista na figura~\ref{fig:instrumented_cfg}(e).
-O aumento de tamanho do programa guardado é pequeno, conforme podemos
-observar nas duas últimas colunas da figura~\ref{fig:instImpact}.
-O maior crescimento, observado em \texttt{450.soplex}, foi de 17.83\%.
-Na média, entretanto, os programas cresceram apenas 5\% em número de instruções.
-Uma vez que o número de instruções inseridas nos programas é tão pequeno, o
-crescimento de seu tempo de execução também é pequeno, pois nenhuma das 
-instruções realiza operações demoradas, como acesso a memórias lentas.
-Executamos todos os programas instrumentados, passando-lhes suas entradas de
-referência, conforme especificado no manual de uso de SPEC CPU 2006, e as
-diferenças de tempo de execução ficaram dentro da margem de erro dos benchmarks.
-% XX - Melhorar esse final de parágrafo, colocando os resultados do teste dinâmico
-Em outras palavras, não pudemos perceber quaisquer diferenças, em termos de
-tempo de execução, entre os programas originais e instrumentados.
+\noindent
+\textbf{Laços Alcançáveis e Vulneráveis. }
+A figura~\ref{fig:staticLoopData} mostra a quantidade de laços alcançáveis e
+vulneráveis que encontramos por programa.
+A noção de ``laço vulnerável" é definida na seção~\ref{sub:det}.
+A quantidade de laços vulneráveis que reportamos representa um limite inferior
+no número de estruturas de iteração que precisamos instrumentar para prevenir
+ataques de não terminação baseados em estouro de precisão.
+A figura indica que aproximadamente 70\% de todos os laços do programa
+são alcançáveis.
+Dessa quantidade, a metade é vulnerável.
+Cerca de 12\% dos laços vulneráveis são controlados por comparações do
+tipo \texttt{i <= N}.
+Esse tipo de condição é particularmente perigosa, pois, conforme visto no
+exemplo da figura~\ref{fig:fact}, se o limite \texttt{N} for o
+maior inteiro possível, então a condição será sempre verdade.
+A figura~\ref{fig:staticLoopData} mostra que os caminhos entre as entradas de
+dados e as condições de parada de laços são geralmente pequenos.
+Por exemplo, os dez caminhos vulneráveis em \texttt{429.mcf} possuem em média
+sete instruções.
+Conclui-se que um auditor que procure por vulnerabilidades a ataques de
+não-terminação tem, em geral, de analisar sequências relativamente
+pequenas de código.
 
 \begin{figure}[t!]
 \begin{center}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lrrrrrr} \toprule
-Benchmark		&	Num. Inst.	&	Num. Arit.	&	\multicolumn{2}{c}{Instrumentação}		&	\multicolumn{2}{c}{Crescimento}			\\ 
+Benchmark		&		Insts.	&		Arits.	&	\multicolumn{2}{c}{Instrumentação}		&	\multicolumn{2}{c}{Crescimento}			\\ 
 													\cmidrule{4-5} 			\cmidrule{6-7}
 {}				&	{}			&	{}			&	I		&	II		&	I		&	II		\\ \midrule
 433.milc			&	24,971		&	1,101		&	150		&	0		&	9.49\%	&	0.00\%	\\
@@ -624,15 +624,50 @@ Total			&	2,936,308	&	92,610		&	12,493	&	1,641	&	5.02\%	&	0.81\%	\\ \bottomrule
 \end{tabular*}
 \end{center}
 \caption{Impacto da instrumentação no código saneado.
-{\bf Num. Inst.}: número de instruções no benchmark.
-{\bf Num. Arit.}: número de instruções que podem causar estouro de precisão inteira.
+{\bf Insts.}: número de instruções no benchmark.
+{\bf Arits.}: número de instruções que podem causar estouro de precisão inteira.
 {\bf Instrumentação}: quantidade de testes inseridos para sanear o programa.
 {\bf Crescimento}: razão entre o tamanho do programa instrumentado e o tamanho do
 programa original.
-{\bf I}: análise considerando todas as condições de parada de loop potencialmente vulneráveis.
-{\bf II}: análise considerando somente as condições de parada de loop controlados por comparações do tipo \texttt{i <= N}.}
+{\bf I}: análise considerando todos os laços vulneráveis.
+{\bf II}: análise considerando somente os laços controlados por condições do
+tipo \texttt{i <= N}.}
 \label{fig:instImpact}
 \end{figure}
+
+\noindent
+\textbf{Instrumentação. }
+A figura~\ref{fig:instImpact} mostra que nossa instrumentação tem um
+impacto ínfimo sobre o tamanho do programa guardado.
+Nossos programas possuem poucas operações de tipo inteiro passíveis de estouro
+de precisão -- em média somente 3.15\% das instruções são desse tipo.
+Dessas instruções, um número ainda menor é usado dentro de laços vulneráveis.
+No caso médio, cada laço vulnerável custou-nos a criação de 1.64 guardas, como
+aquela vista na figura~\ref{fig:instrumented_cfg}(e).
+O aumento de tamanho do programa guardado é pequeno, conforme podemos
+observar nas duas últimas colunas da figura~\ref{fig:instImpact}.
+O maior crescimento, observado em \texttt{450.soplex}, foi de 17.83\%.
+Na média, entretanto, os programas cresceram apenas 5\% em número de
+instruções.
+Um dos benchmarks, \texttt{470.lbm} não recebeu qualquer instrumentação,
+uma vez que ele não possui laços controlados por dados de entrada.
+Todos os laços desse benchmark dependem de constantes criadas dentro do próprio
+programa.
+
+\noindent
+\textbf{Tempo de execução. }
+Uma vez que o número de instruções inseridas nos programas é tão pequeno, o
+crescimento de seu tempo de execução é irrisório.
+Para justificar tal fato, alegamos que nenhuma das instruções presentes em
+uma guarda realiza operações demoradas, como acesso a memórias lentas.
+Executamos todos os programas instrumentados, passando-lhes suas entradas de
+referência, conforme especificado no manual de uso de SPEC CPU 2006, e as
+diferenças de tempo de execução ficaram dentro da margem de erro
+prevista pelo manual SPEC CPU 2006.
+% XX - Melhorar esse final de parágrafo, colocando os resultados do teste dinâmico
+Em outras palavras, não pudemos perceber quaisquer diferenças, em termos de
+tempo de execução, entre os programas originais e instrumentados.
+
 
 % Describe which programs were aborted once you tried to execute them.
 
