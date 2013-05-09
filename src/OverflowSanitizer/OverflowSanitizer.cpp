@@ -12,6 +12,7 @@ using namespace std;
 
 #define InsertAborts false
 #define TruncInstrumentation true
+#define InsertFprintfs false
 
 
 static cl::opt<bool, false>
@@ -145,7 +146,7 @@ BasicBlock* OverflowSanitizer::NewOverflowOccurrenceBlock(Instruction* I, BasicB
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);
 
-	//if (InsertFprintfs){
+	if (InsertFprintfs){
 		Value* vStderr = new LoadInst(GVstderr, "loadstderr", branch);
 
 		std::vector<Value*> args;
@@ -156,7 +157,7 @@ BasicBlock* OverflowSanitizer::NewOverflowOccurrenceBlock(Instruction* I, BasicB
 		args.push_back(InstructionIdentifier);
 		ArrayRef<Value*> ARargs(args);
 		CallInst::Create(FPrintF, ARargs, "", branch);
-	//}
+	}
 
 	return result;
 }
