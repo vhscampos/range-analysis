@@ -99,7 +99,7 @@ Uma vez que essa quantidade de incursões é pequena, os métodos tradicionais
 de detecção de negação de serviço não podem ser usados para reconhecer ataques
 de não-terminação.
 Além disso, dada a vasta quantidade de código aberto usado nos mais diversos
-ramos da indústria de {\em software}, usuários maliciosos têm a sua
+ramos da indústria de {\em software}, usuários maliciosos têm à sua
 disposição um vasto campo de ação.
 
 A detecção de código vulnerável a ataques de não-terminação é difícil.
@@ -275,8 +275,8 @@ Esse grafo é definido da seguinte forma:
 para cada variável $v$ no programa, nós criamos um nodo $n_v$, e para cada
 instrução $i$ no programa, nós criamos um nodo $n_i$.
 Para cada instrução $i: v = f(\ldots, u, \ldots)$ que define uma variável $v$ e
-usa uma variável $u$ n\'{o}s criamos duas areastas: $n_u \leftarrow n_i$ e
-$n_i \leftarrow n_v$.
+usa uma variável $u$ n\'{o}s criamos duas areastas: $n_u \rightarrow n_i$ e
+$n_i \rightarrow n_v$.
 O grafo de dependências que extraímos a partir d CFG visto na
 figura~\ref{fig:fact}(b) é mostrado na figura~\ref{fig:depGraph}.
 
@@ -296,7 +296,7 @@ O grafo de dependências de nosso exemplo apresenta tal condição:
 existe um caminho que une o nodo correspondente ao parâmetro \texttt{n}, uma
 entrada, ao nodo que corresponde a \texttt{p}, o predicado de controle do
 laço.
-Esse tipo de caminho, uma vez contruído o grafo, pode ser encontrado em
+Esse tipo de caminho, uma vez construído o grafo, pode ser encontrado em
 tempo linear no número de arestas do grafo - normalmente proporcional ao
 número de nodos - via a simples busca em profundidade ou largura.
 
@@ -352,8 +352,9 @@ Nesse caso, usamos o seguinte critério para determinar se uma operação
 $i : v = f(v_1, \ldots, v_n)$ precisa ser instrumentada:
 %
 \begin{itemize}
-\item existe um caminho no nodo $n_i$ até o nodo $n_p$.
+\item Existe um caminho no nodo $n_i$ até o nodo $n_p$.
 \item O nodo $n_i$ encontra-se em um ciclo.
+\item A operação que define a variável $i$ pode provocar um estouro aritmético.
 \end{itemize}
 %
 A título de exemplo, a operação de incremento $++$ no grafo de dependências
@@ -474,7 +475,7 @@ Observa-se que existem mais nós de operação no grafo do que instruções no
 programa.
 Esse fato verifica-se porque nossa análise é interprocedural.
 Assim, inserimos nós de operação para criar dependências entre parâmetros
-formais a parâmetros reais e também para ligar valores de retorno aos valores
+formais e parâmetros reais e também para ligar valores de retorno aos valores
 que recebem o resultado de funções.
 
 \begin{figure}[t!]
