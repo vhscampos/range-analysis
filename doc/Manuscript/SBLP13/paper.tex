@@ -47,7 +47,7 @@ e testa-mo-no em um conjunto de programas que compraz mais de
 Descobrimos que, em média, caminhos em que informação perigosa trafega são 
 pequenos, sendo compostos por não mais que 13 instruções assembly.
 A instrumentação que inserimos para prevenir ataques de não terminação aumenta o 
-tamanho do programa saneado em cerca de 5\% em média, e torna-os menos que 2\% 
+tamanho do programa saneado em cerca de 5\% em média, e torna-os menos que 1\% 
 mais lentos.
 \end{abstract}
 
@@ -56,7 +56,7 @@ mais lentos.
 We say that a program is vulnerable to a non-termination attack if (i) it
 contains a loop that is bounded by values coming from public inputs, and (ii)
 an adversary can manipulate these values to force this loop to iterate forever.
-Preventing this kind of attack is difficult because they do not originate
+Preventing this kind of attack is difficult because it does not originate
 from bugs that break the semantics of the programming
 language, such as buffer overflows.
 Instead, they usually are made possible by the wrapping integer arithmetics
@@ -70,9 +70,9 @@ We have implemented our framework in the LLVM compiler, and have tested it on
 a benchmark suite containing over 2.5 million lines of C code.
 We have found out that the typical path from inputs to loop conditions is,
 on the average, less than 13 instructions long.
-Our instrumentation that prevents this kind of attacks adds in average less than 
+Our instrumentation that prevents this kind of attack adds on average less than
 5\% extra code on the secured program.
-The final, protected code, is, on the average, less than 2\% slower than the
+The final, protected code, is, on the average, less than 1\% slower than the
 original, unprotected program.
 \end{abstract}
 
@@ -142,25 +142,34 @@ Consequentemente, o arcabouço que propomos incorre em uma perda de
 desempenho muito pequena, e, em nossa opinião, completamente justificável em
 decurso do benefício que assegura.
 
-Nós implementamos todas as ideias que discutimos neste artigo em LLVM,
+Implementamos todas as ideias que discutimos neste artigo em LLVM,
 um compilador de qualidade industrial~\cite{Lattner04}.
 Na seção~\ref{sec:exp} descreveremos uma série de experimentos que
 validam nossa análise.
-Ao analisar os programas presentes na coleção SPEC CPU 2006, fomos capazes
+Examinando os programas presentes na coleção SPEC CPU 2006, fomos capazes
 de descobrir 12.304 laços que são influenciados por dados provenientes de
 entradas públicas, isto é, que podem ser manipuladas por um adversário.
-Dentre esses laços, pelo menos 920 estão sujeitos à não terminação.
-Para obter esse número, utilizamos um padrão muito simples: procuramos por
+Pelo menos 920 desses laços estão sujeitos à não terminação.
+Esse número advém de um padrão simples: procuramos por
 laços cujo teste de parada é do tipo \texttt{i <= N}, sendo \texttt{N}
 dependente da entrada.
 Uma vez que nos atemos a esse tipo de condição de parada, especulamos que
 a quantidade de laços vulneráveis presente nos programas de SPEC CPU 2006
 seja bem maior que o valor que apuramos.
+Para testar essa hipótese, alargamos a nossa definição de laços vulneráveis
+para englobar qualquer iterador cuja condição de controle esteja sujeita a
+estouro de precisão.
+Dentre os laços encontrados em SPEC CPU 2006, 7,742 deles atendem esse
+requisito.
 A nossa instrumentação -- usada para impedir os ataques de não-terminação --
 mostra-se extremamente eficiente.
 Os testes que inserimos antes de cada operação aritmética que pode levar a
-um ataque de não terminação custa-nos uma perda de desempenho de menos que
-XX\%.
+um ataque de não terminação custa-nos uma perda de desempenho que vai de
+0.61\% no pior caso, a 0.24\% no melhor.
+Protegemos laços conservadoramente.
+Assim, ainda que não estejamos fornecendo uma prova formal de que um laço é
+vulnerável, nós garantimos que qualquer programa instrumentado é invulnerável
+a ataques de não-terminação baseados em estouro de precisão.
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Ataques de Não-Terminação}
