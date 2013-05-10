@@ -15,6 +15,7 @@
 
 \begin{document}
 
+
 \title{Prevenção de Ataques de Não-Terminação baseados em
 Estouros de Precisão}
 
@@ -662,14 +663,35 @@ Para justificar tal fato, alegamos que nenhuma das instruções presentes em
 uma guarda realiza operações demoradas, como acesso a memórias lentas.
 Executamos todos os programas instrumentados, passando-lhes suas entradas de
 referência, conforme especificado no manual de uso de SPEC CPU 2006, e as
-diferenças de tempo de execução ficaram dentro da margem de erro
-prevista pelo manual SPEC CPU 2006.
-% XX - Melhorar esse final de parágrafo, colocando os resultados do teste dinâmico
-Em outras palavras, não pudemos perceber quaisquer diferenças, em termos de
-tempo de execução, entre os programas originais e instrumentados.
+diferenças de tempo de execução são mostradas na figura~\ref{fig:runtime}.
+Cada programa foi amostrado 30 vezes, e o resultado que apresentamos é a
+média aritmética dessas trinta amostras.
+A margem de erro é negligível.
+Testamos dois modos de instrumentação.
+No primeiro deles guardamos todos os laços considerados vulneráveis contra
+estouros de precisão.
+Nesse caso, observamos que os programas instrumentados ficaram 0.61\% mais
+lentos.
+No segundo modo de instrumentação guardamos somente os laços cujas condições
+de controle usam comparadores do tipo \texttt{<=}.
+Registramos nesse segundo experimento que os programas modificados ficaram
+0.24\% mais lentos.
+Caso houvéssemos instrumentado todas as operações aritméticas nos programas
+disponíveis em SPEC CPU 2006, a taxa de lentidão seria de 3.24\%.
+Não mostramos esse resultado na figura, para não comprometermos a sua
+leitura.
+Em alguns programas, como \texttt{401.bzip2}, por exemplo, pudemos registrar
+diminuição do tempo de execução.
+Não encontramos razão aparente para tal comportamento, pois não efetuamos
+qualquer otimização sobre o código instrumentado.
 
-
-% Describe which programs were aborted once you tried to execute them.
+\begin{figure}[t!]
+\begin{center}
+\includegraphics[width=1\textwidth]{images/runtime}
+\caption{Variação no tempo de execução dos programas instrumentados.}
+\label{fig:runtime}
+\end{center}
+\end{figure}
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Trabalhos Relacionados}
