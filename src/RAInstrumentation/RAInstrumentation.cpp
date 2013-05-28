@@ -30,12 +30,32 @@ bool RAInstrumentation::isValidInst(Instruction *I)
 //
 //}
 
+Constant* RAInstrumentation::strToLLVMConstant(std::string s){
+
+	std::vector<unsigned char> vec( s.begin(), s.end() );
+
+	std::vector<Constant*>	cVec;
+
+	for(unsigned int i = 0; i < vec.size(); i++){
+		cVec.push_back( llvm::ConstantInt::get(Type::getInt8Ty(*context), APInt(8, vec[i], false) ) );
+	}
+
+	llvm::ArrayRef<Constant*> aRef(cVec);
+
+	int size = vec.size();
+	ArrayType* arrayType = ArrayType::get(Type::getInt8Ty(*context), size);
+
+	return llvm::ConstantArray::get( arrayType, aRef);
+
+}
+
 
 void RAInstrumentation::InstrumentMainFunction(Function* F, std::string mIdentifier) {
 
 
 	//Create a global variable with the module name
-	Constant* stringConstant = llvm::ConstantArray::get(*context, mIdentifier, true);
+	Constant* stringConstant = strToLLVMConstant(mIdentifier);
+
 
 	GlobalVariable* moduleName = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,

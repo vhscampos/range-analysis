@@ -28,7 +28,7 @@
 using namespace llvm;
 
 
-namespace {
+namespace llvm {
 
 	struct RAInstrumentation : public ModulePass {
 		static char ID;
@@ -45,6 +45,7 @@ namespace {
         Function& GetSetCurrentMinMaxFunction();
         Function& GetPrintHashFunction();
         Instruction* GetNextInstruction(Instruction& i);
+        Constant* strToLLVMConstant(std::string s);
 
         void InstrumentMainFunction(Function* F, std::string mIdentifier);
 
