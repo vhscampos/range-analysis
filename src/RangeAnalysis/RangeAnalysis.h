@@ -33,11 +33,11 @@
 #ifndef LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_
 #define LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_
 
-#include "llvm/Function.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
-#include "llvm/Constants.h"
-#include "llvm/Instructions.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -685,7 +685,7 @@ class Profile {
 		}
 
 		void setMemoryUsage() {
-			size_t newmemory = sys::Process::GetTotalMemoryUsage();
+			size_t newmemory = sys::Process::GetMallocUsage();
 			if (newmemory > memory) {
 				memory = newmemory;
 			}

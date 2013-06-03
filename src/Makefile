@@ -1,4 +1,4 @@
-llvmpath=~/workspace/ra/llvm-3.0
+llvmpath=~/llvm
 
 all:
 	cd ${llvmpath}/lib/Transforms && rm -rf RangeAnalysis vSSA RAInstrumentation  RAPrinter OverflowDetect #RangeAnalysisTest
@@ -17,7 +17,6 @@ all:
 	# Compile RangeAnalysis Printer
 	cd ${llvmpath}/lib/Transforms/RAPrinter && make # && make -j2
 	# Compile OverflowDetect
-	cd ${llvmpath}/lib/Transforms/OverflowDetect && make # && make -j2	
-ENABLE_PROFILING=1	
+	#cd ${llvmpath}/lib/Transforms/OverflowDetect && make # && make -j2	ENABLE_PROFILING=1	
 	# Compile RangeAnalysisTests
 #cd ${llvmpath}/lib/Transforms/RangeAnalysisTest && make

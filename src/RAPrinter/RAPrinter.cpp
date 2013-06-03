@@ -1,6 +1,6 @@
-#include "llvm/Function.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
-#include "llvm/User.h"
+#include "llvm/IR/User.h"
 #include "llvm/PassAnalysisSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include "../RangeAnalysis/RangeAnalysis.h"

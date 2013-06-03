@@ -3,22 +3,22 @@
 // This file implements the LLVM "Range Analysis Instrumentation" pass 
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/Type.h"
-#include "llvm/Constants.h"
-#include "llvm/Operator.h"
-#include "llvm/DerivedTypes.h"
-#include "llvm/Function.h"
-#include "llvm/InstrTypes.h"
-#include "llvm/Instructions.h"
-#include "llvm/Instruction.h"
-#include "llvm/LLVMContext.h"
-#include "llvm/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/DebugInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
-#include "../uSSA/uSSA.h"
+#include "uSSA/uSSA.h"
 #include <vector>
 #include <list>
 #include <map>
@@ -247,7 +247,7 @@ Constant* OverflowDetect::getSourceFile(Instruction* I){
 	} else {
 
 		//Create a global variable with the File string
-		Constant* stringConstant = llvm::ConstantArray::get(*context, File, true);
+		Constant* stringConstant = llvm::ConstantArray::get(*context, File);
 		GlobalVariable* sourceFileStr = new GlobalVariable(*module, stringConstant->getType(), true,
 		                                                llvm::GlobalValue::InternalLinkage,
 		                                                stringConstant, "SourceFile");
