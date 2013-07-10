@@ -1,7 +1,7 @@
 \documentclass{llncs}
 
 \usepackage[utf8]{inputenc}
-\usepackage[brazil]{babel}
+\usepackage[english,brazil]{babel}
 
 \usepackage{proof}
 \usepackage{amsmath}
@@ -28,6 +28,7 @@ Estouros de Precisão}
 
 \maketitle
 
+\addtolength{\parskip}{-3mm}
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \begin{abstract}
 Dizemos que um programa é vulnerável a um ataque de não terminação quando
@@ -36,7 +37,7 @@ iterar para sempre.
 A prevenção de ataques desse tipo é difícil, pois eles não se originam de bugs 
 que infringem a semântica da linguagem em que o programa foi feito.
 Ao contrário, essas vulnerabilidades têm origem na aritmética modular inteira de 
-linguagens como C, C++ e Java, a qual possui semântica bem definida.
+linguagens como C, C++ e Java, que possui semântica bem definida.
 Neste artigo nós apresentamos uma ferramenta que detecta tais problemas, 
 e que saneia código vulnerável.
 A detecção da vulnerabilidade dá-se via uma análise de fluxo de informação;
@@ -51,17 +52,20 @@ tamanho do programa saneado em cerca de 5\% em média, e torna-os menos que 1\%
 mais lentos.
 \end{abstract}
 
+
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+{
+\selectlanguage{english}
 \begin{abstract}
-We say that a program is vulnerable to a non-termination attack if (i) it
-contains a loop that is bounded by values coming from public inputs, and (ii)
+We say that a program is vulnerable to a non-termination attack if it
+contains a loop that is bounded by values dependent on public inputs, and
 an adversary can manipulate these values to force this loop to iterate forever.
 Preventing this kind of attack is difficult because it does not originate
 from bugs that break the semantics of the programming
 language, such as buffer overflows.
 Instead, they usually are made possible by the wrapping integer arithmetics
 used by C, C++ and Java-like languages, which have well-defined semantics.
-In this paper we present the diagnosis and the cure for this type of attack.
+In this paper we present a diagnosis and a solution for this type of attack.
 Firstly, we describe a tainted-flow analysis that detects non-termination
 vulnerabilities.
 Secondly, we provide a compiler transformation that inserts arithmetic guards on
@@ -71,10 +75,12 @@ a benchmark suite containing over 2.5 million lines of C code.
 We have found out that the typical path from inputs to loop conditions is,
 on the average, less than 13 instructions long.
 Our instrumentation that prevents this kind of attack adds on average less than
-5\% extra code on the secured program.
-The final, protected code, is, on the average, less than 1\% slower than the
+5\% extra code on the secured programs and make them less than 1\% slower than the
 original, unprotected program.
 \end{abstract}
+}
+
+\addtolength{\parskip}{3mm}
 
 %mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 \section{Introdução}
@@ -176,13 +182,13 @@ a ataques de não-terminação baseados em estouro de precisão.
 \label{sec:bkg}
 
 De acordo com Appel e Palsberg~\cite[p.376]{Appel02}, um laço natural é um
-conjunto de nodos $S$ do grafo de fluxo de controle (CFG) de um programa,
-includindo um nodo cabeçalho $H$, com as seguintes três propriedades:
+conjunto de nós $S$ do grafo de fluxo de controle (CFG) de um programa,
+includindo um nó cabeçalho $H$, com as seguintes três propriedades:
 %
 \begin{itemize}
-\item a partir de qualquer nodo em $S$ existe um caminho que chega a $H$;
-\item existe um caminho de $H$ até qualquer nodo que faz parte de $S$;
-\item qualquer caminho de um nodo fora de $S$ para um nodo em $S$
+\item a partir de qualquer nó em $S$ existe um caminho que chega a $H$;
+\item existe um caminho de $H$ até qualquer nó que faz parte de $S$;
+\item qualquer caminho de um nó fora de $S$ para um nó em $S$
 contém $H$.
 \end{itemize}
 %
@@ -199,7 +205,7 @@ valores que dependem de um conjunto $I = \{i_1, i_2, \ldots, i_m\}$ de
 dados lidos a partir da entrada do programa.
 \item existe uma atribuição de valores $i_1 \mapsto v_1,
 i_2 \mapsto v_2, \ldots, i_m \mapsto v_m$ que, ao influenciar $E'$, faz com
-que o laço $L$ não termine.
+que $E$ nunca tenha um valor que faça o laço $L$ parar.
 \end{enumerate}
 Note que a nossa definição de vulnerabilidade de não-terminação requer a
 noção de dependência de dados.
@@ -272,12 +278,12 @@ um laço alcançável.
 Utilizamos o {\em grafo de dependências de dados} para determinar laços
 alcançáveis.
 Esse grafo é definido da seguinte forma:
-para cada variável $v$ no programa, nós criamos um nodo $n_v$, e para cada
-instrução $i$ no programa, nós criamos um nodo $n_i$.
+para cada variável $v$ no programa, nós criamos um nó $n_v$, e para cada
+instrução $i$ no programa, nós criamos um nó $n_i$.
 Para cada instrução $i: v = f(\ldots, u, \ldots)$ que define uma variável $v$ e
 usa uma variável $u$ n\'{o}s criamos duas areastas: $n_u \rightarrow n_i$ e
 $n_i \rightarrow n_v$.
-O grafo de dependências que extraímos a partir d CFG visto na
+O grafo de dependências que extraímos a partir do CFG visto na
 figura~\ref{fig:fact}(b) é mostrado na figura~\ref{fig:depGraph}.
 
 \begin{figure}[t!]
@@ -290,15 +296,15 @@ partir do CFG visto na figura~\ref{fig:fact}(b).}
 \end{center}
 \end{figure}
 
-Um caminho entre uma entrada do programa, e o predicado que controla o laço é
+Um caminho entre uma entrada do programa e o predicado que controla o laço é
 uma condição necessária para um ataque de não-terminação.
 O grafo de dependências de nosso exemplo apresenta tal condição:
-existe um caminho que une o nodo correspondente ao parâmetro \texttt{n}, uma
-entrada, ao nodo que corresponde a \texttt{p}, o predicado de controle do
+existe um caminho que une o nó correspondente ao parâmetro \texttt{n}, uma
+entrada, ao nó que corresponde a \texttt{p}, o predicado de controle do
 laço.
 Esse tipo de caminho, uma vez construído o grafo, pode ser encontrado em
 tempo linear no número de arestas do grafo - normalmente proporcional ao
-número de nodos - via a simples busca em profundidade ou largura.
+número de nós - via uma simples busca em profundidade ou largura.
 
 Diremos que um laço é {\em vulnerável} quando ele é alcançável, e, além disso,
 sua condição de parada é dependente de alguma operação {\em cíclica}
@@ -352,15 +358,15 @@ Nesse caso, usamos o seguinte critério para determinar se uma operação
 $i : v = f(v_1, \ldots, v_n)$ precisa ser instrumentada:
 %
 \begin{itemize}
-\item Existe um caminho no nodo $n_i$ até o nodo $n_p$.
-\item O nodo $n_i$ encontra-se em um ciclo.
+\item Existe um caminho no nó $n_i$ até o nó $n_p$.
+\item O nó $n_i$ encontra-se em um ciclo.
 \item A operação que define a variável $i$ pode provocar um estouro aritmético.
 \end{itemize}
 %
 A título de exemplo, a operação de incremento $++$ no grafo de dependências
 visto na figura~\ref{fig:depGraph} precisa ser instrumentada.
 Em primeiro lugar, porque essa operação encontra-se em um ciclo.
-Em segundo lugar, porque existe um caminho do nodo $n_{++}$ até o nodo
+Em segundo lugar, porque existe um caminho do nó $n_{++}$ até o nó
 $n_p$.
 
 \paragraph{Instrumentação de Saneamento. }
@@ -439,7 +445,7 @@ RAM, e 3.40 GHz de Clock.
 Executamos nossa análise com sucesso sobre o arcabouço de testes do LLVM,
 um conjunto de programas com mais de 4.3 milhões de linhas de código C.
 No restante desta seção mostraremos somente resultados obtidos sobre os
-programas disponíveis em SPEC CPU 2006.
+programas escritos na linguagem C disponíveis em SPEC CPU 2006.
 
 \noindent
 \textbf{Definição de Entrada de Dados.}
@@ -467,7 +473,7 @@ A figura~\ref{fig:tblDepGraph} mostra informações estáticas a respeito dos
 grafos de dependências dos programas analisados.
 Como ponto de referência, mostramos o tamanho absoluto de cada programa, em
 número de  instruções.
-Em média 14\% dos valores que cada programa manipula podem
+Em média, 14\% dos valores que cada programa manipula podem
 conter informações vindas da entrada de dados.
 Esses valores são produzidos por funções externas, para as quais não é
 possível saber se há ou não contaminação por dados externos.
@@ -531,7 +537,7 @@ Essa relação fica ainda mais evidente quando extraímos o coeficiente de
 determinação entre essas duas grandezas -- número de vértices e arestas.
 Obtemos o valor de 0.99, o que indica uma forte correlação linear entre os
 dois valores.
-Essa baixa densidade ocorre porque programas reais variáveis tendem a ser
+Essa baixa densidade ocorre porque em programas reais variáveis tendem a ser
 usadas um número baixo de vezes.
 Boissinot {\em et al.}~\cite{Benoit08} demonstraram, empiricamente, que
 a maior parte das variáveis é usada somente uma vez no programa, e mais de
@@ -593,7 +599,7 @@ no número de estruturas de iteração que precisamos instrumentar para prevenir
 ataques de não terminação baseados em estouro de precisão.
 A figura indica que aproximadamente 70\% de todos os laços do programa
 são alcançáveis.
-Dessa quantidade, a metade é vulnerável.
+Dessa quantidade, metade é vulnerável.
 Cerca de 12\% dos laços vulneráveis são controlados por comparações do
 tipo \texttt{i <= N}.
 Esse tipo de condição é particularmente perigosa, pois, conforme visto no
@@ -767,7 +773,7 @@ Exemplos desse tipo de pesquisa incluem os trabalhos de Burnim
 {\em et al.}~\cite{Burnim09}, Brockschmidt {\em et al}~\cite{Brockschmidt11} e
 Veroyen {\em et al.}~\cite{Velroyen08}.
 Esses trabalhos não levam em consideração possibilidade de não-terminação
-devido à estouros de precisão, tampouco procuram detectar possíveis
+devido a estouros de precisão, tampouco procuram detectar possíveis
 vulnerabilidades baseadas em negação de serviço.
 Existem, contudo, trabalhos na linha de detecção de não-terminação que são
 bastante próximos do nosso.
