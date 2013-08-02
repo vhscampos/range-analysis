@@ -140,10 +140,7 @@ private:
 
 public:
 	Range();
-	Range(APInt lb, APInt ub, RangeType type = Regular) {
-    if (lb > ub)
-       type = Empty; 
-  }
+	Range(APInt lb, APInt ub, RangeType type = Regular);
 	~Range();
 	APInt getLower() const {return l;}
 	APInt getUpper() const {return u;}

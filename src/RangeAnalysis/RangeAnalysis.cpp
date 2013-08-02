@@ -504,6 +504,8 @@ Range::Range() {
 
 Range::Range(APInt lb, APInt ub, RangeType rType) :
 		l(lb), u(ub), type(rType) {
+  if (lb.sgt(ub))
+    type = Empty;
 }
 
 Range::~Range() {
