@@ -513,6 +513,7 @@ Range::Range(APInt lb, APInt ub, RangeType rType) :
 Range::~Range() {
 }
 
+
 bool Range::isMaxRange() const {
 	return this->getLower().eq(Min) && this->getUpper().eq(Max);
 }
@@ -625,68 +626,117 @@ Range Range::mul(const Range& other) {
 									(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
 									:(x.OP(y)))))
 
-// [a, b] / [c, d] = [Min(a/c, a/d, b/c, b/d), Max(a/c, a/d, b/c, b/d)]
 Range Range::udiv(const Range& other) {
-	const APInt &a = this->getLower();
-	const APInt &b = this->getUpper();
-	const APInt &c = other.getLower();
-	const APInt &d = other.getUpper();
+//	const APInt &a = this->getLower();
+//	const APInt &b = this->getUpper();
+//	const APInt &c = other.getLower();
+//	const APInt &d = other.getUpper();
 
-	// Deal with division by 0 exception
-	if ((c.eq(Zero) || d.eq(Zero))) {
-		return Range(Min, Max);
+//	// Deal with division by 0 exception
+//	if ((c.eq(Zero) || d.eq(Zero))) {
+//		return Range(Min, Max);
+//	}
+
+//	APInt candidates[4];
+//	
+//	// value[1]: lb(c) / leastpositive(d)
+//	candidates[0] = DIV_HELPER(udiv, a, c);
+//	candidates[1] = DIV_HELPER(udiv, a, d);
+//	candidates[2] = DIV_HELPER(udiv, b, c);
+//	candidates[3] = DIV_HELPER(udiv, b, d);
+
+//	//Lower bound is the min value from the vector, while upper bound is the max value
+//	APInt *min = &candidates[0];
+//	APInt *max = &candidates[0];
+
+//	for (unsigned i = 1; i < 4; ++i) {
+//		if (candidates[i].sgt(*max))
+//			max = &candidates[i];
+//		else if (candidates[i].slt(*min))
+//			min = &candidates[i];
+//	}
+
+//	return Range(*min, *max);
+
+
+
+// This code has been copied from ::udiv() of ConstantRange class,
+// and adapted to our purposes
+
+	if (isEmpty() || other.isEmpty() || other.getUpper() == 0)
+	    return Range();
+	if (other.isMaxRange())
+		return Range();
+
+	APInt Lower = getLower().udiv(other.getUpper());
+
+	APInt other_umin = other.getLower();
+	
+	if (other_umin == 0) {
+      other_umin = APInt(MAX_BIT_INT, 1);
 	}
 
-	APInt candidates[4];
-	candidates[0] = DIV_HELPER(udiv, a, c);
-	candidates[1] = DIV_HELPER(udiv, a, d);
-	candidates[2] = DIV_HELPER(udiv, b, c);
-	candidates[3] = DIV_HELPER(udiv, b, d);
+	APInt Upper = getUpper().udiv(other_umin);
 
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
+	// If the LHS is Full and the RHS is a wrapped interval containing 1 then
+	// this could occur.
+	if (Lower == Upper)
+		return Range();
 
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+	return Range(Lower, Upper);
 }
 
-// [a, b] / [c, d] = [Min(a/c, a/d), Max(b/c, b/d)]
 Range Range::sdiv(const Range& other) {
-	const APInt &a = this->getLower();
-	const APInt &b = this->getUpper();
-	const APInt &c = other.getLower();
-	const APInt &d = other.getUpper();
+//	const APInt &a = this->getLower();
+//	const APInt &b = this->getUpper();
+//	const APInt &c = other.getLower();
+//	const APInt &d = other.getUpper();
 
-	// Deal with division by 0 exception
-	if ((c.eq(Zero) || d.eq(Zero))) {
-		return Range(Min, Max);
+//	// Deal with division by 0 exception
+//	if ((c.eq(Zero) || d.eq(Zero))) {
+//		return Range(Min, Max);
+//	}
+
+//	APInt candidates[4];
+//	candidates[0] = DIV_HELPER(sdiv, a, c);
+//	candidates[1] = DIV_HELPER(sdiv, a, d);
+//	candidates[2] = DIV_HELPER(sdiv, b, c);
+//	candidates[3] = DIV_HELPER(sdiv, b, d);
+
+//	//Lower bound is the min value from the vector, while upper bound is the max value
+//	APInt *min = &candidates[0];
+//	APInt *max = &candidates[0];
+
+//	for (unsigned i = 1; i < 4; ++i) {
+//		if (candidates[i].sgt(*max))
+//			max = &candidates[i];
+//		else if (candidates[i].slt(*min))
+//			min = &candidates[i];
+//	}
+
+//	return Range(*min, *max);
+
+	if (isEmpty() || other.isEmpty() || other.getUpper() == 0)
+	    return Range();
+	if (other.isMaxRange())
+		return Range();
+
+	APInt Lower = getLower().sdiv(other.getUpper());
+
+	APInt other_smin = other.getLower();
+	
+	if (other_smin == 0) {
+      other_smin = APInt(MAX_BIT_INT, 1);
 	}
 
-	APInt candidates[4];
-	candidates[0] = DIV_HELPER(sdiv, a, c);
-	candidates[1] = DIV_HELPER(sdiv, a, d);
-	candidates[2] = DIV_HELPER(sdiv, b, c);
-	candidates[3] = DIV_HELPER(sdiv, b, d);
+	APInt Upper = getUpper().sdiv(other_smin);
 
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
+	// If the LHS is Full and the RHS is a wrapped interval containing 1 then
+	// this could occur.
+	if (Lower == Upper)
+		return Range();
 
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+	return Range(Lower, Upper);
 }
 
 Range Range::urem(const Range& other) {
