@@ -5,6 +5,8 @@
  *	These new definitions are inserted right after the use site, and
  *	all remaining uses dominated by this new definition are renamed
  *	properly.
+ *
+ *	Copyright (C) 2012  Victor Hugo Sperle Campos
 */
 
 #include "llvm/IR/Metadata.h"

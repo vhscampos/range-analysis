@@ -1,3 +1,8 @@
+//
+//
+// Copyright (C) 2012  Victor Hugo Sperle Campos
+//
+
 #define DEBUG_TYPE "uSSA"
 
 #include "uSSA.h"

@@ -6,6 +6,8 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
+// Copyright (C) 2011-2012  Victor Hugo Sperle Campos
+//
 //===----------------------------------------------------------------------===//
 // This file contains a pass that performs range analysis. The objective of
 // the range analysis is to map each integer variable in the program to the
