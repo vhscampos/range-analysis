@@ -658,15 +658,15 @@ Range Range::udiv(const Range& other) {
 
 //	return Range(*min, *max);
 
-
+errs() << "udiv!\n";
 
 // This code has been copied from ::udiv() of ConstantRange class,
 // and adapted to our purposes
 
 	if (isEmpty() || other.isEmpty() || other.getUpper() == 0)
-	    return Range();
+	    return Range(Min, Max);
 	if (other.isMaxRange())
-		return Range();
+		return Range(Min, Max);
 
 	APInt Lower = getLower().udiv(other.getUpper());
 
@@ -681,7 +681,7 @@ Range Range::udiv(const Range& other) {
 	// If the LHS is Full and the RHS is a wrapped interval containing 1 then
 	// this could occur.
 	if (Lower == Upper)
-		return Range();
+		return Range(Min, Max);
 
 	return Range(Lower, Upper);
 }
@@ -716,15 +716,17 @@ Range Range::sdiv(const Range& other) {
 
 //	return Range(*min, *max);
 
+	errs() << "sdiv!\n";
+
 	if (isEmpty() || other.isEmpty() || other.getUpper() == 0)
-	    return Range();
+	    return Range(Min, Max);
 	if (other.isMaxRange())
-		return Range();
+		return Range(Min, Max);
 
 	APInt Lower = getLower().sdiv(other.getUpper());
 
 	APInt other_smin = other.getLower();
-	
+
 	if (other_smin == 0) {
       other_smin = APInt(MAX_BIT_INT, 1);
 	}
@@ -734,7 +736,7 @@ Range Range::sdiv(const Range& other) {
 	// If the LHS is Full and the RHS is a wrapped interval containing 1 then
 	// this could occur.
 	if (Lower == Upper)
-		return Range();
+		return Range(Min, Max);
 
 	return Range(Lower, Upper);
 }
