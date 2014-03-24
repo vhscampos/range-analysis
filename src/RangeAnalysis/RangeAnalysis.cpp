@@ -311,8 +311,13 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 #ifdef PRINT_DEBUG
 	CG->printToFile(*(M.begin()), "/tmp/" + mIdentifier + ".cgpos.dot");
 #endif
-	// FIXME: Não sei se tem que retornar true ou false
-	return true;
+
+	return false;
+}
+
+template<class CGT>
+void InterProceduralRA<CGT>::getAnalysisUsage(AnalysisUsage &AU) const {
+	AU.setPreservesAll();
 }
 
 template<class CGT>
@@ -500,8 +505,7 @@ static RegisterPass<InterProceduralRA<CropDFS> > X("ra-inter-crop",
 // ========================================================================== //
 // Range
 // ========================================================================== //
-Range::Range() {
-	Range(Min, Max);
+Range::Range(): l(Min), u(Max), type(Regular) {
 }
 
 Range::Range(APInt lb, APInt ub, RangeType rType) :

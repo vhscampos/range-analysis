@@ -914,6 +914,7 @@ public:
 	InterProceduralRA() : ModulePass(ID) { CG = NULL; }
 	~InterProceduralRA();
 	bool runOnModule(Module &M);
+	void getAnalysisUsage(AnalysisUsage &AU) const;
 	static unsigned getMaxBitWidth(Module &M);
 
 	virtual APInt getMin();
