@@ -12,11 +12,19 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/InstIterator.h"
+
+#include "../RangeAnalysis/RangeAnalysis.h"
 #include "ASSegPropagation.h"
 
 namespace llvm {
 
 class DistributedRangeDump: public llvm::ModulePass {
+private:
+	std::string getOriginalFunctionName(Function* F);
 public:
 	static char ID;
 
@@ -25,7 +33,7 @@ public:
 
 	void getAnalysisUsage(AnalysisUsage &AU) const {
 		AU.setPreservesAll();
-		AU.addRequired<ASSegPropagation>();
+		//AU.addRequired<ASSegPropagation>();
 	}
 
 	bool runOnModule(Module &M);
