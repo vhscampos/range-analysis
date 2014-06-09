@@ -48,6 +48,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ConstantRange.h"
 #include "llvm/Support/CallSite.h"
+#include "llvm/Support/InstIterator.h"
 #include "llvm/Support/TimeValue.h"
 #include "llvm/Support/Process.h"
 #include <deque>
@@ -117,6 +118,10 @@ llvm::raw_fd_ostream _log_file(_log_fileName.str().c_str(), _log_ErrorInfo);
 #endif
 //****************************************************************************//
 using namespace llvm;
+
+extern APInt Min;
+extern APInt Max;
+extern APInt Zero;
 
 /// In our range analysis pass we have to perform operations on ranges all the
 /// time. LLVM has a class to perform operations on ranges: the class
