@@ -33,7 +33,7 @@ public:
 
 	void getAnalysisUsage(AnalysisUsage &AU) const {
 		AU.setPreservesAll();
-		//AU.addRequired<ASSegPropagation>();
+		AU.addRequired<ASSegPropagation>();
 	}
 
 	bool runOnModule(Module &M);

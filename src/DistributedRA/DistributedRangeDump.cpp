@@ -43,7 +43,7 @@ bool DistributedRangeDump::runOnModule(Module &M){
         outputStream = File;
 	}
 
-	//ASSegPropagation& ASP = getAnalysis<ASSegPropagation>();
+	ASSegPropagation& ASP = getAnalysis<ASSegPropagation>();
 
 	//Iterate over functions
 	for(Module::iterator Fit = M.begin(), Fend = M.end(); Fit != Fend; Fit++){
@@ -63,7 +63,7 @@ bool DistributedRangeDump::runOnModule(Module &M){
 
 				if(LoadInst* LI = dyn_cast<LoadInst>(I)){
 
-					Range r(Min,Max); // = ASP.getRange(LI->getPointerOperand());
+					Range r = ASP.getRange(LI->getPointerOperand());
 
 					(*outputStream) << FunctionName  << "|"
 									<< LI->getName() << "|"
