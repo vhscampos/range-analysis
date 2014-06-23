@@ -141,7 +141,7 @@ BasicBlock* OverflowSanitizer::NewOverflowOccurrenceBlock(Instruction* I, BasicB
 
 	Constant* SourceFile = getSourceFile(I);
 	Constant* LineNumber = getLineNumber(I);
-	Constant* InstructionIdentifier = ConstantInt::get(Type::getInt32Ty(*context), (int)I);
+	Constant* InstructionIdentifier = ConstantInt::get(Type::getInt32Ty(*context), (long)I);
 
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);

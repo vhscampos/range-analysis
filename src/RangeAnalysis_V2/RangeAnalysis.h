@@ -77,6 +77,8 @@ public:
 	virtual ~RangeAnalysis() {};
 
 	Range getRange(Value* V);
+	APInt getMin() { return Min; };
+	APInt getMax() { return Max; };
 };
 
 } /* namespace llvm */

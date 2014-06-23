@@ -18,13 +18,14 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
-#include "uSSA/uSSA.h"
+#include "../uSSA/uSSA.h"
 #include <vector>
 #include <list>
 #include <map>
 #include <stdio.h>
+#include <string.h>
 
-#include "../RangeAnalysis/RangeAnalysis.h"
+#include "../RangeAnalysis_V2/RangeAnalysis.h"
 
 using namespace llvm;
 
@@ -56,6 +57,8 @@ namespace {
 		void InsertGlobalDeclarations();
 		BasicBlock* NewOverflowOccurrenceBlock(Instruction* I, BasicBlock* NextBlock, Value *messagePtr);
 
+		Constant* strToLLVMConstant(std::string s);
+
 		void insertInstrumentation(Instruction* I, BasicBlock* AbortBB, OvfPrediction Pred);
 		Constant* getSourceFile(Instruction* I);
 		Constant* getLineNumber(Instruction* I);
@@ -75,12 +78,12 @@ namespace {
         	return range.isRegular() && range.getLower().ne(Min) && range.getUpper().ne(Max);
         }
         
-        OvfPrediction ovfStaticAnalysis(Instruction* I, InterProceduralRA<Cousot> *ra);
+        OvfPrediction ovfStaticAnalysis(Instruction* I, InterProceduralRA *ra);
 
 		virtual void getAnalysisUsage(AnalysisUsage &AU) const {
 
 			if (UseRaPrunning)
-				AU.addRequired<InterProceduralRA<Cousot> >();
+				AU.addRequired<InterProceduralRA>();
 
 		}
 
@@ -100,7 +103,7 @@ namespace {
 char OverflowDetect::ID = 0;
 
 STATISTIC(NrInsts, "Number of instructions");
-STATISTIC(NrPrunnedInsts, "Number of prunned instructions");
+STATISTIC(NrPrunedInsts, "Number of pruned instructions");
 STATISTIC(NrSignedInsts, "Number of signed instructions instrumented");
 STATISTIC(NrUnsignedInsts, "Number of unsigned instructions instrumented");
 STATISTIC(NrOvfStaticallyDetected, "Number of statically detected overflows");
@@ -143,7 +146,7 @@ static bool isSignedInst(Value* V){
 
 }
 
-OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralRA<Cousot> *ra){
+OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralRA *ra){
 
 	if (!UseRaPrunning) return OvUnknown;
 
@@ -168,7 +171,7 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 		
 		//Check if the range is contained within the type bounds, because it is represented with less bits
 		if (r.getUpper().getBitWidth() < numBits || r.getLower().getBitWidth() < numBits) {
-			NrPrunnedInsts++;
+			NrPrunedInsts++;
 			return OvWillNotHappen;
 		}		
 
@@ -192,7 +195,7 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 				return OvCanHappen;
 			}
 			else {
-				NrPrunnedInsts++;
+				NrPrunedInsts++;
 				return OvWillNotHappen;
 			}
 
@@ -219,7 +222,7 @@ OvfPrediction OverflowDetect::ovfStaticAnalysis(Instruction* I, InterProceduralR
 				return OvCanHappen;
 			}
 			else if (r.getLower().uge(Zero) && r.getUpper().ult(MaxValue)) {
-				NrPrunnedInsts++;
+				NrPrunedInsts++;
 				return OvWillNotHappen;
 			}
 			else
@@ -247,7 +250,7 @@ Constant* OverflowDetect::getSourceFile(Instruction* I){
 	} else {
 
 		//Create a global variable with the File string
-		Constant* stringConstant = llvm::ConstantArray::get(*context, File);
+		Constant* stringConstant = strToLLVMConstant(File);
 		GlobalVariable* sourceFileStr = new GlobalVariable(*module, stringConstant->getType(), true,
 		                                                llvm::GlobalValue::InternalLinkage,
 		                                                stringConstant, "SourceFile");
@@ -285,7 +288,7 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 
 	Constant* SourceFile = getSourceFile(I);
 	Constant* LineNumber = getLineNumber(I);
-	Constant* InstructionIdentifier = ConstantInt::get(Type::getInt32Ty(*context), (int)I);
+	Constant* InstructionIdentifier = ConstantInt::get(Type::getInt32Ty(*context), (long)I);
 
 	BasicBlock* result = BasicBlock::Create(*context, "", I->getParent()->getParent(), NextBlock);
 	BranchInst* branch = BranchInst::Create(NextBlock, result);
@@ -305,13 +308,42 @@ BasicBlock* OverflowDetect::NewOverflowOccurrenceBlock(Instruction* I, BasicBloc
 	return result;
 }
 
+
+Constant* OverflowDetect::strToLLVMConstant(std::string s){
+
+	std::vector<unsigned char> vec( s.begin(), s.end() );
+
+	std::vector<Constant*>	cVec;
+
+	for(unsigned int i = 0; i < vec.size(); i++){
+		cVec.push_back( llvm::ConstantInt::get(Type::getInt8Ty(*context), APInt(8, vec[i], false) ) );
+	}
+
+	llvm::ArrayRef<Constant*> aRef(cVec);
+
+	int size = vec.size();
+	ArrayType* arrayType = ArrayType::get(Type::getInt8Ty(*context), size);
+
+	return llvm::ConstantArray::get( arrayType, aRef);
+
+}
+
+
 /*
  * Inserts global variable and function declarations, needed during the instrumentation.
  */
 void OverflowDetect::InsertGlobalDeclarations(){
 
+
 	//Create a global variable with the fprintf Message
-	Constant* stringConstant = llvm::ConstantArray::get(*context, "Overflow occurred in %s, line %d. [%d]\n", true);
+	std::string message1("Overflow occurred in %s, line %d. [%d]\n");
+	std::string message2("Truncation with data loss occurred in %s, line %d. [%d]\n");
+	std::string message3("(Suspected) Overflow occurred in %s, line %d. [%d]\n");
+	std::string message4("(Suspected) Truncation with data loss occurred in %s, line %d. [%d]\n");
+
+
+	//Create a global variable with the fprintf Message
+	Constant* stringConstant = strToLLVMConstant(message1);
 	GlobalVariable* messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "OverflowMessage");
@@ -322,7 +354,7 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	overflowMessagePtr = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
 
 
-	stringConstant = llvm::ConstantArray::get(*context, "Truncation with data loss occurred in %s, line %d. [%d]\n", true);
+	stringConstant = strToLLVMConstant(message2);
 	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "TruncErrorMessage");
@@ -333,7 +365,7 @@ void OverflowDetect::InsertGlobalDeclarations(){
 
 
 	//Messages for the overflows statically detected (suspect instructions)
-	stringConstant = llvm::ConstantArray::get(*context, "(Suspected) Overflow occurred in %s, line %d. [%d]\n", true);
+	stringConstant = strToLLVMConstant(message3);
 	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "OverflowMessage");
@@ -342,7 +374,7 @@ void OverflowDetect::InsertGlobalDeclarations(){
 	constArray = ConstantExpr::getInBoundsGetElementPtr(messageStr, constZero);
 	overflowMessagePtr2 = ConstantExpr::getBitCast(constArray, PointerType::getUnqual(Type::getInt8Ty(*context)));
 
-	stringConstant = llvm::ConstantArray::get(*context, "(Suspected) Truncation with data loss occurred in %s, line %d. [%d]\n", true);
+	stringConstant = strToLLVMConstant(message4);
 	messageStr = new GlobalVariable(*module, stringConstant->getType(), true,
 	                                                llvm::GlobalValue::InternalLinkage,
 	                                                stringConstant, "TruncErrorMessage");
@@ -477,10 +509,10 @@ bool OverflowDetect::runOnModule(Module &M) {
 	this->constZero = NULL;
 	SourceFiles.clear();
 	
-	InterProceduralRA<Cousot> *ra;
+	InterProceduralRA *ra;
 
 	if (UseRaPrunning) {
-		ra = &getAnalysis<InterProceduralRA<Cousot> >();
+		ra = &getAnalysis<InterProceduralRA>();
 
 		this->Min = ra->getMin();
 		this->Max = ra->getMax();
@@ -491,7 +523,7 @@ bool OverflowDetect::runOnModule(Module &M) {
 	NrInsts = 0;
 	NrOvfStaticallyDetected = 0;
 	NrPossibleOvfStaticallyDetected = 0;
-	NrPrunnedInsts = 0;
+	NrPrunedInsts = 0;
 
 	//Insert the global declarations (fPrintf, stderr, etc...)
 	InsertGlobalDeclarations();
