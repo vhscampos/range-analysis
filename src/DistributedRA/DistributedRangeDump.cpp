@@ -17,7 +17,9 @@ cl::opt<std::string> DumpFilename("dump-filename",
 
 std::string llvm::DistributedRangeDump::getOriginalFunctionName(Function* F) {
 
-	//FIXME: remove the prefix of the function names.
+	if(F->getName().startswith("ttt_")){
+		return F->getName().slice(4, F->getName().size());
+	}
 
 	return F->getName();
 }
@@ -64,7 +66,7 @@ bool DistributedRangeDump::runOnModule(Module &M){
 				if(LoadInst* LI = dyn_cast<LoadInst>(I)){
 
 					Range r = ASP.getRange(LI->getPointerOperand());
-
+					//errs() << "Pointer: " << LI->getPointerOperand()->getName() << "\n";
 					(*outputStream) << FunctionName  << "|"
 									<< LI->getName() << "|"
 									<< r.getLower()  << "|"

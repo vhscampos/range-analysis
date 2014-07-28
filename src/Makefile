@@ -1,4 +1,4 @@
-llvmpath=~/llvm
+llvmpath=~/mestrado/llvm-andersen
 
 all:
 	cd ${llvmpath}/lib/Transforms && rm -rf RangeAnalysis vSSA RAInstrumentation  RAPrinter OverflowDetect #RangeAnalysisTest

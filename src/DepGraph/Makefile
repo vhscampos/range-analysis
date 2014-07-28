@@ -7,7 +7,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-LEVEL = ../../..
+LEVEL = ../../../../..
 LIBRARYNAME = DepGraph
 LOADABLE_MODULE = 1
 USEDLIBS = 
@@ -15,6 +15,7 @@ REQUIRES_RTTI=1
 
 include $(LEVEL)/Makefile.common
 
-CXXFLAGS+= -std=c++0x -Wno-deprecated-declarations -fexceptions -w
-LIBS+= -lginac
+CXXFLAGS+= -std=c++0x -Wno-deprecated-declarations -fexceptions -w -I/home/luiz/ginac-1.6.2/build/include
+LIBS+= -L/home/luiz/ginac-1.6.2/build/lib -lginac
 LDFLAGS+=-fPIC -shared -L/usr/local/lib -Wl,-rpath,/usr/local/lib:
+
