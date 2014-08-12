@@ -16,7 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/InstIterator.h"
 #include "SegmentationTables.h"
-#include "../../../AliasSets/AliasSets.h"
+#include "../DepGraph/AliasSets.h"
 
 namespace llvm {
 
