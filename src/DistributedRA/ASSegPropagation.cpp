@@ -306,6 +306,10 @@ bool ASSegPropagation::runOnModule(Module &M) {
 	for (std::set<GraphNode*>::iterator recv1it = recvP1.begin(), recv1end =
 			recvP1.end(); recv1it != recv1end; ++recv1it) {
 
+		//VITOR
+		errs() << "====================P1======================" << "\n";
+		allSendsToRecvTableMap1[*recv1it]->PrintContent();
+
 		for (std::set<GraphNode*>::iterator mem1it = mem1.begin(), mem1end =
 				mem1.end(); mem1it != mem1end; ++mem1it) {
 
@@ -329,11 +333,7 @@ bool ASSegPropagation::runOnModule(Module &M) {
 
 					}
 
-
-
 				}
-
-
 
 			}
 			visited.clear();
@@ -344,6 +344,10 @@ bool ASSegPropagation::runOnModule(Module &M) {
 
 	for (std::set<GraphNode*>::iterator recv2it = recvP2.begin(), recv2end =
 			recvP2.end(); recv2it != recv2end; ++recv2it) {
+
+		//VITOR
+		errs() << "===================P2=======================" << "\n";
+		allSendsToRecvTableMap2[*recv2it]->PrintContent();
 
 		for (std::set<GraphNode*>::iterator mem2it = mem2.begin(), mem2end =
 				mem2.end(); mem2it != mem2end; ++mem2it) {
@@ -356,7 +360,7 @@ bool ASSegPropagation::runOnModule(Module &M) {
 					int key = ((MemNode*) (*mem2it))->getAliasSetId();
 
 					SegmentationTable *destMemSegTab = ass.getTable(key);
-					SegmentationTable *recvMemSegTab = allSendsToRecvTableMap1[(*recv2it)];
+					SegmentationTable *recvMemSegTab = allSendsToRecvTableMap2[(*recv2it)];
 
 					if(destMemSegTab != NULL && recvMemSegTab != NULL){
 

@@ -67,10 +67,11 @@ bool DistributedRangeDump::runOnModule(Module &M){
 
 					Range r = ASP.getRange(LI->getPointerOperand());
 					//errs() << "Pointer: " << LI->getPointerOperand()->getName() << "\n";
-					(*outputStream) << FunctionName  << "|"
+					/*(*outputStream) << FunctionName  << "|"
 									<< LI->getName() << "|"
 									<< r.getLower()  << "|"
 									<< r.getUpper()  << "\n";
+					*/
 
 				}
 			}

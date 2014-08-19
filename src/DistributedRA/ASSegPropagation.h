@@ -18,7 +18,7 @@
 #include "llvm/IR/Module.h"
 #include "AliasSetSegmentation.h"
 
-#include "../../../NetDepGraph/src/NetDepGraph/DepGraph.h"
+#include "../NetDepGraph/DepGraph.h"
 //#include "../../../NetDepGraph/src/NetDepGraph/InputDep.h"
 
 namespace llvm {

@@ -10,7 +10,7 @@
 # Makefile for RangeBasedAnalysis passes
 
 # Path to top level of LLVM hierarchy
-LEVEL = ../../../../..
+LEVEL = ../../..
 
 # Name of the library to build
 LIBRARYNAME = DistributedRA

@@ -798,8 +798,8 @@ bool AliasSetSegmentation::runOnModule(Module &M){
 		}			
 
 																														/**///testing alias set master table's content
-																														errs() << "CONTENTS OF MASTER TABLE OF SET " << i->first << "\n-------------------\n";
-																														master_tables[i->first]->PrintContent();	
+																														//errs() << "CONTENTS OF MASTER TABLE OF SET " << i->first << "\n-------------------\n";
+																														//master_tables[i->first]->PrintContent();	
 																														/**/
 		
 	}
