@@ -189,8 +189,8 @@ Range llvm::RangeAnalysis::getUnionOfPredecessors(GraphNode* Node){
 
 			//Ignore the data that comes from ignored functions
 			if (CallNode* CI = dyn_cast<CallNode>(pred->first)){
-				Function* F = CI->getCalledFunction();
-				if (ignoredFunctions.count(F->getName())) continue;
+				if (Function* F = CI->getCalledFunction())
+					if (ignoredFunctions.count(F->getName())) continue;
 			}
 
 
@@ -225,7 +225,7 @@ Range llvm::RangeAnalysis::abstractInterpretation(Range Op1, Range Op2, Instruct
 		case Instruction::Or:   return Op1.Or(Op2);
 		case Instruction::Xor:  return Op1.Xor(Op2);
 		default:
-			errs() << "Unhandled Instruction:" << *I;
+			//errs() << "Unhandled Instruction:" << *I;
 			return Range(Min,Max);
 	}
 }
@@ -260,7 +260,7 @@ Range llvm::RangeAnalysis::abstractInterpretation(Range Op1, Instruction *I){
 			break;
 		}
 		default:
-			errs() << "Unhandled UnaryInstruction:" << *I;
+			//errs() << "Unhandled UnaryInstruction:" << *I;
 			result = Range(Min, Max);
 			break;
 		}
@@ -328,6 +328,10 @@ void llvm::RangeAnalysis::addSuccessorsToWorklist(GraphNode* Node, std::set<Grap
  */
 bool llvm::RangeAnalysis::join(GraphNode* Node, Range new_abstract_state){
 
+	//Do not widen the range of a value that has an initial value
+	if (!getInitialState(Node).isMaxRange()) {
+		return false;
+	}
 
 
 	Range oldInterval = out_state[Node];
