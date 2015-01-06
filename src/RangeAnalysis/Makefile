@@ -7,7 +7,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-LEVEL = ../../../../..
+LEVEL = ../../..
 LIBRARYNAME = RangeAnalysis
 LOADABLE_MODULE = 1
 USEDLIBS =
