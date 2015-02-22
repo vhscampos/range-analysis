@@ -5,16 +5,17 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-// Copyright (C) 2011-2012  Victor Hugo Sperle Campos
+// Copyright (C) 2011-2012, 2014-2015	Victor Hugo Sperle Campos
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Pass.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/Dominators.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/CFG.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Analysis/DominanceFrontier.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <deque>
 #include <algorithm>
 
@@ -28,7 +29,8 @@ public:
 	bool runOnFunction(Function&);
 
 private:
-	// Variables always live
+	// Variables always liive
+	DominatorTreeWrapperPass *DTw_;
 	DominatorTree *DT_;
 	DominanceFrontier *DF_;
 	void createSigmasIfNeeded(BasicBlock *BB);

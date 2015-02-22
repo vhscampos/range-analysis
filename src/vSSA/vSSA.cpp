@@ -5,7 +5,7 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-// Copyright (C) 2011-2012  Victor Hugo Sperle Campos
+// Copyright (C) 2011-2012, 2014-2015	Victor Hugo Sperle Campos
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,23 +22,27 @@ STATISTIC(numsigmas, "Number of sigmas");
 STATISTIC(numphis, "Number of phis");
 
 void vSSA::getAnalysisUsage(AnalysisUsage &AU) const {
-	AU.addRequiredTransitive<DominanceFrontier>();
-	AU.addRequiredTransitive<DominatorTree>();
-	
-	// This pass modifies the program, but not the CFG
-	AU.setPreservesCFG();
+	AU.addRequired<DominanceFrontier>();
+	AU.addRequired<DominatorTreeWrapperPass>();
 }
 
 bool vSSA::runOnFunction(Function &F) {
-	DT_ = &getAnalysis<DominatorTree>();
+	// For some reason, in the DominatorTree pass, an unreachable BasicBlock
+	// inside a function is considered to be dominated by anything. This goes
+	// against the definition of dominance in my algorithm, and breaks for
+	// some programs. Therefore, I decided to remove unreachable blocks from
+	// the program before the conversion to e-SSA takes place.
+	removeUnreachableBlocks(F);
+	
+	DTw_ = &getAnalysis<DominatorTreeWrapperPass>();
+	DT_ = &DTw_->getDomTree();
 	DF_ = &getAnalysis<DominanceFrontier>();
 	
 	// Iterate over all Basic Blocks of the Function, calling the function that creates sigma functions, if needed
 	for (Function::iterator Fit = F.begin(), Fend = F.end(); Fit != Fend; ++Fit) {
 		createSigmasIfNeeded(Fit);
 	}
-	
-	return false;
+	return true;
 }
 
 void vSSA::createSigmasIfNeeded(BasicBlock *BB)
@@ -83,7 +87,9 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 						// Create sigmas for the operands of the operands too
 						CastInst *cinst = NULL;
 						if ((cinst = dyn_cast<CastInst>(operand))) {
-							insertSigmas(ti, cinst->getOperand(0));
+							if (isa<Instruction>(cinst->getOperand(0)) || isa<Argument>(cinst->getOperand(0))) {
+								insertSigmas(ti, cinst->getOperand(0));
+							}
 						}
 					}
 				}
@@ -91,7 +97,6 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 		}
 	}
 	// CASE 2: Switch Instruction
-	
 	else if ((si = dyn_cast<SwitchInst>(ti))) {
 		Value *condition = si->getCondition();
 		
@@ -102,7 +107,9 @@ void vSSA::createSigmasIfNeeded(BasicBlock *BB)
 			// Create sigmas for the operands of the operands too
 			CastInst *cinst = NULL;
 			if ((cinst = dyn_cast<CastInst>(condition))) {
-				insertSigmas(ti, cinst->getOperand(0));
+				if (isa<Instruction>(cinst->getOperand(0)) || isa<Argument>(cinst->getOperand(0))) {
+					insertSigmas(ti, cinst->getOperand(0));
+				}
 			}
 		}
 	}
@@ -202,7 +209,7 @@ void vSSA::renameUsesToSigma(Value *V, PHINode *sigma)
 	unsigned i = 0, n = V->getNumUses();
 	usepointers.resize(n);
 	
-	for (Value::use_iterator uit = V->use_begin(), uend = V->use_end(); uit != uend; ++uit, ++i)
+	for (Value::user_iterator uit = V->user_begin(), uend = V->user_end(); uit != uend; ++uit, ++i)
 		usepointers[i] = dyn_cast<Instruction>(*uit);
 	
 	for (i = 0; i < n; ++i) {
@@ -385,7 +392,7 @@ void vSSA::renameUsesToPhi(Value *V, PHINode *phi)
 	// Get the dominance frontier of the successor
 	DominanceFrontier::iterator DF_BB = DF_->find(BB_next);
 	
-	for (Value::use_iterator uit = V->use_begin(), uend = V->use_end(); uit != uend; ++uit, ++i)
+	for (Value::user_iterator uit = V->user_begin(), uend = V->user_end(); uit != uend; ++uit, ++i)
 		usepointers[i] = dyn_cast<Instruction>(*uit);
 	
 	BasicBlock *BB_parent = phi->getParent();
@@ -437,7 +444,7 @@ void vSSA::renameUsesToPhi(Value *V, PHINode *phi)
 		
 		unsigned i = 0;
 		
-		for (Value::use_iterator uit = V->use_begin(), uend = V->use_end(); uit != uend; ++uit, ++i)
+		for (Value::user_iterator uit = V->user_begin(), uend = V->user_end(); uit != uend; ++uit, ++i)
 			usepointers[i] = dyn_cast<Instruction>(*uit);
 		 
 		for (i = 0; i < n; ++i) {
@@ -486,7 +493,7 @@ void vSSA::renameUsesToPhi(Value *V, PHINode *phi)
 	}
 	
 	// Creation of phis may require the creation of sigmas that were not created previosly, so we do it now
-	createSigmasIfNeeded(phi->getParent());
+	//createSigmasIfNeeded(phi->getParent());
 }
 
 /*
@@ -579,7 +586,7 @@ bool vSSA::dominateAny(BasicBlock *BB, Value *value) {
 	// Iterate over the uses of Value.
 	// If the use is in the BasicBlock in-frontier itself and it's a PHINode, it means that mem2reg already created a phi for this case, so we don't need to do it
 	// Otherwise, if the use is dominated by the BasicBlock in-frontier, we create the vSSA_PHI
-	for (Value::use_iterator begin = value->use_begin(), end = value->use_end(); begin != end; ++begin) {
+	for (Value::user_iterator begin = value->user_begin(), end = value->user_end(); begin != end; ++begin) {
 		Instruction *I = cast<Instruction>(*begin);
 		BasicBlock *BB_father = I->getParent();
 		if (BB == BB_father && isa<PHINode>(I)) {
@@ -599,7 +606,7 @@ bool vSSA::dominateAny(BasicBlock *BB, Value *value) {
 bool vSSA::dominateOrHasInFrontier(BasicBlock *BB, BasicBlock *BB_next, Value *value) {
 	DominanceFrontier::iterator DF_BB = DF_->find(BB_next);
 
-	for (Value::use_iterator begin = value->use_begin(), end = value->use_end(); begin != end; ++begin) {
+	for (Value::user_iterator begin = value->user_begin(), end = value->user_end(); begin != end; ++begin) {
 		Instruction *I = dyn_cast<Instruction>(*begin);
 		
 		// ATTENTION: GEP uses are not taken into account
@@ -643,4 +650,5 @@ bool vSSA::verifySigmaExistance(Value *V, BasicBlock *BB, BasicBlock *BB_from)
 }
 
 char vSSA::ID = 0;
-static RegisterPass<vSSA> X("vssa", "Static Single Assignment Construction");
+static RegisterPass<vSSA> X("vssa", "Victor's e-SSA construction", false, false);
+

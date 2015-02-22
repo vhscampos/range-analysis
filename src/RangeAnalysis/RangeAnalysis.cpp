@@ -6,14 +6,15 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-// Copyright (C) 2011-2012  Victor Hugo Sperle Campos
+// Copyright (C) 2011-2012, 2015    Victor Hugo Sperle Campos
+//               2011               Douglas do Couto Teixeira
+//               2012               Igor Rafael de Assis Costa
 //
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "range-analysis"
 
 #include "RangeAnalysis.h"
-#include "llvm/Support/InstIterator.h"
 
 using namespace llvm;
 
@@ -55,6 +56,8 @@ APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
 APInt Zero(MAX_BIT_INT, 0, true);
 
 // String used to identify sigmas
+// IMPORTANT: the range-analysis identifies sigmas by comparing
+// to this hard-coded instruction name prefix.
 const std::string sigmaString = "vSSA_sigma";
 
 // Used to print pseudo-edges in the Constraint Graph dot
@@ -75,7 +78,7 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 		OS << A->getParent()->getName() << "." << A->getName();
 	} else if ((I = dyn_cast<Instruction>(V))) {
 		OS << I->getParent()->getParent()->getName() << "."
-				<< I->getParent()->getName() << "." << I->getName();
+			<< I->getParent()->getName() << "." << I->getName();
 	} else {
 		OS << V->getName();
 	}
@@ -84,33 +87,30 @@ static void printVarName(const Value *V, raw_ostream& OS) {
 /// Selects the instructions that we are going to evaluate.
 static bool isValidInstruction(const Instruction* I) {
 
-	switch (I->getOpcode()) {
-	case Instruction::PHI:
-	case Instruction::Add:
-	case Instruction::Sub:
-	case Instruction::Mul:
-	case Instruction::UDiv:
-	case Instruction::SDiv:
-	case Instruction::URem:
-	case Instruction::SRem:
-	case Instruction::Shl:
-	case Instruction::LShr:
-	case Instruction::AShr:
-	case Instruction::And:
-	case Instruction::Or:
-	case Instruction::Xor:
-	case Instruction::Trunc:
-	case Instruction::ZExt:
-	case Instruction::SExt:
-	case Instruction::Load:
-	case Instruction::Store:
-		return true;
-	default:
-		return false;
-	}
+	assert(I);
 
-	assert(false && "It should not be here.");
-	return false;
+	switch (I->getOpcode()) {
+		case Instruction::PHI:
+		case Instruction::Add:
+		case Instruction::Sub:
+		case Instruction::Mul:
+		case Instruction::UDiv:
+		case Instruction::SDiv:
+		case Instruction::URem:
+		case Instruction::SRem:
+		case Instruction::Shl:
+		case Instruction::LShr:
+		case Instruction::AShr:
+		case Instruction::And:
+		case Instruction::Or:
+		case Instruction::Xor:
+		case Instruction::Trunc:
+		case Instruction::ZExt:
+		case Instruction::SExt:
+			return true;
+		default:
+			return false;
+	}
 }
 
 // ========================================================================== //
@@ -138,7 +138,7 @@ unsigned RangeAnalysis::getMaxBitWidth(const Function& F) {
 
 	// Bitwidth equal to 0 is not valid, so we increment to 1
 	if (max == 0) ++max;
-	
+
 	return max;
 }
 
@@ -156,13 +156,13 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
 // ========================================================================== //
 // IntraProceduralRangeAnalysis
 // ========================================================================== //
-template <class CGT>
+	template <class CGT>
 APInt IntraProceduralRA<CGT>::getMin()
 {
 	return Min;
 }
 
-template <class CGT>
+	template <class CGT>
 APInt IntraProceduralRA<CGT>::getMax()
 {
 	return Max;
@@ -175,7 +175,7 @@ Range IntraProceduralRA<CGT>::getRange(const Value *v){
 
 template<class CGT>
 bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
-//	if(CG) delete CG;
+	//	if(CG) delete CG;
 	CG = new CGT();
 
 	MAX_BIT_INT = getMaxBitWidth(F);
@@ -218,11 +218,11 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	prof.printTime("SCCs resolution");
 	prof.printTime("ComputeStats");
 	prof.printMemoryUsage();
-	
+
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
-	
+
 	// max visit computation
 	unsigned maxtimes = 0;
 	for (DenseMap<const Value*, unsigned>::iterator fmit = FerMap.begin(), fmend = FerMap.end(); fmit != fmend; ++fmit) {
@@ -233,19 +233,19 @@ IntraProceduralRA<CGT>::~IntraProceduralRA(){
 	}
 	maxVisit = maxtimes;
 #endif
-//	delete CG;
+	//	delete CG;
 }
 
 // ========================================================================== //
 // InterProceduralRangeAnalysis
 // ========================================================================== //
-template <class CGT>
+	template <class CGT>
 APInt InterProceduralRA<CGT>::getMin()
 {
 	return Min;
 }
 
-template <class CGT>
+	template <class CGT>
 APInt InterProceduralRA<CGT>::getMax()
 {
 	return Max;
@@ -275,7 +275,7 @@ unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M) {
 template<class CGT>
 bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 	// Constraint Graph
-//	if(CG) delete CG;
+	//	if(CG) delete CG;
 	CG = new CGT();
 
 	MAX_BIT_INT = getMaxBitWidth(M);
@@ -289,7 +289,7 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 		// If the function is only a declaration, or if it has variable number of arguments, do not match
 		if (I->isDeclaration() || I->isVarArg())
 			continue;
-			
+
 		CG->buildGraph(*I);
 		MatchParametersAndReturnValues(*I, *CG);
 	}
@@ -303,7 +303,7 @@ bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 #endif
 #ifdef PRINT_DEBUG
 	std::string moduleIdentifier = M.getModuleIdentifier();
-    int pos = moduleIdentifier.rfind("/");
+	int pos = moduleIdentifier.rfind("/");
 	std::string mIdentifier = pos > 0 ? moduleIdentifier.substr(pos) : moduleIdentifier;
 	CG->printToFile(*(M.begin()), "/tmp/" + mIdentifier + ".cgpre.dot");
 #endif
@@ -395,21 +395,23 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(Function &F,
 
 	for (Value::use_iterator UI = F.use_begin(), E = F.use_end(); UI != E;
 			++UI) {
-		User *U = *UI;
+		Use *U = &*UI;
+		User *Us = U->getUser();
 
 		// Ignore blockaddress uses
-		if (isa<BlockAddress>(U))
+		if (isa<BlockAddress>(Us))
 			continue;
 
 		// Used by a non-instruction, or not the callee of a function, do not
 		// match.
-		if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
+		if (!isa<CallInst>(Us) && !isa<InvokeInst>(Us))
 			continue;
 
-		Instruction *caller = cast<Instruction>(U);
+		Instruction *caller = cast<Instruction>(Us);
 
 		CallSite CS(caller);
-		if (!CS.isCallee(UI))
+
+		if (!CS.isCallee(U))
 			continue;
 
 		// Iterate over the real parameters and put them in the data structure
@@ -471,12 +473,13 @@ InterProceduralRA<CGT>::~InterProceduralRA(){
 	prof.printTime("BuildGraph");
 	prof.printTime("Nuutila");
 	prof.printTime("SCCs resolution");
+	prof.printTime("ComputeStats");
 	prof.printMemoryUsage();
-	
+
 	std::ostringstream formated;
 	formated << 100 * (1.0 - ((double)(needBits) / usedBits));
 	errs() << formated.str() << "\t - " << " Percentage of reduction\n";
-	
+
 	// max visit computation
 	unsigned maxtimes = 0;
 	for (DenseMap<const Value*, unsigned>::iterator fmit = FerMap.begin(), fmend = FerMap.end(); fmit != fmend; ++fmit) {
@@ -509,10 +512,10 @@ Range::Range(): l(Min), u(Max), type(Regular) {
 }
 
 Range::Range(APInt lb, APInt ub, RangeType rType) :
-		l(lb), u(ub), type(rType) {
-  if (lb.sgt(ub))
-    type = Empty;
-}
+	l(lb), u(ub), type(rType) {
+		if (lb.sgt(ub))
+			type = Empty;
+	}
 
 Range::~Range() {
 }
@@ -522,9 +525,13 @@ bool Range::isMaxRange() const {
 	return this->getLower().eq(Min) && this->getUpper().eq(Max);
 }
 
-/// Add and Mul are commutatives. So, they are a little different 
-/// of the other operations.
-Range Range::add(const Range& other) {
+/// Add and Mul are commutative. So, they are a little different 
+/// than the other operations.
+Range Range::add(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
@@ -532,12 +539,16 @@ Range Range::add(const Range& other) {
 	APInt l = Min, u = Max;
 	if (a.ne(Min) && c.ne(Min)) {
 		l = a + c;
+
+		// Overflow handling
 		if(a.isNegative() == c.isNegative() && a.isNegative() != l.isNegative())
 			l = Min;
 	}
 
 	if (b.ne(Max) && d.ne(Max)) {
 		u = b + d;
+
+		// Overflow handling
 		if(b.isNegative() == d.isNegative() && b.isNegative() != u.isNegative())
 			u = Max;
 	}
@@ -548,49 +559,68 @@ Range Range::add(const Range& other) {
 /// [a, b] − [c, d] = 
 /// [min (a − c, a − d, b − c, b − d), 
 /// max (a − c, a − d, b − c, b − d)] = [a − d, b − c]
-/// The other operations are just like this operation.
-Range Range::sub(const Range& other) {
+/// The other operations are just like this.
+Range Range::sub(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
 	const APInt &d = other.getUpper();
 	APInt l, u;
 
+	const APInt less = (a.slt(c)) ? a : c;
+	const APInt greater = (b.sgt(d)) ? b : d;
+
 	//a-d
 	if (a.eq(Min) || d.eq(Max))
 		l = Min;
-	else
-		//FIXME: handle overflow when a-d < Min
+	else {
 		l = a - d;
+
+		// Overflow handling
+		if (a.isNegative() != d.isNegative() && d.isNegative() == l.isNegative())
+			l = Min;
+	}
 
 	//b-c
 	if (b.eq(Max) || c.eq(Min))
 		u = Max;
-	else
-		//FIXME: handle overflow when b-c > Max
+	else {
 		u = b - c;
+
+		// Overflow handling
+		if (b.isNegative() != c.isNegative() && c.isNegative() == u.isNegative())
+			u = Max;
+	}
 
 	return Range(l, u);
 }
 
 #define MUL_HELPER(x,y) x.eq(Max) ? \
-							(y.slt(Zero) ? Min : (y.eq(Zero) ? Zero : Max)) \
-							: (y.eq(Max) ? \
-								(x.slt(Zero) ? Min :(x.eq(Zero) ? Zero : Max)) \
-								:(x.eq(Min) ? \
-									(y.slt(Zero) ? Max : (y.eq(Zero) ? Zero : Min)) \
-									: (y.eq(Min) ? \
-										(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
-										:(x*y))))
+	(y.slt(Zero) ? Min : (y.eq(Zero) ? Zero : Max)) \
+: (y.eq(Max) ? \
+		(x.slt(Zero) ? Min :(x.eq(Zero) ? Zero : Max)) \
+		:(x.eq(Min) ? \
+			(y.slt(Zero) ? Max : (y.eq(Zero) ? Zero : Min)) \
+			: (y.eq(Min) ? \
+				(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
+				:(x*y))))
 
 #define MUL_OV(x,y,xy) (x.isStrictlyPositive() == y.isStrictlyPositive() ? \
-							(xy.isNegative() ? Max : xy) \
-							: (xy.isStrictlyPositive() ? Min : xy))
+		(xy.isNegative() ? Max : xy) \
+		: (xy.isStrictlyPositive() ? Min : xy))
 
 /// Add and Mul are commutatives. So, they are a little different 
 /// of the other operations.
 // [a, b] * [c, d] = [Min(a*c, a*d, b*c, b*d), Max(a*c, a*d, b*c, b*d)]
-Range Range::mul(const Range& other) {
+Range Range::mul(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
 	if (this->isMaxRange() || other.isMaxRange()) {
 		return Range(Min, Max);
 	}
@@ -621,139 +651,102 @@ Range Range::mul(const Range& other) {
 }
 
 #define DIV_HELPER(OP,x,y) 	x.eq(Max) ? \
-						(y.slt(Zero) ? Min : (y.eq(Zero) ? Zero : Max)) \
-						: (y.eq(Max) ? \
-							(x.slt(Zero) ? Min :(x.eq(Zero) ? Zero : Max)) \
-							:(x.eq(Min) ? \
-								(y.slt(Zero) ? Max : (y.eq(Zero) ? Zero : Min)) \
-								: (y.eq(Min) ? \
-									(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
-									:(x.OP(y)))))
+	(y.slt(Zero) ? Min : (y.eq(Zero) ? Zero : Max)) \
+: (y.eq(Max) ? \
+		(x.slt(Zero) ? Min :(x.eq(Zero) ? Zero : Max)) \
+		:(x.eq(Min) ? \
+			(y.slt(Zero) ? Max : (y.eq(Zero) ? Zero : Min)) \
+			: (y.eq(Min) ? \
+				(x.slt(Zero) ? Max : (x.eq(Zero) ? Zero : Min)) \
+				:(x.OP(y)))))
 
-Range Range::udiv(const Range& other) {
-//	const APInt &a = this->getLower();
-//	const APInt &b = this->getUpper();
-//	const APInt &c = other.getLower();
-//	const APInt &d = other.getUpper();
-
-//	// Deal with division by 0 exception
-//	if ((c.eq(Zero) || d.eq(Zero))) {
-//		return Range(Min, Max);
-//	}
-
-//	APInt candidates[4];
-//	
-//	// value[1]: lb(c) / leastpositive(d)
-//	candidates[0] = DIV_HELPER(udiv, a, c);
-//	candidates[1] = DIV_HELPER(udiv, a, d);
-//	candidates[2] = DIV_HELPER(udiv, b, c);
-//	candidates[3] = DIV_HELPER(udiv, b, d);
-
-//	//Lower bound is the min value from the vector, while upper bound is the max value
-//	APInt *min = &candidates[0];
-//	APInt *max = &candidates[0];
-
-//	for (unsigned i = 1; i < 4; ++i) {
-//		if (candidates[i].sgt(*max))
-//			max = &candidates[i];
-//		else if (candidates[i].slt(*min))
-//			min = &candidates[i];
-//	}
-
-//	return Range(*min, *max);
-
-
-// This code has been copied from ::udiv() of ConstantRange class,
-// and adapted to our purposes
-
-	if (isEmpty() || other.isEmpty() || other.getUpper() == 0)
-	    return Range(Min, Max);
-	if (other.isMaxRange())
-		return Range(Min, Max);
-
-	APInt Lower = getLower().udiv(other.getUpper());
-
-	APInt other_umin = other.getLower();
-	
-	if (other_umin == 0) {
-      other_umin = APInt(MAX_BIT_INT, 1);
+Range Range::udiv(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
 	}
 
-	APInt Upper = getUpper().udiv(other_umin);
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
 
-	// If the LHS is Full and the RHS is a wrapped interval containing 1 then
-	// this could occur.
-	if (Lower == Upper)
+	// Deal with division by 0 exception
+	if (c.ule(Zero) && d.uge(Zero)) {
 		return Range(Min, Max);
-
-	return Range(Lower, Upper);
-}
-
-Range Range::sdiv(const Range& other) {
-//	const APInt &a = this->getLower();
-//	const APInt &b = this->getUpper();
-//	const APInt &c = other.getLower();
-//	const APInt &d = other.getUpper();
-
-//	// Deal with division by 0 exception
-//	if ((c.eq(Zero) || d.eq(Zero))) {
-//		return Range(Min, Max);
-//	}
-
-//	APInt candidates[4];
-//	candidates[0] = DIV_HELPER(sdiv, a, c);
-//	candidates[1] = DIV_HELPER(sdiv, a, d);
-//	candidates[2] = DIV_HELPER(sdiv, b, c);
-//	candidates[3] = DIV_HELPER(sdiv, b, d);
-
-//	//Lower bound is the min value from the vector, while upper bound is the max value
-//	APInt *min = &candidates[0];
-//	APInt *max = &candidates[0];
-
-//	for (unsigned i = 1; i < 4; ++i) {
-//		if (candidates[i].sgt(*max))
-//			max = &candidates[i];
-//		else if (candidates[i].slt(*min))
-//			min = &candidates[i];
-//	}
-
-//	return Range(*min, *max);
-
-
-	if (isEmpty() || other.isEmpty() || other.getUpper() == 0)
-	    return Range(Min, Max);
-	if (other.isMaxRange())
-		return Range(Min, Max);
-
-	APInt Lower = getLower().sdiv(other.getUpper());
-
-	APInt other_smin = other.getLower();
-
-	if (other_smin == 0) {
-      other_smin = APInt(MAX_BIT_INT, 1);
 	}
 
-	APInt Upper = getUpper().sdiv(other_smin);
+	APInt candidates[4];
 
-	// If the LHS is Full and the RHS is a wrapped interval containing 1 then
-	// this could occur.
-	if (Lower == Upper)
-		return Range(Min, Max);
+	// value[1]: lb(c) / leastpositive(d)
+	candidates[0] = DIV_HELPER(udiv, a, c);
+	candidates[1] = DIV_HELPER(udiv, a, d);
+	candidates[2] = DIV_HELPER(udiv, b, c);
+	candidates[3] = DIV_HELPER(udiv, b, d);
 
-	return Range(Lower, Upper);
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
+
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
 }
 
-Range Range::urem(const Range& other) {
+Range Range::sdiv(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	// Deal with division by 0 exception
+	if (c.sle(Zero) && d.sge(Zero)) {
+		return Range(Min, Max);
+	}
+
+	APInt candidates[4];
+	candidates[0] = DIV_HELPER(sdiv, a, c);
+	candidates[1] = DIV_HELPER(sdiv, a, d);
+	candidates[2] = DIV_HELPER(sdiv, b, c);
+	candidates[3] = DIV_HELPER(sdiv, b, d);
+
+	//Lower bound is the min value from the vector, while upper bound is the max value
+	APInt *min = &candidates[0];
+	APInt *max = &candidates[0];
+
+	for (unsigned i = 1; i < 4; ++i) {
+		if (candidates[i].sgt(*max))
+			max = &candidates[i];
+		else if (candidates[i].slt(*min))
+			min = &candidates[i];
+	}
+
+	return Range(*min, *max);
+}
+
+Range Range::urem(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
 	const APInt &d = other.getUpper();
 
 	// Deal with mod 0 exception
-	if (c.eq(Zero) || d.eq(Zero)) {
+	if (c.ule(Zero) && d.uge(Zero)) {
 		return Range(Min, Max);
 	}
-	
+
 	APInt candidates[4];
 	candidates[0] = Min;
 	candidates[1] = Min;
@@ -790,9 +783,13 @@ Range Range::urem(const Range& other) {
 	return Range(*min, *max);
 }
 
-Range Range::srem(const Range& other) {
+Range Range::srem(const Range& other) const {
 	if(other == Range(Zero,Zero) || other == Range(Min, Max, Empty))
 		return Range(Min, Max, Empty);
+
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
 
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
@@ -800,8 +797,9 @@ Range Range::srem(const Range& other) {
 	const APInt &d = other.getUpper();
 
 	// Deal with mod 0 exception
-	if((c.slt(Zero) && d.sgt(Zero)) || c.eq(Zero) || d.eq(Zero))
+	if (c.sle(Zero) && d.sge(Zero)) {
 		return Range(Min, Max);
+	}
 
 	APInt candidates[4];
 	candidates[0] = Min;
@@ -839,204 +837,149 @@ Range Range::srem(const Range& other) {
 	return Range(*min, *max);
 }
 
-Range Range::shl(const Range& other) {
+// Logic has been borrowed from ConstantRange
+Range Range::shl(const Range& other) const {
+	if (isEmpty())
+		return Range(*this);
+	if (other.isEmpty())
+		return Range(other);
+
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
 	const APInt &d = other.getUpper();
 
-	APInt candidates[4];
-	candidates[0] = Min;
-	candidates[1] = Min;
-	candidates[2] = Max;
-	candidates[3] = Max;
-
-	if (a.ne(Min) && c.ne(Min)) {
-		candidates[0] = a.shl(c); // lower lower
+	if (a.eq(Min) || c.eq(Min) || b.eq(Max) || d.eq(Max)) {
+		return Range(Min, Max);
 	}
 
-	if (a.ne(Min) && d.ne(Max)) {
-		candidates[1] = a.shl(d); // lower upper
-	}
+	APInt min = a.shl(c);
+	APInt max = b.shl(d);
 
-	if (b.ne(Max) && c.ne(Min)) {
-		candidates[2] = b.shl(c); // upper lower
-	}
+	APInt Zeros(MAX_BIT_INT, b.countLeadingZeros());
+	if (Zeros.ugt(d))
+		return Range(min, max);
 
-	if (b.ne(Max) && d.ne(Max)) {
-		candidates[3] = b.shl(d); // upper upper
-	}
-
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
-
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+	// [-inf, +inf]
+	return Range(Min, Max);
 }
 
-Range Range::lshr(const Range& other) {
-	const APInt &a = this->getLower();
-	const APInt &b = this->getUpper();
-	const APInt &c = other.getLower();
-	const APInt &d = other.getUpper();
-	
-	// If any of the bounds is negative, result is [0, +inf] automatically
-	if (a.isNegative() || b.isNegative()) {
-		return Range(Zero, Max);
-	}
-	
-	APInt candidates[4];
-	candidates[0] = Min;
-	candidates[1] = Min;
-	candidates[2] = Max;
-	candidates[3] = Max;
-	
-	if (a.ne(Min) && c.ne(Min)) {
-		candidates[0] = a.lshr(c); // lower lower
+// Logic has been borrowed from ConstantRange
+Range Range::lshr(const Range& other) const {
+	if (isEmpty())
+		return Range(*this);
+	if (other.isEmpty())
+		return Range(other);
+
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
 	}
 
-	if (a.ne(Min) && d.ne(Max)) {
-		candidates[1] = a.lshr(d); // lower upper
-	}
-
-	if (b.ne(Max) && c.ne(Min)) {
-		candidates[2] = b.lshr(c); // upper lower
-	}
-
-	if (b.ne(Max) && d.ne(Max)) {
-		candidates[3] = b.lshr(d); // upper upper
-	}
-
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
-
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
-}
-
-Range Range::ashr(const Range& other) {
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
 	const APInt &d = other.getUpper();
 
-	APInt candidates[4];
-	candidates[0] = Min;
-	candidates[1] = Min;
-	candidates[2] = Max;
-	candidates[3] = Max;
-
-	if (a.ne(Min) && c.ne(Min)) {
-		candidates[0] = a.ashr(c); // lower lower
+	if (a.eq(Min) || c.eq(Min) || b.eq(Max) || d.eq(Max)) {
+		return Range(Min, Max);
 	}
 
-	if (a.ne(Min) && d.ne(Max)) {
-		candidates[1] = a.ashr(d); // lower upper
-	}
+	APInt max = b.lshr(c);
+	APInt min = a.lshr(d);
 
-	if (b.ne(Max) && c.ne(Min)) {
-		candidates[2] = b.ashr(c); // upper lower
-	}
-
-	if (b.ne(Max) && d.ne(Max)) {
-		candidates[3] = b.ashr(d); // upper upper
-	}
-
-	//Lower bound is the min value from the vector, while upper bound is the max value
-	APInt *min = &candidates[0];
-	APInt *max = &candidates[0];
-
-	for (unsigned i = 1; i < 4; ++i) {
-		if (candidates[i].sgt(*max))
-			max = &candidates[i];
-		else if (candidates[i].slt(*min))
-			min = &candidates[i];
-	}
-
-	return Range(*min, *max);
+	return Range(min, max);
 }
 
-int64_t minAND(int64_t a, int64_t b, int64_t c, int64_t d)
-{
-	int64_t m, temp;
-	
-	m = 0x80000000;
-	while (m != 0) {
-		if (~a & ~c & m) {
-			temp = (a | m) & -m;
-			if (temp <= b) {
-				a = temp;
-				break;
-			}
-			temp = (c | m) & -m;
-			if (temp <= d) {
-				c = temp;
-				break;
-			}
-		}
-		m = m >> 1;
-	}
-	return a & c;
-}
+Range Range::ashr(const Range& other) const {
+	if (isEmpty())
+		return Range(*this);
+	if (other.isEmpty())
+		return Range(other);
 
-int64_t maxAND(int64_t a, int64_t b, int64_t c, int64_t d)
-{
-	int64_t m, temp;
-	
-	m = 0x80000000;
-	while (m != 0) {
-		if (b & ~d & m) {
-			temp = (b & ~m) | (m - 1);
-			if (temp >= a) {
-				b = temp;
-				break;
-			}
-		}
-		else if (~b & d & m) {
-			temp = (d & ~m) | (m - 1);
-			if (temp >= c) {
-				d = temp;
-				break;
-			}
-		}
-		m = m >> 1;
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
 	}
-	return b & d;
+
+	const APInt &a = this->getLower();
+	const APInt &b = this->getUpper();
+	const APInt &c = other.getLower();
+	const APInt &d = other.getUpper();
+
+	if (a.eq(Min) || c.eq(Min) || b.eq(Max) || d.eq(Max)) {
+		return Range(Min, Max);
+	}
+
+	APInt max = b.ashr(c);
+	APInt min = a.ashr(d);
+
+	return Range(min, max);
 }
 
 /*
- *  This and operation was took from the original ConstantRange implementation.
- *  It does not provide a tight result.
- *  TODO: Implement Hacker's Delight algorithm
+ * 	This and operation is coded following Hacker's Delight algorithm.
+ * 	According to the author, it provides tight results.
  */
-Range Range::And(const Range& other) {
-	if (isEmpty() || other.isEmpty())
-		return Range(Min, Max, Empty);
+Range Range::And(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+	
+	APInt a = this->getLower();
+	APInt b = this->getUpper();
+	APInt c = other.getLower();
+	APInt d = other.getUpper();
+	
+	if (a.eq(Min) || b.eq(Max) || c.eq(Min) || d.eq(Max)) {
+		return Range(Min, Max);
+	}
+	
+	// not everybody
+	a.flipAllBits();
+	b.flipAllBits();
+	c.flipAllBits();
+	d.flipAllBits();
+	
+	Range inv1 = Range(a, b);
+	Range inv2 = Range(c, d);
+		
+	Range invres = inv1.Or(inv2);
+	
+	// not the result of the 'or'
+	APInt invLower = invres.getLower();
+	invLower.flipAllBits();
+	
+	APInt invUpper = invres.getUpper();
+	invUpper.flipAllBits();
+	
+	return Range(invLower, invUpper);
+}
+
+// This operator is used when we are dealing with values
+// with more than 64-bits
+Range Range::And_conservative(const Range& other) const {
+	if (isEmpty()) 
+		return Range(*this);
+	if (other.isEmpty())
+		return Range(other);
+
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
 
 	APInt umin = APIntOps::umin(other.getUpper(), getUpper());
 	if (umin.isAllOnesValue())
 		return Range(Min, Max);
-	return Range(APInt::getNullValue(MAX_BIT_INT), umin);
+	return Range(APInt::getNullValue(MAX_BIT_INT), umin + 1);
 }
 
 int64_t minOR(int64_t a, int64_t b, int64_t c, int64_t d)
 {
 	int64_t m, temp;
-	
+
 	m = 0x80000000;
 	while (m != 0) {
 		if (~a & c & m) {
@@ -1061,7 +1004,7 @@ int64_t minOR(int64_t a, int64_t b, int64_t c, int64_t d)
 int64_t maxOR(int64_t a, int64_t b, int64_t c, int64_t d)
 {
 	int64_t m, temp;
-	
+
 	m = 0x80000000;
 	while (m != 0) {
 		if (b & d & m) {
@@ -1081,12 +1024,30 @@ int64_t maxOR(int64_t a, int64_t b, int64_t c, int64_t d)
 	return b | d;
 }
 
+// This operator is used when we are dealing with values
+// with more than 64-bits
+Range Range::Or_conservative(const Range &other) const {
+	if (isEmpty()) 
+		return Range(*this);
+	if (other.isEmpty())
+		return Range(other);
+
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
+	APInt umax = APIntOps::umax(getLower(), other.getLower());
+	if (umax.isMinValue())
+		return Range(Min, Max);
+
+	return Range(umax, APInt::getNullValue(MAX_BIT_INT));
+}
 
 /*
  * 	This or operation is coded following Hacker's Delight algorithm.
  * 	According to the author, it provides tight results.
  */
-Range Range::Or(const Range& other) {
+Range Range::Or(const Range& other) const {
 	const APInt &a = this->getLower();
 	const APInt &b = this->getUpper();
 	const APInt &c = other.getLower();
@@ -1095,7 +1056,10 @@ Range Range::Or(const Range& other) {
 	if (this->isUnknown() || other.isUnknown()) {
 		return Range(Min, Max, Unknown);
 	}
-	
+	if (a.eq(Min) || b.eq(Max) || c.eq(Min) || d.eq(Max)) {
+		return Range(Min, Max);
+	}
+
 	unsigned char switchval = 0;
 	switchval += (a.isNonNegative() ? 1 : 0);
 	switchval <<= 1;
@@ -1104,9 +1068,9 @@ Range Range::Or(const Range& other) {
 	switchval += (c.isNonNegative() ? 1 : 0);
 	switchval <<= 1;
 	switchval += (d.isNonNegative() ? 1 : 0);
-	
+
 	APInt l = Min, u = Max;
-	
+
 	switch (switchval) {
 		case 0:
 			l = minOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
@@ -1145,25 +1109,19 @@ Range Range::Or(const Range& other) {
 			u = maxOR(a.getSExtValue(), b.getSExtValue(), c.getSExtValue(), d.getSExtValue());
 			break;
 	}
-	
+
 	return Range(l, u);
-}
-
-int64_t minXOR(int64_t a, int64_t b, int64_t c, int64_t d)
-{
-	return minAND(a, b, ~d, ~c) | minAND(~b, ~a, c, d);
-}
-
-int64_t maxXOR(int64_t a, int64_t b, int64_t c, int64_t d)
-{
-	return maxOR(0, maxAND(a, b, ~d, ~c), 0, maxAND(~b, ~a, c, d));
 }
 
 /*
  * 	We don't have a xor implementation yet.
  * 	To be in safe side, we just give maxrange as result.
  */
-Range Range::Xor(const Range& other) {
+Range Range::Xor(const Range& other) const {
+	if (this->isUnknown() || other.isUnknown()) {
+		return Range(Min, Max, Unknown);
+	}
+
 	return Range(Min, Max);
 }
 
@@ -1244,12 +1202,12 @@ Range Range::unionWith(const Range& other) const {
 
 bool Range::operator==(const Range& other) const {
 	return this->type == other.type && getLower().eq(other.getLower())
-			&& getUpper().eq(other.getUpper());
+		&& getUpper().eq(other.getUpper());
 }
 
 bool Range::operator!=(const Range& other) const {
 	return this->type != other.type || getLower().ne(other.getLower())
-			|| getUpper().ne(other.getUpper());
+		|| getUpper().ne(other.getUpper());
 }
 
 void Range::print(raw_ostream& OS) const {
@@ -1286,16 +1244,16 @@ raw_ostream& operator<<(raw_ostream& OS, const Range& R) {
 // ========================================================================== //
 
 BasicInterval::BasicInterval(const Range& range) :
-		range(range) {
-}
+	range(range) {
+	}
 
 BasicInterval::BasicInterval() :
-		range(Range(Min, Max)) {
-}
+	range(Range(Min, Max)) {
+	}
 
 BasicInterval::BasicInterval(const APInt& l, const APInt& u) :
-		range(Range(l, u)) {
-}
+	range(Range(l, u)) {
+	}
 
 // This is a base class, its dtor must be virtual.
 BasicInterval::~BasicInterval() {
@@ -1312,8 +1270,8 @@ void BasicInterval::print(raw_ostream& OS) const {
 
 SymbInterval::SymbInterval(const Range& range, const Value* bound,
 		CmpInst::Predicate pred) :
-		BasicInterval(range), bound(bound), pred(pred) {
-}
+	BasicInterval(range), bound(bound), pred(pred) {
+	}
 
 SymbInterval::~SymbInterval() {
 }
@@ -1329,31 +1287,31 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 	APInt upper = sink->getRange().getUpper();
 
 	switch (this->getOperation()) {
-	case ICmpInst::ICMP_EQ: // equal
-		return Range(l, u);
-		break;
-	case ICmpInst::ICMP_SLE: // signed less or equal
-		return Range(lower, u);
-		break;
-	case ICmpInst::ICMP_SLT: // signed less than
-		if (u != Max) {
-			return Range(lower, u - 1);
-		} else {
+		case ICmpInst::ICMP_EQ: // equal
+			return Range(l, u);
+			break;
+		case ICmpInst::ICMP_SLE: // signed less or equal
 			return Range(lower, u);
-		}
-		break;
-	case ICmpInst::ICMP_SGE: // signed greater or equal
-		return Range(l, upper);
-		break;
-	case ICmpInst::ICMP_SGT: // signed greater than
-		if (l != Min) {
-			return Range(l + 1, upper);
-		} else {
+			break;
+		case ICmpInst::ICMP_SLT: // signed less than
+			if (u != Max) {
+				return Range(lower, u - 1);
+			} else {
+				return Range(lower, u);
+			}
+			break;
+		case ICmpInst::ICMP_SGE: // signed greater or equal
 			return Range(l, upper);
-		}
-		break;
-	default:
-		return Range(Min, Max);
+			break;
+		case ICmpInst::ICMP_SGT: // signed greater than
+			if (l != Min) {
+				return Range(l + 1, upper);
+			} else {
+				return Range(l, upper);
+			}
+			break;
+		default:
+			return Range(Min, Max);
 	}
 
 	return Range(Min, Max);
@@ -1362,35 +1320,35 @@ Range SymbInterval::fixIntersects(VarNode* bound, VarNode* sink) {
 /// Pretty print.
 void SymbInterval::print(raw_ostream& OS) const {
 	switch (this->getOperation()) {
-	case ICmpInst::ICMP_EQ: // equal
-		OS << "[lb(";
-		printVarName(getBound(), OS);
-		OS << "), ub(";
-		printVarName(getBound(), OS);
-		OS << ")]";
-		break;
-	case ICmpInst::ICMP_SLE: // sign less or equal
-		OS << "[-inf, ub(";
-		printVarName(getBound(), OS);
-		OS << ")]";
-		break;
-	case ICmpInst::ICMP_SLT: // sign less than
-		OS << "[-inf, ub(";
-		printVarName(getBound(), OS);
-		OS << ") - 1]";
-		break;
-	case ICmpInst::ICMP_SGE: // sign greater or equal
-		OS << "[lb(";
-		printVarName(getBound(), OS);
-		OS << "), +inf]";
-		break;
-	case ICmpInst::ICMP_SGT: // sign greater than
-		OS << "[lb(";
-		printVarName(getBound(), OS);
-		OS << " - 1), +inf]";
-		break;
-	default:
-		OS << "Unknown Instruction.\n";
+		case ICmpInst::ICMP_EQ: // equal
+			OS << "[lb(";
+			printVarName(getBound(), OS);
+			OS << "), ub(";
+			printVarName(getBound(), OS);
+			OS << ")]";
+			break;
+		case ICmpInst::ICMP_SLE: // sign less or equal
+			OS << "[-inf, ub(";
+			printVarName(getBound(), OS);
+			OS << ")]";
+			break;
+		case ICmpInst::ICMP_SLT: // sign less than
+			OS << "[-inf, ub(";
+			printVarName(getBound(), OS);
+			OS << ") - 1]";
+			break;
+		case ICmpInst::ICMP_SGE: // sign greater or equal
+			OS << "[lb(";
+			printVarName(getBound(), OS);
+			OS << "), +inf]";
+			break;
+		case ICmpInst::ICMP_SGT: // sign greater than
+			OS << "[lb(";
+			printVarName(getBound(), OS);
+			OS << " - 1), +inf]";
+			break;
+		default:
+			OS << "Unknown Instruction.\n";
 	}
 }
 
@@ -1400,8 +1358,8 @@ void SymbInterval::print(raw_ostream& OS) const {
 
 /// The ctor.
 VarNode::VarNode(const Value* V) :
-		V(V), interval(Range(Min, Max, Unknown)) {
-}
+	V(V), interval(Range(Min, Max, Unknown)) {
+	}
 
 /// The dtor.
 VarNode::~VarNode() {
@@ -1440,15 +1398,15 @@ void VarNode::print(raw_ostream& OS) const {
 void VarNode::storeAbstractState() {
 	ASSERT(!this->interval.isUnknown(), "storeAbstractState doesn't handle empty set")
 
-	if (this->interval.getLower().eq(Min))
-		if (this->interval.getUpper().eq(Max))
-			this->abstractState = '?';
+		if (this->interval.getLower().eq(Min))
+			if (this->interval.getUpper().eq(Max))
+				this->abstractState = '?';
+			else
+				this->abstractState = '-';
+		else if (this->interval.getUpper().eq(Max))
+			this->abstractState = '+';
 		else
-			this->abstractState = '-';
-	else if (this->interval.getUpper().eq(Max))
-		this->abstractState = '+';
-	else
-		this->abstractState = '0';
+			this->abstractState = '0';
 }
 
 raw_ostream& operator<<(raw_ostream& OS, const VarNode* VN) {
@@ -1464,8 +1422,8 @@ raw_ostream& operator<<(raw_ostream& OS, const VarNode* VN) {
 /// but we want to inherit of it.
 BasicOp::BasicOp(BasicInterval* intersect, VarNode* sink,
 		const Instruction *inst) :
-		intersect(intersect), sink(sink), inst(inst) {
-}
+	intersect(intersect), sink(sink), inst(inst) {
+	}
 
 /// We can not want people creating objects of this class,
 /// but we want to inherit of it.
@@ -1486,8 +1444,8 @@ void BasicOp::fixIntersects(VarNode* V) {
 // ========================================================================== //
 
 ControlDep::ControlDep(VarNode* sink, VarNode* source) :
-		BasicOp(new BasicInterval(), sink, NULL), source(source) {
-}
+	BasicOp(new BasicInterval(), sink, NULL), source(source) {
+	}
 
 ControlDep::~ControlDep() {
 }
@@ -1505,8 +1463,8 @@ void ControlDep::print(raw_ostream& OS) const {
 
 UnaryOp::UnaryOp(BasicInterval* intersect, VarNode* sink,
 		const Instruction *inst, VarNode* source, unsigned int opcode) :
-		BasicOp(intersect, sink, inst), source(source), opcode(opcode) {
-}
+	BasicOp(intersect, sink, inst), source(source), opcode(opcode) {
+	}
 
 // The dtor.
 UnaryOp::~UnaryOp() {
@@ -1522,19 +1480,19 @@ Range UnaryOp::eval() const {
 
 	if (oprnd.isRegular()) {
 		switch (this->getOpcode()) {
-		case Instruction::Trunc:
-			result = oprnd.truncate(bw);
-			break;
-		case Instruction::ZExt:
-			result = oprnd.zextOrTrunc(bw);
-			break;
-		case Instruction::SExt:
-			result = oprnd.sextOrTrunc(bw);
-			break;
-		default:
-			// Loads and Stores are handled here.
-			result = oprnd;
-			break;
+			case Instruction::Trunc:
+				result = oprnd.truncate(bw);
+				break;
+			case Instruction::ZExt:
+				result = oprnd.zextOrTrunc(bw);
+				break;
+			case Instruction::SExt:
+				result = oprnd.sextOrTrunc(bw);
+				break;
+			default:
+				// Loads and Stores are handled here.
+				result = oprnd;
+				break;
 		}
 	} else if (oprnd.isEmpty())
 		result = Range(Min, Max, Empty);
@@ -1558,19 +1516,19 @@ void UnaryOp::print(raw_ostream& OS) const {
 	unsigned bw = getSink()->getValue()->getType()->getPrimitiveSizeInBits();
 
 	switch (this->opcode) {
-	case Instruction::Trunc:
-		OS << "trunc i" << bw;
-		break;
-	case Instruction::ZExt:
-		OS << "zext i" << bw;
-		break;
-	case Instruction::SExt:
-		OS << "sext i" << bw;
-		break;
-	default:
-		// Phi functions, Loads and Stores are handled here.
-		this->getIntersect()->print(OS);
-		break;
+		case Instruction::Trunc:
+			OS << "trunc i" << bw;
+			break;
+		case Instruction::ZExt:
+			OS << "zext i" << bw;
+			break;
+		case Instruction::SExt:
+			OS << "sext i" << bw;
+			break;
+		default:
+			// Phi functions, Loads and Stores are handled here.
+			this->getIntersect()->print(OS);
+			break;
 	}
 
 	OS << "\"]\n";
@@ -1596,8 +1554,8 @@ void UnaryOp::print(raw_ostream& OS) const {
 
 SigmaOp::SigmaOp(BasicInterval* intersect, VarNode* sink,
 		const Instruction *inst, VarNode* source, unsigned int opcode) :
-		UnaryOp(intersect, sink, inst, source, opcode), unresolved(false) {
-}
+	UnaryOp(intersect, sink, inst, source, opcode), unresolved(false) {
+	}
 
 // The dtor.
 SigmaOp::~SigmaOp() {
@@ -1643,9 +1601,9 @@ void SigmaOp::print(raw_ostream& OS) const {
 BinaryOp::BinaryOp(BasicInterval* intersect, VarNode* sink,
 		const Instruction* inst, VarNode* source1, VarNode* source2,
 		unsigned int opcode) :
-		BasicOp(intersect, sink, inst), source1(source1), source2(source2), opcode(
-				opcode) {
-}
+	BasicOp(intersect, sink, inst), source1(source1), source2(source2), opcode(
+			opcode) {
+	}
 
 /// The dtor.
 BinaryOp::~BinaryOp() {
@@ -1664,49 +1622,57 @@ Range BinaryOp::eval() const {
 	//only evaluate if all operands are Regular
 	if (op1.isRegular() && op2.isRegular()) {
 		switch (this->getOpcode()) {
-		case Instruction::Add:
-			result = op1.add(op2);
-			break;
-		case Instruction::Sub:
-			result = op1.sub(op2);
-			break;
-		case Instruction::Mul:
-			result = op1.mul(op2);
-			break;
-		case Instruction::UDiv:
-			result = op1.udiv(op2);
-			break;
-		case Instruction::SDiv:
-			result = op1.sdiv(op2);
-			break;
-		case Instruction::URem:
-			result = op1.urem(op2);
-			break;
-		case Instruction::SRem:
-			result = op1.srem(op2);
-			break;
-		case Instruction::Shl:
-			result = op1.shl(op2);
-			break;
-		case Instruction::LShr:
-			result = op1.lshr(op2);
-			break;
-		case Instruction::AShr:
-			result = op1.ashr(op2);
-			break;
-		case Instruction::And:
-			result = op1.And(op2);
-			break;
-		case Instruction::Or:
-			result = op1.Or(op2);
-			break;
-		case Instruction::Xor:
-			result = op1.Xor(op2);
-			break;
-		default:
-			break;
+			case Instruction::Add:
+				result = op1.add(op2);
+				break;
+			case Instruction::Sub:
+				result = op1.sub(op2);
+				break;
+			case Instruction::Mul:
+				result = op1.mul(op2);
+				break;
+			case Instruction::UDiv:
+				result = op1.udiv(op2);
+				break;
+			case Instruction::SDiv:
+				result = op1.sdiv(op2);
+				break;
+			case Instruction::URem:
+				result = op1.urem(op2);
+				break;
+			case Instruction::SRem:
+				result = op1.srem(op2);
+				break;
+			case Instruction::Shl:
+				result = op1.shl(op2);
+				break;
+			case Instruction::LShr:
+				result = op1.lshr(op2);
+				break;
+			case Instruction::AShr:
+				result = op1.ashr(op2);
+				break;
+			case Instruction::And:
+				result = op1.And(op2);
+				break;
+			case Instruction::Or:
+				// We have two versions of the 'or' operator
+				// One of them gives tight results, but only works
+				// for 64-bit values or less.
+				if (MAX_BIT_INT <= 64) {
+					result = op1.Or(op2);
+				}
+				else {
+					result = op1.Or_conservative(op2);
+				}
+				break;
+			case Instruction::Xor:
+				result = op1.Xor(op2);
+				break;
+			default:
+				break;
 		}
-		
+
 		// If resulting interval has become inconsistent, set it to max range for safety
 		if (result.getLower().sgt(result.getUpper())) {
 			result = Range(Min, Max);
@@ -1764,8 +1730,8 @@ void BinaryOp::print(raw_ostream& OS) const {
 // The ctor.
 PhiOp::PhiOp(BasicInterval* intersect, VarNode* sink, const Instruction* inst,
 		unsigned int opcode) :
-		BasicOp(intersect, sink, inst), opcode(opcode) {
-}
+	BasicOp(intersect, sink, inst), opcode(opcode) {
+	}
 
 /// The dtor.
 PhiOp::~PhiOp() {
@@ -1805,7 +1771,7 @@ void PhiOp::print(raw_ostream& OS) const {
 		const Value* V = (*sit)->getValue();
 		if (const ConstantInt* C = dyn_cast<ConstantInt>(V)) {
 			OS << " " << C->getValue() << " -> " << quot << this << quot
-					<< "\n";
+				<< "\n";
 		} else {
 			OS << " " << quot;
 			printVarName(V, OS);
@@ -1825,8 +1791,8 @@ void PhiOp::print(raw_ostream& OS) const {
 
 ValueBranchMap::ValueBranchMap(const Value* V, const BasicBlock* BBTrue,
 		const BasicBlock* BBFalse, BasicInterval* ItvT, BasicInterval* ItvF) :
-		V(V), BBTrue(BBTrue), BBFalse(BBFalse), ItvT(ItvT), ItvF(ItvF) {
-}
+	V(V), BBTrue(BBTrue), BBFalse(BBFalse), ItvT(ItvT), ItvF(ItvF) {
+	}
 
 ValueBranchMap::~ValueBranchMap() {
 }
@@ -1849,8 +1815,8 @@ void ValueBranchMap::clear() {
 
 ValueSwitchMap::ValueSwitchMap(const Value* V,
 		SmallVector<std::pair<BasicInterval*, const BasicBlock*>, 4> &BBsuccs) :
-		V(V), BBsuccs(BBsuccs) {
-}
+	V(V), BBsuccs(BBsuccs) {
+	}
 
 ValueSwitchMap::~ValueSwitchMap() {
 }
@@ -1874,8 +1840,6 @@ ConstraintGraph::ConstraintGraph() {
 
 /// The dtor.
 ConstraintGraph::~ConstraintGraph() {
-//	errs() << "\nConstraintGraph::~ConstraintGraph : "<< this->vars.size();
-	//delete symbMap;
 
 	for (VarNodes::iterator vit = vars.begin(), vend = vars.end();
 			vit != vend; ++vit) {
@@ -1900,15 +1864,38 @@ ConstraintGraph::~ConstraintGraph() {
 
 Range ConstraintGraph::getRange(const Value *v) {
 	VarNodes::iterator vit = this->vars.find(v);
-	if (vit == this->vars.end())
-		return Range(Min, Max, Unknown);
+
+	if (vit == this->vars.end()) {
+		// If the value doesn't have a range,
+		// it wasn't considered by the range analysis
+		// for some reason.
+		// It gets an unknown range if it's a variable,
+		// or the tight range if it's a constant
+		//
+		// I decided NOT to insert these uncovered
+		// values to the node set after their range
+		// is created here.
+		const ConstantInt *ci = dyn_cast<ConstantInt>(v);
+		if (!ci) {
+			return Range(Min, Max, Unknown);
+		}
+		else {
+			APInt tmp = ci->getValue();
+			if (tmp.getBitWidth() < MAX_BIT_INT) {
+				tmp = tmp.sext(MAX_BIT_INT);
+			}
+
+			return Range(tmp, tmp);
+		}
+	}
+
 	return vit->second->getRange();
 }
 
 /// Adds a VarNode to the graph.
 VarNode* ConstraintGraph::addVarNode(const Value* V) {
 	VarNodes::iterator vit = this->vars.find(V);
-	
+
 	if (vit != this->vars.end()) {
 		return vit->second;
 	}
@@ -1930,78 +1917,74 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	VarNode* source = NULL;
 
 	switch (I->getOpcode()) {
-	case Instruction::Store:
-		source = addVarNode(I->getOperand(1));
-		break;
-	case Instruction::Load:
-	case Instruction::Trunc:
-	case Instruction::ZExt:
+		case Instruction::Trunc:
+		case Instruction::ZExt:
 #ifdef OVERFLOWHANDLER
-	case Instruction::Add:
+		case Instruction::Add:
 #endif
-	case Instruction::SExt:
-		source = addVarNode(I->getOperand(0));
-		break;
-	default:
-		return;
+		case Instruction::SExt:
+			source = addVarNode(I->getOperand(0));
+			break;
+		default:
+			return;
 	}
 
 	UnaryOp* UOp = NULL;
-	
+
 #ifndef OVERFLOWHANDLER
 	// Create the operation using the intersect to constrain sink's interval.
 	UOp = new UnaryOp(new BasicInterval(), sink, I, source,
 			I->getOpcode());
 #else
-	// I can only be an Add instruction if he is a newdef overflow instruction
+	// I can only be an Add instruction if it is a newdef overflow instruction
 	if (I->getOpcode() == Instruction::Add) {
 		BasicBlock::const_iterator it(I);
 		--it;
-		
+
 		APInt constant;
 		APInt lower = Min, upper = Max;
 		APInt candidates[2];
 		Range result;
-		
+
 		switch (it->getOpcode()) {
 			case Instruction::Add:
 				constant = cast<ConstantInt>(it->getOperand(1))->getValue();
 				if (constant.getBitWidth() < MAX_BIT_INT) {
 					constant = constant.sext(MAX_BIT_INT);
 				}
-				
+
 				if (constant.isStrictlyPositive()) {
 					upper -= constant;
 				}
 				else {
 					lower -= constant;
 				}
-				
+
 				UOp = new UnaryOp(new BasicInterval(lower, upper), sink, I, source, I->getOpcode());
 				break;
-				
+
 			case Instruction::Sub:
 				constant = cast<ConstantInt>(it->getOperand(1))->getValue();
 				if (constant.getBitWidth() < MAX_BIT_INT) {
 					constant = constant.sext(MAX_BIT_INT);
 				}
-				
+
 				if (constant.isStrictlyPositive()) {
 					lower += constant;
 				}
 				else {
 					upper += constant;
 				}
-				
+
 				UOp = new UnaryOp(new BasicInterval(lower, upper), sink, I, source, I->getOpcode());
 				break;
-			
+
 			case Instruction::Mul:
 				constant = cast<ConstantInt>(it->getOperand(1))->getValue();
 				if (constant.getBitWidth() < MAX_BIT_INT) {
 					constant = constant.sext(MAX_BIT_INT);
 				}
-				
+
 				candidates[0] = lower.sdiv(constant);
 				candidates[1] = upper.sdiv(constant);
 
@@ -2011,26 +1994,26 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 					candidates[0] = candidates[1];
 					candidates[1] = swap;
 				}
-				
+
 				UOp = new UnaryOp(new BasicInterval(candidates[0], candidates[1]), sink, I, source, I->getOpcode());
 				break;
-			
+
 			case Instruction::Trunc:
 				const TruncInst *trunc = cast<TruncInst>(it);
 				unsigned numbits = trunc->getType()->getPrimitiveSizeInBits();
-				
+
 				APInt minvalue = APInt::getSignedMinValue(numbits);
 				if (minvalue.getBitWidth() < MAX_BIT_INT) {
 					minvalue = minvalue.sext(MAX_BIT_INT);
 				}
-				
+
 				APInt maxvalue = APInt::getSignedMaxValue(numbits);
 				if (maxvalue.getBitWidth() < MAX_BIT_INT) {
 					maxvalue = maxvalue.sext(MAX_BIT_INT);
 				}
-				
+
 				Range truncInterval(minvalue, maxvalue, Regular);
-				
+
 				UOp = new UnaryOp(new BasicInterval(truncInterval), sink, I, source, I->getOpcode());
 				break;
 		}
@@ -2038,7 +2021,7 @@ void ConstraintGraph::addUnaryOp(const Instruction* I) {
 	else {
 		// Create the operation using the intersect to constrain sink's interval.
 		UOp = new UnaryOp(new BasicInterval(), sink, I, source,
-		I->getOpcode());
+				I->getOpcode());
 	}
 #endif
 
@@ -2169,6 +2152,22 @@ void ConstraintGraph::addSigmaOp(const PHINode* Sigma) {
 	}
 }
 
+/// Creates varnodes for all operands of I that are constants
+/// This steps ensures that all constants in the program's body
+/// get a corresponding var node with a range
+/*
+   void ConstraintGraph::createNodesForConstants(const Instruction *I) {
+   for (User::const_op_iterator oit = I->op_begin(), oend = I->op_end();
+   oit != oend; ++oit) {
+   const Value *V = *oit;
+   const ConstantInt *CI = dyn_cast<ConstantInt>(V);
+
+   if (CI) {
+   addVarNode(CI);
+   }
+   }
+   }
+   */
 void ConstraintGraph::buildOperations(const Instruction* I) {
 
 #ifdef OVERFLOWHANDLER
@@ -2248,9 +2247,9 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw) {
 			sigMax = sigMax.sext(MAX_BIT_INT);
 		}
 
-//		if (sigMax.slt(sigMin)) {
-//			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
-//		}
+		//		if (sigMax.slt(sigMin)) {
+		//			sigMax = APInt::getSignedMaxValue(MAX_BIT_INT);
+		//		}
 
 		Range Values = Range(sigMin, sigMax);
 
@@ -2296,12 +2295,42 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 	const BasicBlock *FBlock = br->getSuccessor(1);
 
 	// We have a Variable-Constant comparison.
-	if (ConstantInt * CI = dyn_cast<ConstantInt>(ici->getOperand(1))) {
-		// Calculate the range of values that would satisfy the comparison.
-		ConstantRange CR(CI->getValue(), CI->getValue() + 1);
-		unsigned int pred = ici->getPredicate();
+	const Value *Op0 = ici->getOperand(0);
+	const Value *Op1 = ici->getOperand(1);
+	const ConstantInt *constant = NULL;
+	const Value *variable = NULL;
 
-		ConstantRange tmpT = ConstantRange::makeICmpRegion(pred, CR);
+	// If both operands are constants, nothing to do here
+	if (isa<ConstantInt>(Op0) and isa<ConstantInt>(Op1))
+		return;
+
+	// Then there are two cases: variable being compared to a constant,
+	// or variable being compared to another variable
+
+	// Op0 is constant, Op1 is variable
+	if ((constant = dyn_cast<ConstantInt>(Op0))) {
+		variable = Op1;
+	}
+	// Op0 is variable, Op1 is constant
+	else if ((constant = dyn_cast<ConstantInt>(Op1))) {
+		variable = Op0;
+	}
+	// Both are variables
+	// which means constant == 0 and variable == 0
+
+
+	if (constant) {
+		// Calculate the range of values that would satisfy the comparison.
+		ConstantRange CR(constant->getValue(), constant->getValue() + 1);
+		CmpInst::Predicate pred = ici->getPredicate();
+		CmpInst::Predicate swappred = ici->getSwappedPredicate();
+
+		// If the comparison is in the form (var pred const), we use the actual
+		// predicate to build the constant range. Otherwise, (const pred var),
+		// we use the swapped predicate
+		ConstantRange tmpT = (variable == Op0) ?
+			ConstantRange::makeICmpRegion(pred, CR) : ConstantRange::makeICmpRegion(swappred, CR);
+
 		APInt sigMin = tmpT.getSignedMin();
 		APInt sigMax = tmpT.getSignedMax();
 
@@ -2340,32 +2369,30 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 		BasicInterval* BT = new BasicInterval(TValues);
 		BasicInterval* BF = new BasicInterval(FValues);
 
-		const Value *Op0 = ici->getOperand(0);
-		ValueBranchMap VBM(Op0, TBlock, FBlock, BT, BF);
-		valuesBranchMap.insert(std::make_pair(Op0, VBM));
+		ValueBranchMap VBM(variable, TBlock, FBlock, BT, BF);
+		valuesBranchMap.insert(std::make_pair(variable, VBM));
 
-		// Do the same for the operand of Op0 (if Op0 is a cast instruction)
+		// Do the same for the operand of variable (if variable is a cast instruction)
 		const CastInst *castinst = NULL;
-		if ((castinst = dyn_cast<CastInst>(Op0))) {
-			const Value *Op0_0 = castinst->getOperand(0);
+		if ((castinst = dyn_cast<CastInst>(variable))) {
+			const Value *variable_0 = castinst->getOperand(0);
 
 			BasicInterval* BT = new BasicInterval(TValues);
 			BasicInterval* BF = new BasicInterval(FValues);
 
-			ValueBranchMap VBM(Op0_0, TBlock, FBlock, BT, BF);
-			valuesBranchMap.insert(std::make_pair(Op0_0, VBM));
+			ValueBranchMap VBM(variable_0, TBlock, FBlock, BT, BF);
+			valuesBranchMap.insert(std::make_pair(variable_0, VBM));
 		}
-	} else {
+	}
+	// Both operands of the Compare Instruction are variables
+	else {
 		// Create the interval using the intersection in the branch.
 		CmpInst::Predicate pred = ici->getPredicate();
 		CmpInst::Predicate invPred = ici->getInversePredicate();
 
 		Range CR(Min, Max, Unknown);
 
-		const Value* Op1 = ici->getOperand(1);
-
 		// Symbolic intervals for op0
-		const Value* Op0 = ici->getOperand(0);
 		SymbInterval* STOp0 = new SymbInterval(CR, Op1, pred);
 		SymbInterval* SFOp0 = new SymbInterval(CR, Op1, invPred);
 
@@ -2489,12 +2516,13 @@ void ConstraintGraph::buildConstantVector(const SmallPtrSet<VarNode*, 32> &compo
 {
 	// Remove all elements from the vector
 	constantvector.clear();
-	
-	// Get constants inside component (TODO: may not be necessary, since components with more than 1 node never have a constant inside them)
+
+	// Get constants inside component (TODO: may not be necessary, since components with more than 1 node may
+	// never have a constant inside them)
 	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
 		const Value *V = (*cit)->getValue();
 		const ConstantInt *ci = NULL;
-		
+
 		if ((ci = dyn_cast<ConstantInt>(V))) {
 			insertConstantIntoVector(ci->getValue());
 		}
@@ -2571,7 +2599,15 @@ void ConstraintGraph::buildConstantVector(const SmallPtrSet<VarNode*, 32> &compo
 
 	// Sort vector in ascending order and remove duplicates
 	std::sort(constantvector.begin(), constantvector.end(), compareAPInt);
-	std::unique(constantvector.begin(), constantvector.end());
+
+	// std::unique doesn't remove duplicate elements, only
+	// move them to the end (in an odd way, actually)
+	// This is why erase is necessary. To remove these duplicates
+	// that will be now at the end.
+	SmallVector<APInt, 2>::iterator last = 
+		std::unique(constantvector.begin(), constantvector.end());
+
+	constantvector.erase(last, constantvector.end());
 }
 
 /// Iterates through all instructions in the function and builds the graph.
@@ -2579,28 +2615,22 @@ void ConstraintGraph::buildGraph(const Function& F) {
 	this->func = &F;
 	buildValueMaps(F);
 
-//	for (Function::const_arg_iterator ait = F.arg_begin(), aend = F.arg_end(); ait != aend; ++ait) {
-//		const Value *argument = &*ait;
-//		const Type* ty = argument->getType();
-//
-//		if (!ty->isIntegerTy()) {
-//			continue;
-//		}
-//
-//		addVarNode(argument);
-//	}
-
 	for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-		const Type* ty = (&*I)->getType();
-		if (!(ty->isIntegerTy() || ty->isPointerTy() || ty->isVoidTy())) {
+		const Instruction *inst = (&*I);
+		const Type* ty = inst->getType();
+
+		//createNodesForConstants(inst);
+
+		// Only integers are dealt with
+		if (!ty->isIntegerTy()) {
 			continue;
 		}
 
-		if (!isValidInstruction(&*I)) {
+		if (!isValidInstruction(inst)) {
 			continue;
 		}
 
-		buildOperations(&*I);
+		buildOperations(inst);
 	}
 }
 
@@ -2623,10 +2653,10 @@ void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode*, 32> *component) {
 bool Meet::fixed(BasicOp* op, const SmallVector<APInt, 2> *constantvector){
 	Range oldInterval = op->getSink()->getRange();
 	Range newInterval = op->eval();
-	
+
 	op->getSink()->setRange(newInterval);
 	LOG_TRANSACTION("FIXED::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << newInterval)
-	return oldInterval != newInterval;
+		return oldInterval != newInterval;
 }
 
 /// This is the meet operator of the growth analysis. The growth analysis
@@ -2668,7 +2698,7 @@ bool Meet::widen(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 
 	Range sinkInterval = op->getSink()->getRange();
 	LOG_TRANSACTION("WIDEN::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << sinkInterval)
-	return oldInterval != sinkInterval;
+		return oldInterval != sinkInterval;
 }
 
 bool Meet::growth(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
@@ -2692,7 +2722,7 @@ bool Meet::growth(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 	}
 	Range sinkInterval = op->getSink()->getRange();
 	LOG_TRANSACTION("GROWTH::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << sinkInterval)
-	return oldInterval != sinkInterval;
+		return oldInterval != sinkInterval;
 }
 
 /// This is the meet operator of the cropping analysis. Whereas the growth
@@ -2700,14 +2730,14 @@ bool Meet::growth(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 /// in the constraint graph, the cropping analysis shrinks these bounds back
 /// to ranges that respect the intersections.
 bool Meet::narrow(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
-	
+
 	APInt oLower = op->getSink()->getRange().getLower();
 	APInt oUpper = op->getSink()->getRange().getUpper();
 	Range newInterval = op->eval();
 
 	APInt nLower = newInterval.getLower();
 	APInt nUpper = newInterval.getUpper();
-	
+
 	bool hasChanged = false;
 
 	if (oLower.eq(Min) && nLower.ne(Min)) {
@@ -2731,10 +2761,9 @@ bool Meet::narrow(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 			hasChanged = true;
 		}
 	}
-	
-	//errs() << "final> " << op->getSink()->getValue()->getName() << " [" << op->getSink()->getRange().getLower() << ", " << op->getSink()->getRange().getUpper() << "]\n";
+
 	LOG_TRANSACTION("NARROW::" << op->getSink()->getValue()->getName() << ": " << Range(oLower,oUpper) << " -> " << op->getSink()->getRange())
-	return hasChanged;
+		return hasChanged;
 }
 
 bool Meet::crop(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
@@ -2755,12 +2784,12 @@ bool Meet::crop(BasicOp* op, const SmallVector<APInt, 2> *constantvector) {
 			&& newInterval.getUpper().slt(oldInterval.getUpper())) {
 		op->getSink()->setRange(
 				Range(op->getSink()->getRange().getLower(),
-						newInterval.getUpper()));
+					newInterval.getUpper()));
 		hasChanged = true;
 	}
 
 	LOG_TRANSACTION("CROP::" << op->getSink()->getValue()->getName() << ": " << oldInterval << " -> " << op->getSink()->getRange())
-	return hasChanged;
+		return hasChanged;
 }
 
 void Cousot::preUpdate(const UseMap &compUseMap,
@@ -2791,7 +2820,7 @@ void CropDFS::posUpdate(const UseMap &compUseMap,
 			//int_op
 			if (isa<UnaryOp>(op)
 					&& (op->getSink()->getRange().getLower().ne(Min)
-							|| op->getSink()->getRange().getUpper().ne(Max)))
+						|| op->getSink()->getRange().getUpper().ne(Max)))
 				crop(compUseMap, op);
 	}
 }
@@ -2817,7 +2846,7 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op) {
 
 		// The use list.of sink
 		const SmallPtrSet<BasicOp*, 8> &L =
-				compUseMap.find(sink->getValue())->second;
+			compUseMap.find(sink->getValue())->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
 
 		for (; bgn != end; ++bgn) {
@@ -2831,7 +2860,7 @@ void ConstraintGraph::update(const UseMap &compUseMap,
 	while (!actv.empty()) {
 		const Value* V = *actv.begin();
 		actv.erase(V);
-		
+
 #ifdef STATS
 		// Updates Fermap
 		if (meet == Meet::narrow) {
@@ -2839,7 +2868,6 @@ void ConstraintGraph::update(const UseMap &compUseMap,
 		}
 #endif
 
-		//errs() << "Update: " << V->getName() << "\n";
 		// The use list.
 		const SmallPtrSet<BasicOp*, 8> &L = compUseMap.find(V)->second;
 		SmallPtrSetIterator<BasicOp*> bgn = L.begin(), end = L.end();
@@ -2874,7 +2902,7 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
 
 /// Finds the intervals of the variables in the graph.
 void ConstraintGraph::findIntervals() {
-//	clearValueMaps();
+	//	clearValueMaps();
 
 	// Builds symbMap
 #ifdef STATS
@@ -2899,19 +2927,18 @@ void ConstraintGraph::findIntervals() {
 #ifdef STATS
 	before = prof.timenow();
 #endif
-	
+
 	for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
 			nit != nend; ++nit) {
 		SmallPtrSet<VarNode*, 32> &component = *sccList.components[*nit];
 #ifdef SCC_DEBUG
 		--numberOfSCCs;
 #endif
-		//PRINTCOMPONENT(component)
 
 		if (component.size() == 1) {
 			++numAloneSCCs;
 			fixIntersects(component);
-			
+
 			VarNode *var = *component.begin();
 			if (var->getRange().isUnknown()) {
 				var->setRange(Range(Min, Max));
@@ -2925,7 +2952,7 @@ void ConstraintGraph::findIntervals() {
 
 			// Get the entry points of the SCC
 			SmallPtrSet<const Value*, 6> entryPoints;
-			
+
 #ifdef JUMPSET
 			// Create vector of constants inside component
 			// Comment this line below to deactivate jump-set
@@ -2940,17 +2967,17 @@ void ConstraintGraph::findIntervals() {
 			if (func)
 				printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
 #endif
-			
+
 			// Primeiro iterate till fix point
 			generateEntryPoints(component, entryPoints);
 			// Primeiro iterate till fix point
 			preUpdate(compUseMap, entryPoints);
 			fixIntersects(component);
-			
-			// FIXME: Ensure that this code is not needed
+
+			// FIXME: Ensure that this code is really needed
 			for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend = component.end(); cit != cend; ++cit) {
 				VarNode* var = *cit;
-				
+
 				if (var->getRange().isUnknown()) {
 					var->setRange(Range(Min, Max));
 				}
@@ -2980,7 +3007,7 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 #ifdef STATS
-	before = prof.timenow();
+		before = prof.timenow();
 	computeStats();
 	elapsed = prof.timenow() - before;
 	prof.updateTime("ComputeStats", elapsed);
@@ -2989,17 +3016,12 @@ void ConstraintGraph::findIntervals() {
 
 void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component
 		, SmallPtrSet<const Value*, 6> &entryPoints) {
-	if (!entryPoints.empty()) {
-		errs() << "Set não vazio\n";
-	}
-
 	// Iterate over the varnodes in the component
 	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend =
 			component.end(); cit != cend; ++cit) {
 		VarNode *var = *cit;
 		const Value *V = var->getValue();
 
-		// FIXME: trocar strcmp por enumeraçao de varnodes
 		if (V->getName().startswith(sigmaString)) {
 			DefMap::iterator dit = this->defMap.find(V);
 
@@ -3008,17 +3030,13 @@ void ConstraintGraph::generateEntryPoints(SmallPtrSet<VarNode*, 32> &component
 				SigmaOp *defop = dyn_cast<SigmaOp>(bop);
 
 				if (defop && defop->isUnresolved()) {
-					//printVarName(defop->getSink()->getValue(), errs());
 
-					//errs() << defop->getSink()->getRange();
 					defop->getSink()->setRange(bop->eval());
-					//errs() << defop->getSink()->getRange();
 					defop->markResolved();
 				}
 			}
 		}
 
-		// TODO: Verificar a condição para ser um entry point
 		if (!var->getRange().isUnknown()) {
 			entryPoints.insert(V);
 		}
@@ -3047,9 +3065,6 @@ void ConstraintGraph::fixIntersects(SmallPtrSet<VarNode*, 32> &component) {
 
 void ConstraintGraph::generateActivesVars(SmallPtrSet<VarNode*, 32> &component
 		, SmallPtrSet<const Value*, 6> &activeVars) {
-	if (!activeVars.empty()) {
-		errs() << "Set não vazio\n";
-	}
 
 	for (SmallPtrSetIterator<VarNode*> cit = component.begin(), cend =
 			component.end(); cit != cend; ++cit) {
@@ -3109,7 +3124,8 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 
 void ConstraintGraph::printToFile(const Function& F, Twine FileName) {
 	std::string ErrorInfo;
-	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo);
+	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo, sys::fs::F_Text);
+
 	if(!file.has_error()){
 		print(F, file);
 		file.close();
@@ -3149,7 +3165,7 @@ void ConstraintGraph::computeStats() {
 			++numConstants;
 			continue;
 		}
-		
+
 		// Variables that are not IntegerTy are ignored
 		if (!vbgn->first->getType()->isIntegerTy()) {
 			++numNotInt;
@@ -3174,7 +3190,7 @@ void ConstraintGraph::computeStats() {
 			++numEmpty;
 			continue;
 		}
-		
+
 		if (CR.getLower().eq(Min)) {
 			if (CR.getUpper().eq(Max)) {
 				++numMaxRange;
@@ -3207,7 +3223,7 @@ void ConstraintGraph::computeStats() {
 		}
 
 		unsigned nBits = lb > ub ? lb : ub;
-		
+
 		// If both bounds are positive, decrement needed bits by 1
 		if (!CR.getLower().isNegative() && !CR.getUpper().isNegative()) {
 			--nBits;
@@ -3218,7 +3234,6 @@ void ConstraintGraph::computeStats() {
 		} else {
 			needBits += total;
 		}
-//		errs() << "\nVar [" << vbgn->first->getNameStr() <<"] Range"<< CR <<" Total ["<<total<<"] Needed ["<<nBits <<"]";
 	}
 
 	double totalB = usedBits;
@@ -3320,10 +3335,6 @@ void ConstraintGraph::buildSymbolicIntersectMap() {
 			} else {
 				SmallPtrSet<BasicOp*, 8> l;
 
-				if (!l.empty()) {
-					errs() << "Erro no set\n";
-				}
-
 				l.insert(uop);
 				symbMap.insert(std::make_pair(V, l));
 			}
@@ -3377,16 +3388,16 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap,
 			VarNodes::iterator source_value = vars->find(sit->first);
 			VarNode* source = source_value->second;
 
-//			if (source_value != vars.end()) {
-//				source = vars.find(sit->first)->second;
-//			}
+			//			if (source_value != vars.end()) {
+			//				source = vars.find(sit->first)->second;
+			//			}
 
-//			if (source == NULL) {
-//				continue;
-//			}
+			//			if (source == NULL) {
+			//				continue;
+			//			}
 
 			BasicOp *cdedge = new ControlDep((*opit)->getSink(), source);
-//			BasicOp *cdedge = new ControlDep((cast<UnaryOp>(*opit))->getSource(), source);
+			//			BasicOp *cdedge = new ControlDep((cast<UnaryOp>(*opit))->getSource(), source);
 
 			//(*useMap)[(*opit)->getSink()->getValue()].insert(cdedge);
 			(*useMap)[sit->first].insert(cdedge);
@@ -3402,10 +3413,6 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap) {
 			++it) {
 
 		std::deque<ControlDep*> ops;
-
-		if (!ops.empty()) {
-			errs() << "Erro na lista\n";
-		}
 
 		for (SmallPtrSetIterator<BasicOp*> sit = it->second.begin(), send =
 				it->second.end(); sit != send; ++sit) {
@@ -3480,10 +3487,6 @@ void Nuutila::visit(Value *V, std::stack<Value*> &stack, UseMap *useMap) {
 
 		SmallPtrSet<VarNode*, 32> *SCC = new SmallPtrSet<VarNode*, 32>;
 
-		if (!SCC->empty()) {
-			errs() << "Erro na lista\n";
-		}
-
 		SCC->insert((*variables)[V]);
 
 		inComponent.insert(V);
@@ -3551,9 +3554,6 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap,
 			// If the Value has not been visited yet, call visit for him
 			if (dfs[V] < 0) {
 				std::stack<Value*> pilha;
-				if (!pilha.empty()) {
-					errs() << "Erro na pilha\n";
-				}
 
 				visit(V, pilha, useMap);
 			}
@@ -3564,8 +3564,8 @@ Nuutila::Nuutila(VarNodes *varNodes, UseMap *useMap, SymbMap *symbMap,
 
 #ifdef SCC_DEBUG
 	ASSERT(checkWorklist(),"an inconsistency in SCC worklist have been found")
-	ASSERT(checkComponents(), "a component has been used more than once")
-	ASSERT(checkTopologicalSort(useMap), "topological sort is incorrect")
+		ASSERT(checkComponents(), "a component has been used more than once")
+		ASSERT(checkTopologicalSort(useMap), "topological sort is incorrect")
 #endif
 }
 
@@ -3599,13 +3599,13 @@ bool Nuutila::checkComponents() {
 	bool isConsistent = true;
 	for (Nuutila::iterator nit = this->begin(), nend = this->end();
 			nit != nend; ++nit) {
-		SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+		SmallPtrSet<VarNode*, 32> *component = this->components[*nit];
 		for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
 				nit2 != nend2; ++nit2) {
-			SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
+			SmallPtrSet<VarNode*, 32> *component2 = this->components[*nit2];
 			if (component == component2 && nit != nit2) {
 				errs() << "[Nuutila::checkComponent] Component ["<< component
-				<< ", " << component->size() << "]\n";
+					<< ", " << component->size() << "]\n";
 				isConsistent = false;
 			}
 		}
@@ -3640,20 +3640,20 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap) {
 	DenseMap<SmallPtrSet<VarNode*, 32>*,bool> visited;
 	for (Nuutila::iterator nit = this->begin(), nend = this->end();
 			nit != nend; ++nit) {
-		SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+		SmallPtrSet<VarNode*, 32> *component = this->components[*nit];
 		visited[component] = false;
 	}
 
 	for (Nuutila::iterator nit = this->begin(), nend = this->end();
 			nit != nend; ++nit) {
-		SmallPtrSet<VarNode*, 32> *component = &this->components[*nit];
+		SmallPtrSet<VarNode*, 32> *component = this->components[*nit];
 
 		if(!visited[component]) {
 			visited[component] = true;
 			//check if this component points to another component that has already been visited
 			for (Nuutila::iterator nit2 = this->begin(), nend2 = this->end();
 					nit2 != nend2; ++nit2) {
-				SmallPtrSet<VarNode*, 32> *component2 = &this->components[*nit2];
+				SmallPtrSet<VarNode*, 32> *component2 = this->components[*nit2];
 				if(nit != nit2 && visited[component2] &&
 						hasEdge(component, component2, useMap)) {
 					isConsistent = false;

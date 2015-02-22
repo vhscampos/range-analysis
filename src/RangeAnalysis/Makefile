@@ -14,4 +14,3 @@ USEDLIBS =
 
 
 include $(LEVEL)/Makefile.common
-
