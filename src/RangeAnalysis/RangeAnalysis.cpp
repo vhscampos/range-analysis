@@ -3123,7 +3123,7 @@ void ConstraintGraph::print(const Function& F, raw_ostream& OS) const {
 }
 
 void ConstraintGraph::printToFile(const Function& F, Twine FileName) {
-	std::string ErrorInfo;
+	std::error_code ErrorInfo;
 	raw_fd_ostream file(FileName.str().c_str(), ErrorInfo, sys::fs::F_Text);
 
 	if(!file.has_error()){
