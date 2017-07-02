@@ -6,9 +6,9 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-// Copyright (C) 2011-2012, 2015    Victor Hugo Sperle Campos
-//               2011               Douglas do Couto Teixeira
-//               2012               Igor Rafael de Assis Costa
+// Copyright (C) 2011-2012, 2015, 2017    Victor Hugo Sperle Campos
+//               2011               	  Douglas do Couto Teixeira
+//               2012               	  Igor Rafael de Assis Costa
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,12 +38,14 @@ STATISTIC(numNotInt, "Number of variables that are not Integer.");
 STATISTIC(numOps, "Number of operations");
 STATISTIC(maxVisit, "Max number of times a value has been visited.");
 
+namespace {
 // The number of bits needed to store the largest variable of the function
 // (APInt).
 unsigned MAX_BIT_INT = 1;
 
 // This map is used to store the number of times that the narrow_meet
 // operator is called on a variable. It was a Fernando's suggestion.
+// TODO: remove this
 DenseMap<const Value *, unsigned> FerMap;
 
 // ========================================================================== //
@@ -58,6 +60,7 @@ APInt Zero(MAX_BIT_INT, 0, true);
 // String used to identify sigmas
 // IMPORTANT: the range-analysis identifies sigmas by comparing
 // to this hard-coded instruction name prefix.
+// TODO: remove this as we will migrate to PredicateInfo
 const std::string sigmaString = "vSSA_sigma";
 
 // Used to print pseudo-edges in the Constraint Graph dot
@@ -70,9 +73,9 @@ Profile prof;
 #endif
 
 // Print name of variable according to its type
-static void printVarName(const Value *V, raw_ostream &OS) {
-  const Argument *A = NULL;
-  const Instruction *I = NULL;
+void printVarName(const Value *V, raw_ostream &OS) {
+  const Argument *A = nullptr;
+  const Instruction *I = nullptr;
 
   if ((A = dyn_cast<Argument>(V))) {
     OS << A->getParent()->getName() << "." << A->getName();
@@ -85,7 +88,7 @@ static void printVarName(const Value *V, raw_ostream &OS) {
 }
 
 /// Selects the instructions that we are going to evaluate.
-static bool isValidInstruction(const Instruction *I) {
+bool isValidInstruction(const Instruction *I) {
 
   assert(I);
 
@@ -112,6 +115,7 @@ static bool isValidInstruction(const Instruction *I) {
     return false;
   }
 }
+} // end anonymous namespace
 
 // ========================================================================== //
 // RangeAnalysis
@@ -120,25 +124,25 @@ unsigned RangeAnalysis::getMaxBitWidth(const Function &F) {
   unsigned int InstBitSize = 0, opBitSize = 0, max = 0;
 
   // Obtains the maximum bit width of the instructions of the function.
-  for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    InstBitSize = I->getType()->getPrimitiveSizeInBits();
-    if (I->getType()->isIntegerTy() && InstBitSize > max) {
+  for (const Instruction &I : instructions(F)) {
+    InstBitSize = I.getType()->getPrimitiveSizeInBits();
+    if (I.getType()->isIntegerTy() && InstBitSize > max) {
       max = InstBitSize;
     }
 
     // Obtains the maximum bit width of the operands of the instruction.
-    User::const_op_iterator bgn = I->op_begin(), end = I->op_end();
-    for (; bgn != end; ++bgn) {
-      opBitSize = (*bgn)->getType()->getPrimitiveSizeInBits();
-      if ((*bgn)->getType()->isIntegerTy() && opBitSize > max) {
+    for (const Value *operand : I.operands()) {
+      opBitSize = operand->getType()->getPrimitiveSizeInBits();
+      if (operand->getType()->isIntegerTy() && opBitSize > max) {
         max = opBitSize;
       }
     }
   }
 
   // Bitwidth equal to 0 is not valid, so we increment to 1
-  if (max == 0)
+  if (max == 0) {
     ++max;
+  }
 
   return max;
 }
@@ -174,15 +178,16 @@ template <class CGT> bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
 
 // Build the graph and find the intervals of the variables.
 #ifdef STATS
-  Profile::TimeValue before = prof.timenow();
+  Timer *timer = prof.registerNewTimer("BuildGraph", "Build constraint graph");
+  timer->startTimer();
 #endif
   CG->buildGraph(F);
   CG->buildVarNodes();
 #ifdef STATS
-  Profile::TimeValue elapsed = prof.timenow() - before;
-  prof.updateTime("BuildGraph", elapsed);
+  timer->stopTimer();
+  prof.addTimeRecord(timer);
 
-  prof.setMemoryUsage();
+  prof.registerMemoryUsage();
 #endif
 #ifdef PRINT_DEBUG
   CG->printToFile(F, "/tmp/" + F.getName() + "cgpre.dot");
@@ -242,11 +247,11 @@ template <class CGT> Range InterProceduralRA<CGT>::getRange(const Value *v) {
 
 template <class CGT>
 unsigned InterProceduralRA<CGT>::getMaxBitWidth(Module &M) {
-  unsigned max = 0;
+  unsigned max = 0U;
   // Search through the functions for the max int bitwidth
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
-    if (!I->isDeclaration()) {
-      unsigned bitwidth = RangeAnalysis::getMaxBitWidth(*I);
+  for (const Function &F : M.functions()) {
+    if (!F.isDeclaration()) {
+      unsigned bitwidth = RangeAnalysis::getMaxBitWidth(F);
 
       if (bitwidth > max)
         max = bitwidth;
@@ -265,24 +270,26 @@ template <class CGT> bool InterProceduralRA<CGT>::runOnModule(Module &M) {
 
 // Build the Constraint Graph by running on each function
 #ifdef STATS
-  Profile::TimeValue before = prof.timenow();
+  Timer *timer = prof.registerNewTimer("BuildGraph", "Build constraint graph");
+  timer->startTimer();
 #endif
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+  for (Function &F : M.functions()) {
     // If the function is only a declaration, or if it has variable number of
     // arguments, do not match
-    if (I->isDeclaration() || I->isVarArg())
+    if (F.isDeclaration() || F.isVarArg()) {
       continue;
+    }
 
-    CG->buildGraph(*I);
-    MatchParametersAndReturnValues(*I, *CG);
+    CG->buildGraph(F);
+    MatchParametersAndReturnValues(F, *CG);
   }
   CG->buildVarNodes();
 
 #ifdef STATS
-  Profile::TimeValue elapsed = prof.timenow() - before;
-  prof.updateTime("BuildGraph", elapsed);
+  timer->stopTimer();
+  prof.addTimeRecord(timer);
 
-  prof.setMemoryUsage();
+  prof.registerMemoryUsage();
 #endif
 #ifdef PRINT_DEBUG
   std::string moduleIdentifier = M.getModuleIdentifier();
@@ -316,7 +323,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
   // parameters
   // First: formal parameter
   // Second: real parameter
-  SmallVector<std::pair<Value *, Value *>, 4> Parameters(F.arg_size());
+  SmallVector<std::pair<Value *, Value *>, 4> parameters(F.arg_size());
 
   // Fetch the function arguments (formal parameters) into the data structure
   Function::arg_iterator argptr;
@@ -324,8 +331,9 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
   unsigned i;
 
   for (i = 0, argptr = F.arg_begin(), e = F.arg_end(); argptr != e;
-       ++i, ++argptr)
-    Parameters[i].first = argptr;
+       ++i, ++argptr) {
+    parameters[i].first = &*argptr;
+  }
 
   // Check if the function returns a supported value type. If not, no return
   // value matching is done
@@ -333,34 +341,34 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
 
   // Creates the data structure which receives the return values of the
   // function, if there is any
-  SmallPtrSet<Value *, 8> ReturnValues;
+  SmallPtrSet<Value *, 4> returnValues;
 
   if (!noReturn) {
     // Iterate over the basic blocks to fetch all possible return values
-    for (Function::iterator bb = F.begin(), bbend = F.end(); bb != bbend;
-         ++bb) {
+    for (BasicBlock &BB : F) {
       // Get the terminator instruction of the basic block and check if it's
       // a return instruction: if it's not, continue to next basic block
-      Instruction *terminator = bb->getTerminator();
+      Instruction *terminator = BB.getTerminator();
 
       ReturnInst *RI = dyn_cast<ReturnInst>(terminator);
 
-      if (!RI)
+      if (!RI) {
         continue;
+      }
 
       // Get the return value and insert in the data structure
-      ReturnValues.insert(RI->getReturnValue());
+      returnValues.insert(RI->getReturnValue());
     }
   }
 
   // For each use of F, get the real parameters and the caller instruction to do
   // the matching
-  std::vector<PhiOp *> matchers(F.arg_size(), NULL);
+  SmallVector<PhiOp *, 4> matchers(F.arg_size(), nullptr);
 
-  for (unsigned i = 0, e = Parameters.size(); i < e; ++i) {
-    VarNode *sink = G.addVarNode(Parameters[i].first);
+  for (unsigned i = 0, e = parameters.size(); i < e; ++i) {
+    VarNode *sink = G.addVarNode(parameters[i].first);
 
-    matchers[i] = new PhiOp(new BasicInterval(), sink, NULL, Instruction::PHI);
+    matchers[i] = new PhiOp(new BasicInterval(), sink, nullptr);
 
     // Insert the operation in the graph.
     G.getOprs()->insert(matchers[i]);
@@ -370,20 +378,17 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
   }
 
   // For each return value, create a node
-  std::vector<VarNode *> returnvars;
+  SmallVector<VarNode *, 4> returnVars;
 
-  for (SmallPtrSetIterator<Value *> ri = ReturnValues.begin(),
-                                    re = ReturnValues.end();
-       ri != re; ++ri) {
+  for (Value *returnValue : returnValues) {
     // Add VarNode to the CG
-    VarNode *from = G.addVarNode(*ri);
+    VarNode *from = G.addVarNode(returnValue);
 
-    returnvars.push_back(from);
+    returnVars.push_back(from);
   }
 
-  for (Value::use_iterator UI = F.use_begin(), E = F.use_end(); UI != E; ++UI) {
-    Use *U = &*UI;
-    User *Us = U->getUser();
+  for (Use &U : F.uses()) {
+    User *Us = U.getUser();
 
     // Ignore blockaddress uses
     if (isa<BlockAddress>(Us))
@@ -398,7 +403,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
 
     CallSite CS(caller);
 
-    if (!CS.isCallee(U))
+    if (!CS.isCallee(&U))
       continue;
 
     // Iterate over the real parameters and put them in the data structure
@@ -406,16 +411,16 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
     CallSite::arg_iterator EI;
 
     for (i = 0, AI = CS.arg_begin(), EI = CS.arg_end(); AI != EI; ++i, ++AI)
-      Parameters[i].second = *AI;
+      parameters[i].second = *AI;
 
     // // Do the interprocedural construction of CG
-    VarNode *to = NULL;
-    VarNode *from = NULL;
+    VarNode *to = nullptr;
+    VarNode *from = nullptr;
 
     // Match formal and real parameters
-    for (i = 0; i < Parameters.size(); ++i) {
+    for (i = 0; i < parameters.size(); ++i) {
       // Add real parameter to the CG
-      from = G.addVarNode(Parameters[i].second);
+      from = G.addVarNode(parameters[i].second);
 
       // Connect nodes
       matchers[i]->addSource(from);
@@ -429,7 +434,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
       // Add caller instruction to the CG (it receives the return value)
       to = G.addVarNode(caller);
 
-      PhiOp *phiOp = new PhiOp(new BasicInterval(), to, NULL, Instruction::PHI);
+      PhiOp *phiOp = new PhiOp(new BasicInterval(), to, nullptr);
 
       // Insert the operation in the graph.
       G.getOprs()->insert(phiOp);
@@ -437,10 +442,7 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
       // Insert this definition in defmap
       (*G.getDefMap())[to->getValue()] = phiOp;
 
-      for (std::vector<VarNode *>::iterator vit = returnvars.begin(),
-                                            vend = returnvars.end();
-           vit != vend; ++vit) {
-        VarNode *var = *vit;
+      for (VarNode *var : returnVars) {
         phiOp->addSource(var);
 
         // Inserts the sources of the operation in the use map list.
@@ -450,17 +452,19 @@ void InterProceduralRA<CGT>::MatchParametersAndReturnValues(
 
     // Real parameters are cleaned before moving to the next use (for safety's
     // sake)
-    for (i = 0; i < Parameters.size(); ++i)
-      Parameters[i].second = NULL;
+    for (auto &par : parameters) {
+      par.second = nullptr;
+    }
   }
 }
 
 template <class CGT> InterProceduralRA<CGT>::~InterProceduralRA() {
 #ifdef STATS
-  prof.printTime("BuildGraph");
-  prof.printTime("Nuutila");
-  prof.printTime("SCCs resolution");
-  prof.printTime("ComputeStats");
+  //  TODO: Deprecated by the usage of llvm::Timer
+  //  prof.printTime("BuildGraph");
+  //  prof.printTime("Nuutila");
+  //  prof.printTime("SCCs resolution");
+  //  prof.printTime("ComputeStats");
   prof.printMemoryUsage();
 
   std::ostringstream formated;
@@ -929,22 +933,26 @@ Range Range::And(const Range &other) const {
     return Range(Min, Max);
   }
 
-  // not everybody
-  a.flipAllBits();
-  b.flipAllBits();
-  c.flipAllBits();
-  d.flipAllBits();
+  // negate everybody
+  APInt negA = APInt(a);
+  negA.flipAllBits();
+  APInt negB = APInt(b);
+  negB.flipAllBits();
+  APInt negC = APInt(c);
+  negC.flipAllBits();
+  APInt negD = APInt(d);
+  negD.flipAllBits();
 
-  Range inv1 = Range(a, b);
-  Range inv2 = Range(c, d);
+  Range inv1 = Range(negB, negA);
+  Range inv2 = Range(negD, negC);
 
   Range invres = inv1.Or(inv2);
 
-  // not the result of the 'or'
-  APInt invLower = invres.getLower();
+  // negate the result of the 'or'
+  APInt invLower = invres.getUpper();
   invLower.flipAllBits();
 
-  APInt invUpper = invres.getUpper();
+  APInt invUpper = invres.getLower();
   invUpper.flipAllBits();
 
   return Range(invLower, invUpper);
@@ -968,10 +976,11 @@ Range Range::And_conservative(const Range &other) const {
   return Range(APInt::getNullValue(MAX_BIT_INT), umin + 1);
 }
 
+namespace {
 int64_t minOR(int64_t a, int64_t b, int64_t c, int64_t d) {
   int64_t m, temp;
 
-  m = 0x80000000;
+  m = 0x80000000 >> __builtin_clz(a ^ c);
   while (m != 0) {
     if (~a & c & m) {
       temp = (a | m) & -m;
@@ -994,7 +1003,7 @@ int64_t minOR(int64_t a, int64_t b, int64_t c, int64_t d) {
 int64_t maxOR(int64_t a, int64_t b, int64_t c, int64_t d) {
   int64_t m, temp;
 
-  m = 0x80000000;
+  m = 0x80000000 >> __builtin_clz(b & d);
   while (m != 0) {
     if (b & d & m) {
       temp = (b - m) | (m - 1);
@@ -1012,6 +1021,7 @@ int64_t maxOR(int64_t a, int64_t b, int64_t c, int64_t d) {
   }
   return b | d;
 }
+} // namespace
 
 // This operator is used when we are dealing with values
 // with more than 64-bits
@@ -1124,7 +1134,7 @@ Range Range::Xor(const Range &other) const {
 
 // Truncate
 //		- if the source range is entirely inside max bit range, he is
-//the
+// the
 // result
 //      - else, the result is the max bit range
 Range Range::truncate(unsigned bitwidth) const {
@@ -1344,7 +1354,8 @@ void SymbInterval::print(raw_ostream &OS) const {
 // ========================================================================== //
 
 /// The ctor.
-VarNode::VarNode(const Value *V) : V(V), interval(Range(Min, Max, Unknown)) {}
+VarNode::VarNode(const Value *V)
+    : V(V), interval(Range(Min, Max, Unknown)), abstractState(0) {}
 
 /// The dtor.
 VarNode::~VarNode() {}
@@ -1426,7 +1437,7 @@ void BasicOp::fixIntersects(VarNode *V) {
 // ========================================================================== //
 
 ControlDep::ControlDep(VarNode *sink, VarNode *source)
-    : BasicOp(new BasicInterval(), sink, NULL), source(source) {}
+    : BasicOp(new BasicInterval(), sink, nullptr), source(source) {}
 
 ControlDep::~ControlDep() {}
 
@@ -1699,9 +1710,8 @@ void BinaryOp::print(raw_ostream &OS) const {
 // ========================================================================== //
 
 // The ctor.
-PhiOp::PhiOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst,
-             unsigned int opcode)
-    : BasicOp(intersect, sink, inst), opcode(opcode) {}
+PhiOp::PhiOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst)
+    : BasicOp(intersect, sink, inst) {}
 
 /// The dtor.
 PhiOp::~PhiOp() {}
@@ -1719,11 +1729,8 @@ Range PhiOp::eval() const {
   Range result = this->getSource(0)->getRange();
 
   // Iterate over the sources of the phiop
-  for (SmallVectorImpl<const VarNode *>::const_iterator
-           sit = sources.begin() + 1,
-           send = sources.end();
-       sit != send; ++sit) {
-    result = result.unionWith((*sit)->getRange());
+  for (const VarNode *varNode : sources) {
+    result = result.unionWith(varNode->getRange());
   }
 
   return result;
@@ -1737,10 +1744,8 @@ void PhiOp::print(raw_ostream &OS) const {
   OS << "phi";
   OS << "\"]\n";
 
-  for (SmallVectorImpl<const VarNode *>::const_iterator sit = sources.begin(),
-                                                        send = sources.end();
-       sit != send; ++sit) {
-    const Value *V = (*sit)->getValue();
+  for (const VarNode *varNode : sources) {
+    const Value *V = varNode->getValue();
     if (const ConstantInt *C = dyn_cast<ConstantInt>(V)) {
       OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
     } else {
@@ -1770,12 +1775,12 @@ ValueBranchMap::~ValueBranchMap() {}
 void ValueBranchMap::clear() {
   if (ItvT) {
     delete ItvT;
-    ItvT = NULL;
+    ItvT = nullptr;
   }
 
   if (ItvF) {
     delete ItvF;
-    ItvF = NULL;
+    ItvF = nullptr;
   }
 }
 
@@ -1791,10 +1796,10 @@ ValueSwitchMap::ValueSwitchMap(
 ValueSwitchMap::~ValueSwitchMap() {}
 
 void ValueSwitchMap::clear() {
-  for (unsigned i = 0, e = BBsuccs.size(); i < e; ++i) {
-    if (BBsuccs[i].first) {
-      delete BBsuccs[i].first;
-      BBsuccs[i].first = NULL;
+  for (auto &succ : BBsuccs) {
+    if (succ.first) {
+      delete succ.first;
+      succ.first = nullptr;
     }
   }
 }
@@ -1803,31 +1808,24 @@ void ValueSwitchMap::clear() {
 // ConstraintGraph
 // ========================================================================== //
 
-ConstraintGraph::ConstraintGraph() { this->func = NULL; }
+ConstraintGraph::ConstraintGraph() { this->func = nullptr; }
 
 /// The dtor.
 ConstraintGraph::~ConstraintGraph() {
-
-  for (VarNodes::iterator vit = vars.begin(), vend = vars.end(); vit != vend;
-       ++vit) {
-    delete vit->second;
+  for (auto &pair : vars) {
+    delete pair.second;
   }
 
-  for (GenOprs::iterator oit = oprs.begin(), oend = oprs.end(); oit != oend;
-       ++oit) {
-    delete *oit;
+  for (BasicOp *op : oprs) {
+    delete op;
   }
 
-  for (ValuesBranchMap::iterator vit = valuesBranchMap.begin(),
-                                 vend = valuesBranchMap.end();
-       vit != vend; ++vit) {
-    vit->second.clear();
+  for (auto &pair : valuesBranchMap) {
+    pair.second.clear();
   }
 
-  for (ValuesSwitchMap::iterator vit = valuesSwitchMap.begin(),
-                                 vend = valuesSwitchMap.end();
-       vit != vend; ++vit) {
-    vit->second.clear();
+  for (auto &pair : valuesSwitchMap) {
+    pair.second.clear();
   }
 }
 
@@ -1882,7 +1880,7 @@ void ConstraintGraph::addUnaryOp(const Instruction *I) {
   // Create the sink.
   VarNode *sink = addVarNode(I);
   // Create the source.
-  VarNode *source = NULL;
+  VarNode *source = nullptr;
 
   switch (I->getOpcode()) {
   case Instruction::Trunc:
@@ -1897,7 +1895,7 @@ void ConstraintGraph::addUnaryOp(const Instruction *I) {
     return;
   }
 
-  UnaryOp *UOp = NULL;
+  UnaryOp *UOp = nullptr;
 
 #ifndef OVERFLOWHANDLER
   // Create the operation using the intersect to constrain sink's interval.
@@ -2033,7 +2031,7 @@ void ConstraintGraph::addBinaryOp(const Instruction *I) {
 void ConstraintGraph::addPhiOp(const PHINode *Phi) {
   // Create the sink.
   VarNode *sink = addVarNode(Phi);
-  PhiOp *phiOp = new PhiOp(new BasicInterval(), sink, Phi, Phi->getOpcode());
+  PhiOp *phiOp = new PhiOp(new BasicInterval(), sink, Phi);
 
   // Insert the operation in the graph.
   this->oprs.insert(phiOp);
@@ -2042,9 +2040,8 @@ void ConstraintGraph::addPhiOp(const PHINode *Phi) {
   this->defMap[sink->getValue()] = phiOp;
 
   // Create the sources.
-  for (User::const_op_iterator it = Phi->op_begin(), e = Phi->op_end(); it != e;
-       ++it) {
-    VarNode *source = addVarNode(*it);
+  for (const Value *operand : Phi->operands()) {
+    VarNode *source = addVarNode(operand);
     phiOp->addSource(source);
 
     // Inserts the sources of the operation in the use map list.
@@ -2055,16 +2052,14 @@ void ConstraintGraph::addPhiOp(const PHINode *Phi) {
 void ConstraintGraph::addSigmaOp(const PHINode *Sigma) {
   // Create the sink.
   VarNode *sink = addVarNode(Sigma);
-  BasicInterval *BItv = NULL;
-  SigmaOp *sigmaOp = NULL;
+  BasicInterval *BItv = nullptr;
+  SigmaOp *sigmaOp = nullptr;
 
   const BasicBlock *thisbb = Sigma->getParent();
 
   // Create the sources (FIXME: sigma has only 1 source. This 'for' may not be
   // needed)
-  for (User::const_op_iterator it = Sigma->op_begin(), e = Sigma->op_end();
-       it != e; ++it) {
-    Value *operand = *it;
+  for (const Value *operand : Sigma->operands()) {
     VarNode *source = addVarNode(operand);
 
     // Create the operation (two cases from: branch or switch)
@@ -2101,7 +2096,7 @@ void ConstraintGraph::addSigmaOp(const PHINode *Sigma) {
       }
     }
 
-    if (BItv == NULL) {
+    if (BItv == nullptr) {
       sigmaOp = new SigmaOp(new BasicInterval(), sink, Sigma, source,
                             Sigma->getOpcode());
     } else {
@@ -2179,8 +2174,8 @@ void ConstraintGraph::buildValueSwitchMap(const SwitchInst *sw) {
 
   // Treat when condition of switch is a cast of the real condition (same thing
   // as in buildValueBranchMap)
-  const CastInst *castinst = NULL;
-  const Value *Op0_0 = NULL;
+  const CastInst *castinst = nullptr;
+  const Value *Op0_0 = nullptr;
   if ((castinst = dyn_cast<CastInst>(condition))) {
     Op0_0 = castinst->getOperand(0);
   }
@@ -2266,8 +2261,8 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
   // We have a Variable-Constant comparison.
   const Value *Op0 = ici->getOperand(0);
   const Value *Op1 = ici->getOperand(1);
-  const ConstantInt *constant = NULL;
-  const Value *variable = NULL;
+  const ConstantInt *constant = nullptr;
+  const Value *variable = nullptr;
 
   // If both operands are constants, nothing to do here
   if (isa<ConstantInt>(Op0) and isa<ConstantInt>(Op1))
@@ -2344,7 +2339,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
 
     // Do the same for the operand of variable (if variable is a cast
     // instruction)
-    const CastInst *castinst = NULL;
+    const CastInst *castinst = nullptr;
     if ((castinst = dyn_cast<CastInst>(variable))) {
       const Value *variable_0 = castinst->getOperand(0);
 
@@ -2371,7 +2366,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
     valuesBranchMap.insert(std::make_pair(Op0, VBMOp0));
 
     // Symbolic intervals for operand of op0 (if op0 is a cast instruction)
-    const CastInst *castinst = NULL;
+    const CastInst *castinst = nullptr;
     if ((castinst = dyn_cast<CastInst>(Op0))) {
       const Value *Op0_0 = castinst->getOperand(0);
 
@@ -2389,7 +2384,7 @@ void ConstraintGraph::buildValueBranchMap(const BranchInst *br) {
     valuesBranchMap.insert(std::make_pair(Op1, VBMOp1));
 
     // Symbolic intervals for operand of op1 (if op1 is a cast instruction)
-    castinst = NULL;
+    castinst = nullptr;
     if ((castinst = dyn_cast<CastInst>(Op1))) {
       const Value *Op0_0 = castinst->getOperand(0);
 
@@ -2422,11 +2417,6 @@ void ConstraintGraph::buildValueMaps(const Function &F) {
 //	valuesSwitchMap.clear();
 //	valuesBranchMap.clear();
 //}
-
-/*
- * Comparison function used to sort the constant vector
- */
-bool compareAPInt(const APInt &v1, const APInt &v2) { return v1.slt(v2); }
 
 /*
  * Used to insert constant in the right position
@@ -2491,11 +2481,9 @@ void ConstraintGraph::buildConstantVector(
   // Get constants inside component (TODO: may not be necessary, since
   // components with more than 1 node may
   // never have a constant inside them)
-  for (SmallPtrSetIterator<VarNode *> cit = component.begin(),
-                                      cend = component.end();
-       cit != cend; ++cit) {
-    const Value *V = (*cit)->getValue();
-    const ConstantInt *ci = NULL;
+  for (VarNode *varNode : component) {
+    const Value *V = varNode->getValue();
+    const ConstantInt *ci = nullptr;
 
     if ((ci = dyn_cast<ConstantInt>(V))) {
       insertConstantIntoVector(ci->getValue());
@@ -2504,11 +2492,8 @@ void ConstraintGraph::buildConstantVector(
 
   // Get constants that are sources of operations whose sink belong to the
   // component
-  for (SmallPtrSetIterator<VarNode *> cit = component.begin(),
-                                      cend = component.end();
-       cit != cend; ++cit) {
-    const VarNode *var = (*cit);
-    const Value *V = var->getValue();
+  for (VarNode *varNode : component) {
+    const Value *V = varNode->getValue();
 
     DefMap::iterator dfit = defMap.find(V);
     if (dfit == defMap.end()) {
@@ -2549,13 +2534,9 @@ void ConstraintGraph::buildConstantVector(
   }
 
   // Get constants used in intersections generated for sigmas
-  for (UseMap::const_iterator umit = compusemap.begin(),
-                              umend = compusemap.end();
-       umit != umend; ++umit) {
-    for (SmallPtrSetIterator<BasicOp *> sit = umit->second.begin(),
-                                        send = umit->second.end();
-         sit != send; ++sit) {
-      const SigmaOp *sigma = dyn_cast<SigmaOp>(*sit);
+  for (auto &pair : compusemap) {
+    for (BasicOp *op : pair.second) {
+      const SigmaOp *sigma = dyn_cast<SigmaOp>(op);
 
       if (sigma) {
         // Symbolic intervals are discarded, as they don't have fixed values yet
@@ -2579,10 +2560,11 @@ void ConstraintGraph::buildConstantVector(
   }
 
   // Sort vector in ascending order and remove duplicates
-  std::sort(constantvector.begin(), constantvector.end(), compareAPInt);
+  std::sort(constantvector.begin(), constantvector.end(),
+            [](const APInt &i1, const APInt &i2) { return i1.slt(i2); });
 
   // std::unique doesn't remove duplicate elements, only
-  // move them to the end (in an odd way, actually)
+  // move them to the end
   // This is why erase is necessary. To remove these duplicates
   // that will be now at the end.
   SmallVector<APInt, 2>::iterator last =
@@ -2596,9 +2578,8 @@ void ConstraintGraph::buildGraph(const Function &F) {
   this->func = &F;
   buildValueMaps(F);
 
-  for (const_inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    const Instruction *inst = (&*I);
-    const Type *ty = inst->getType();
+  for (const Instruction &I: instructions(F)) {
+    const Type *ty = I.getType();
 
     // createNodesForConstants(inst);
 
@@ -2607,28 +2588,25 @@ void ConstraintGraph::buildGraph(const Function &F) {
       continue;
     }
 
-    if (!isValidInstruction(inst)) {
+    if (!isValidInstruction(&I)) {
       continue;
     }
 
-    buildOperations(inst);
+    buildOperations(&I);
   }
 }
 
 void ConstraintGraph::buildVarNodes() {
   // Initializes the nodes and the use map structure.
-  VarNodes::iterator bgn = this->vars.begin(), end = this->vars.end();
-  for (; bgn != end; ++bgn) {
-    bgn->second->init(!this->defMap.count(bgn->first));
+  for (auto &pair: vars) {
+    pair.second->init(!this->defMap.count(pair.first));
   }
 }
 
 // FIXME: do it just for component
-void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode *, 32> *component) {
-  for (SmallPtrSetIterator<VarNode *> cit = component->begin(),
-                                      cend = component->end();
-       cit != cend; ++cit) {
-    (*cit)->storeAbstractState();
+void CropDFS::storeAbstractStates(const SmallPtrSet<VarNode *, 32> &component) {
+  for (VarNode *varNode: component) {
+    varNode->storeAbstractState();
   }
 }
 
@@ -2649,7 +2627,7 @@ bool Meet::fixed(BasicOp *op, const SmallVector<APInt, 2> *constantvector) {
 /// be no undefined interval. Each variable will be either bound to a
 /// constant interval, or to [-, c], or to [c, +], or to [-, +].
 bool Meet::widen(BasicOp *op, const SmallVector<APInt, 2> *constantvector) {
-  assert(constantvector != NULL && "Invalid pointer to constant vector");
+  assert(constantvector != nullptr && "Invalid pointer to constant vector");
 
   Range oldInterval = op->getSink()->getRange();
   Range newInterval = op->eval();
@@ -2801,7 +2779,7 @@ void CropDFS::preUpdate(const UseMap &compUseMap,
 void CropDFS::posUpdate(const UseMap &compUseMap,
                         SmallPtrSet<const Value *, 6> &entryPoints,
                         const SmallPtrSet<VarNode *, 32> *component) {
-  storeAbstractStates(component);
+  storeAbstractStates(*component);
   GenOprs::iterator obgn = oprs.begin(), oend = oprs.end();
   for (; obgn != oend; ++obgn) {
     BasicOp *op = *obgn;
@@ -2830,7 +2808,7 @@ void CropDFS::crop(const UseMap &compUseMap, BasicOp *op) {
     if (visitedOps.count(sink))
       continue;
 
-    Meet::crop(V, NULL);
+    Meet::crop(V, nullptr);
     visitedOps.insert(sink);
 
     // The use list.of sink
@@ -2860,13 +2838,12 @@ void ConstraintGraph::update(
 
     // The use list.
     const SmallPtrSet<BasicOp *, 8> &L = compUseMap.find(V)->second;
-    SmallPtrSetIterator<BasicOp *> bgn = L.begin(), end = L.end();
 
-    for (; bgn != end; ++bgn) {
-      if (meet(*bgn, &constantvector)) {
+    for (BasicOp *op : L) {
+      if (meet(op, &constantvector)) {
         // I want to use it as a set, but I also want
         // keep an order or insertions and removals.
-        actv.insert((*bgn)->getSink()->getValue());
+        actv.insert(op->getSink()->getValue());
       }
     }
   }
@@ -2879,16 +2856,15 @@ void ConstraintGraph::update(unsigned nIterations, const UseMap &compUseMap,
     actv.erase(V);
     // The use list.
     const SmallPtrSet<BasicOp *, 8> &L = compUseMap.find(V)->second;
-    SmallPtrSetIterator<BasicOp *> bgn = L.begin(), end = L.end();
-    for (; bgn != end; ++bgn) {
+    for (BasicOp *op : L) {
       if (nIterations == 0) {
         actv.clear();
         return;
       } else
         --nIterations;
 
-      if (Meet::fixed(*bgn, NULL))
-        actv.insert((*bgn)->getSink()->getValue());
+      if (Meet::fixed(op, nullptr))
+        actv.insert(op->getSink()->getValue());
     }
   }
 }
@@ -2899,16 +2875,18 @@ void ConstraintGraph::findIntervals() {
 
 // Builds symbMap
 #ifdef STATS
-  Profile::TimeValue before = prof.timenow();
+  Timer *timer = prof.registerNewTimer(
+      "Nuutila", "Nuutila's algorithm for strongly connected components");
+  timer->startTimer();
 #endif
   buildSymbolicIntersectMap();
 
   // List of SCCs
   Nuutila sccList(&vars, &useMap, &symbMap);
 #ifdef STATS
-  Profile::TimeValue after = prof.timenow();
-  Profile::TimeValue elapsed = after - before;
-  prof.updateTime("Nuutila", elapsed);
+  timer->stopTimer();
+  prof.addTimeRecord(timer);
+// delete timer;
 #endif
   // STATS
   numSCCs += sccList.worklist.size();
@@ -2918,7 +2896,8 @@ void ConstraintGraph::findIntervals() {
 
 // For each SCC in graph, do the following
 #ifdef STATS
-  before = prof.timenow();
+  timer = prof.registerNewTimer("ConstraintSolving", "Constraint solving");
+  timer->startTimer();
 #endif
 
   for (Nuutila::iterator nit = sccList.begin(), nend = sccList.end();
@@ -2962,9 +2941,8 @@ void ConstraintGraph::findIntervals() {
         printToFile(*func, "/tmp/" + func->getName() + "cgfixed.dot");
 #endif
 
-      // Primeiro iterate till fix point
       generateEntryPoints(component, entryPoints);
-      // Primeiro iterate till fix point
+      // First iterate till fix point
       preUpdate(compUseMap, entryPoints);
       fixIntersects(component);
 
@@ -2985,7 +2963,7 @@ void ConstraintGraph::findIntervals() {
         printToFile(*func, "/tmp/" + func->getName() + "cgint.dot");
 #endif
 
-      // Segundo iterate till fix point
+      // Second iterate till fix point
       SmallPtrSet<const Value *, 6> activeVars;
       generateActivesVars(component, activeVars);
       posUpdate(compUseMap, activeVars, &component);
@@ -2994,8 +2972,8 @@ void ConstraintGraph::findIntervals() {
   }
 
 #ifdef STATS
-  elapsed = prof.timenow() - before;
-  prof.updateTime("SCCs resolution", elapsed);
+  timer->stopTimer();
+  prof.addTimeRecord(timer);
 #endif
 
 #ifdef SCC_DEBUG
@@ -3003,10 +2981,13 @@ void ConstraintGraph::findIntervals() {
 #endif
 
 #ifdef STATS
-  before = prof.timenow();
+  timer = prof.registerNewTimer("ComputeStats", "Compute statistics");
+  timer->startTimer();
+
   computeStats();
-  elapsed = prof.timenow() - before;
-  prof.updateTime("ComputeStats", elapsed);
+
+  timer->stopTimer();
+  prof.addTimeRecord(timer);
 #endif
 }
 
@@ -3082,7 +3063,7 @@ void ConstraintGraph::generateActivesVars(
   }
 }
 
-// TODO: To implement it.
+// TODO
 /// Releases the memory used by the graph.
 void ConstraintGraph::clear() {}
 
@@ -3397,7 +3378,7 @@ void Nuutila::addControlDependenceEdges(SymbMap *symbMap, UseMap *useMap,
       //				source = vars.find(sit->first)->second;
       //			}
 
-      //			if (source == NULL) {
+      //			if (source == nullptr) {
       //				continue;
       //			}
 
@@ -3423,7 +3404,7 @@ void Nuutila::delControlDependenceEdges(UseMap *useMap) {
     for (SmallPtrSetIterator<BasicOp *> sit = it->second.begin(),
                                         send = it->second.end();
          sit != send; ++sit) {
-      ControlDep *op = NULL;
+      ControlDep *op = nullptr;
 
       if ((op = dyn_cast<ControlDep>(*sit))) {
         ops.push_back(op);

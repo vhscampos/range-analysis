@@ -6,9 +6,9 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-// Copyright (C) 2011-2012, 2015    Victor Hugo Sperle Campos
-//               2011               Douglas do Couto Teixeira
-//               2012               Igor Rafael de Assis Costa
+// Copyright (C) 2011-2012, 2015, 2017    Victor Hugo Sperle Campos
+//               2011               	  Douglas do Couto Teixeira
+//               2012               	  Igor Rafael de Assis Costa
 //
 //===----------------------------------------------------------------------===//
 // This file contains a pass that performs range analysis. The objective of
@@ -37,28 +37,28 @@
 #ifndef LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_
 #define LLVM_TRANSFORMS_RANGEANALYSIS_RANGEANALYSIS_H_
 
-#include "llvm/IR/Function.h"
-#include "llvm/Pass.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/CallSite.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TimeValue.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/Timer.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <deque>
-#include <stack>
 #include <set>
 #include <sstream>
-#include <algorithm>
+#include <stack>
 
 using namespace llvm;
 
@@ -67,7 +67,7 @@ using namespace llvm;
 //#define SCC_DEBUG
 
 // Comment the line below to disable the dot printing of Constraint Graphs
-//#define PRINT_DEBUG
+#define PRINT_DEBUG
 
 // Used to enable the stats computing. Comment the below line to disable it
 #define STATS
@@ -132,10 +132,6 @@ llvm::raw_fd_ostream _log_file(_log_fileName.str().c_str(), _log_ErrorInfo,
 #endif
 //****************************************************************************//
 
-extern APInt Min;
-extern APInt Max;
-extern APInt Zero;
-
 /// In our range analysis pass we have to perform operations on ranges all the
 /// time. LLVM has a class to perform operations on ranges: the class
 /// ConstantRange. However, the class ConstantRange doesn't serve very well
@@ -163,8 +159,8 @@ public:
   Range();
   Range(APInt lb, APInt ub, RangeType type = Regular);
   ~Range();
-  APInt getLower() const { return l; }
-  APInt getUpper() const { return u; }
+  const APInt &getLower() const { return l; }
+  const APInt &getUpper() const { return u; }
   void setLower(const APInt &newl) { this->l = newl; }
   void setUpper(const APInt &newu) { this->u = newu; }
   bool isUnknown() const { return type == Unknown; }
@@ -443,14 +439,12 @@ class PhiOp : public BasicOp {
 private:
   // Vector of sources
   SmallVector<const VarNode *, 2> sources;
-  unsigned opcode;
   /// Computes the interval of the sink based on the interval of the sources,
   /// the operation and the interval associated to the operation.
   Range eval() const;
 
 public:
-  PhiOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst,
-        unsigned int opcode);
+  PhiOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst);
   ~PhiOp();
   // Add source to the vector of sources
   void addSource(const VarNode *newsrc);
@@ -501,7 +495,7 @@ public:
 };
 
 /// This class is used to store the intersections that we get in the branches.
-/// I decided to write it because I think it is better to have an objetc
+/// I decided to write it because I think it is better to have an object
 /// to store these information than create a lot of maps
 /// in the ConstraintGraph class.
 class ValueBranchMap {
@@ -570,88 +564,45 @@ public:
 /// to provide a class for this exact purpose. We'll keep using this
 /// because it works just fine and is well put together.
 class Profile {
-public:
-  class TimeValue : public sys::TimeValue {
-  public:
-    // Default constructor
-    TimeValue() : sys::TimeValue(0.0) {}
+  typedef StringMap<TimeRecord> AccTimesMap;
+  TimerGroup *tg;
+  SmallVector<Timer *, 4> timers;
 
-    // Copy constructor related to parent class
-    TimeValue(const sys::TimeValue &from) : sys::TimeValue(0.0) {
-      seconds(from.seconds());
-      nanoseconds(from.nanoseconds());
-    }
-
-    // Copy constructor
-    TimeValue(const TimeValue &from) : sys::TimeValue(0.0) {
-      seconds(from.seconds());
-      nanoseconds(from.nanoseconds());
-    }
-
-    // Assignment operator
-    TimeValue &operator=(const TimeValue &from) {
-      if (*this == from) {
-        return *this;
-      }
-
-      seconds(from.seconds());
-      nanoseconds(from.nanoseconds());
-
-      return *this;
-    }
-
-    // Add operator
-    TimeValue operator+(const TimeValue &op) {
-      return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) +
-                                    static_cast<sys::TimeValue>(op));
-    }
-
-    TimeValue &operator+=(const TimeValue &op) {
-      TimeValue result = *this + op;
-      *this = result;
-      return *this;
-    }
-
-    // Sub operator
-    TimeValue operator-(const TimeValue &op) {
-      return static_cast<TimeValue>(static_cast<sys::TimeValue>(*this) -
-                                    static_cast<sys::TimeValue>(op));
-    }
-
-    TimeValue &operator-=(const TimeValue &op) {
-      TimeValue result = *this - op;
-      *this = result;
-      return *this;
-    }
-  };
-
-  // Map to store accumulated times
-  typedef StringMap<TimeValue> AccTimesMap;
-
-private:
   AccTimesMap accumulatedtimes;
-  size_t memory;
+  ssize_t memory;
 
 public:
-  Profile() : memory(0) {}
-
-  TimeValue timenow() {
-    TimeValue garbage, usertime;
-    sys::Process::GetTimeUsage(garbage, usertime, garbage);
-
-    return usertime;
+  Profile() : tg(), timers(), accumulatedtimes(), memory(0L) {
+    tg = new TimerGroup("RangeAnalysis", "Range Analysis algorithm");
   }
 
-  void updateTime(StringRef key, const TimeValue &time) {
+  ~Profile() {
+    delete tg;
+    for (Timer *timer : timers) {
+      delete timer;
+    }
+  }
+
+  ssize_t getMemoryUsage() const { return memory; }
+
+  Timer *registerNewTimer(StringRef key, StringRef descr) {
+    Timer *timer = new Timer(key, descr, *tg);
+    timers.push_back(timer);
+
+    return timer;
+  }
+
+  void addTimeRecord(const Timer *timer) {
+    StringRef key = timer->getName();
+    TimeRecord time = timer->getTotalTime();
     accumulatedtimes[key] += time;
   }
 
   double getTimeDouble(StringRef key) {
-    return accumulatedtimes[key].seconds() +
-           (0.001) * accumulatedtimes[key].milliseconds();
+    return accumulatedtimes[key].getUserTime();
   }
 
-  TimeValue getTime(StringRef key) { return accumulatedtimes[key]; }
+  TimeRecord getTimeRecord(StringRef key) { return accumulatedtimes[key]; }
 
   void printTime(StringRef key) {
     double time = getTimeDouble(key);
@@ -660,16 +611,15 @@ public:
     errs() << formatted.str() << "\t - " << key << " elapsed time\n";
   }
 
-  void setMemoryUsage() {
-    size_t newmemory = sys::Process::GetMallocUsage();
+  void registerMemoryUsage() {
+    TimeRecord current = TimeRecord::getCurrentTime();
+    ssize_t newmemory = current.getMemUsed();
     if (newmemory > memory) {
       memory = newmemory;
     }
   }
 
-  size_t getMemoryUsage() { return memory; }
-
-  void printMemoryUsage() {
+  void printMemoryUsage() const {
     std::ostringstream formatted;
     // Convert bytes to kilobytes
     double mem = memory;
@@ -683,7 +633,7 @@ public:
 typedef DenseMap<const Value *, VarNode *> VarNodes;
 
 // The Operations type.
-typedef SmallPtrSet<BasicOp *, 64> GenOprs;
+typedef SmallPtrSet<BasicOp *, 32> GenOprs;
 
 // A map from variables to the operations where these variables are used.
 typedef DenseMap<const Value *, SmallPtrSet<BasicOp *, 8>> UseMap;
@@ -831,7 +781,7 @@ private:
   void posUpdate(const UseMap &compUseMap,
                  SmallPtrSet<const Value *, 6> &activeVars,
                  const SmallPtrSet<VarNode *, 32> *component);
-  void storeAbstractStates(const SmallPtrSet<VarNode *, 32> *component);
+  void storeAbstractStates(const SmallPtrSet<VarNode *, 32> &component);
   void crop(const UseMap &compUseMap, BasicOp *op);
 
 public:
