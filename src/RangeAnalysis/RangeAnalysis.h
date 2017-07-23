@@ -164,8 +164,8 @@ public:
   Range &operator=(const Range &other) = default;
   Range &operator=(Range &&) = default;
 
-  const APInt &getLower() const { return l; }
-  const APInt &getUpper() const { return u; }
+  const APInt& getLower() const { return l; }
+  const APInt& getUpper() const { return u; }
   void setLower(const APInt &newl) { this->l = newl; }
   void setUpper(const APInt &newu) { this->u = newu; }
   bool isUnknown() const { return type == Unknown; }
@@ -223,7 +223,7 @@ public:
   /// Initializes the value of the node.
   void init(bool outside);
   /// Returns the range of the variable represented by this node.
-  Range getRange() const { return interval; }
+  const Range& getRange() const { return interval; }
   /// Returns the variable represented by this node.
   const Value *getValue() const { return V; }
   /// Changes the status of the variable represented by this node.
@@ -316,8 +316,6 @@ public:
   void print(raw_ostream &OS) const override;
 };
 
-enum OperationId { UnaryOpId, SigmaOpId, BinaryOpId, PhiOpId, ControlDepId };
-
 /// This class represents a generic operation in our analysis.
 class BasicOp {
 private:
@@ -337,6 +335,15 @@ protected:
   BasicOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst);
 
 public:
+  enum class OperationId {
+    UnaryOpId,
+    SigmaOpId,
+    BinaryOpId,
+    TernaryOpId,
+    PhiOpId,
+    ControlDepId
+  };
+
   /// The dtor. It's virtual because this is a base class.
   virtual ~BasicOp();
   // We do not want people creating objects of this class.
@@ -394,10 +401,11 @@ public:
   UnaryOp &operator=(UnaryOp &&) = delete;
 
   // Methods for RTTI
-  OperationId getValueId() const override { return UnaryOpId; }
+  OperationId getValueId() const override { return OperationId::UnaryOpId; }
   static bool classof(UnaryOp const * /*unused*/) { return true; }
   static bool classof(BasicOp const *BO) {
-    return BO->getValueId() == UnaryOpId || BO->getValueId() == SigmaOpId;
+    return BO->getValueId() == OperationId::UnaryOpId ||
+           BO->getValueId() == OperationId::SigmaOpId;
   }
   /// Return the opcode of the operation.
   unsigned int getOpcode() const { return opcode; }
@@ -420,20 +428,20 @@ private:
 public:
   SigmaOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst,
           VarNode *source, unsigned int opcode);
-  ~SigmaOp() override;
+  ~SigmaOp() override = default;
   SigmaOp(const SigmaOp &) = delete;
   SigmaOp(SigmaOp &&) = delete;
   SigmaOp &operator=(const SigmaOp &) = delete;
   SigmaOp &operator=(SigmaOp &&) = delete;
 
   // Methods for RTTI
-  OperationId getValueId() const override { return SigmaOpId; }
+  OperationId getValueId() const override { return OperationId::SigmaOpId; }
   static bool classof(SigmaOp const * /*unused*/) { return true; }
   static bool classof(UnaryOp const *UO) {
-    return UO->getValueId() == SigmaOpId;
+    return UO->getValueId() == OperationId::SigmaOpId;
   }
   static bool classof(BasicOp const *BO) {
-    return BO->getValueId() == SigmaOpId;
+    return BO->getValueId() == OperationId::SigmaOpId;
   }
 
   bool isUnresolved() const { return unresolved; }
@@ -462,10 +470,10 @@ public:
   ControlDep &operator=(ControlDep &&) = delete;
 
   // Methods for RTTI
-  OperationId getValueId() const override { return ControlDepId; }
+  OperationId getValueId() const override { return OperationId::ControlDepId; }
   static bool classof(ControlDep const * /*unused*/) { return true; }
   static bool classof(BasicOp const *BO) {
-    return BO->getValueId() == ControlDepId;
+    return BO->getValueId() == OperationId::ControlDepId;
   }
   /// Returns the source of the operation.
   VarNode *getSource() const { return source; }
@@ -482,7 +490,7 @@ private:
 
 public:
   PhiOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst);
-  ~PhiOp() override;
+  ~PhiOp() override = default;
   PhiOp(const PhiOp &) = delete;
   PhiOp(PhiOp &&) = delete;
   PhiOp &operator=(const PhiOp &) = delete;
@@ -494,9 +502,11 @@ public:
   const VarNode *getSource(unsigned index) const { return sources[index]; }
   unsigned getNumSources() const { return sources.size(); }
   // Methods for RTTI
-  OperationId getValueId() const override { return PhiOpId; }
+  OperationId getValueId() const override { return OperationId::PhiOpId; }
   static bool classof(PhiOp const * /*unused*/) { return true; }
-  static bool classof(BasicOp const *BO) { return BO->getValueId() == PhiOpId; }
+  static bool classof(BasicOp const *BO) {
+    return BO->getValueId() == OperationId::PhiOpId;
+  }
   /// Prints the content of the operation. I didn't it an operator overload
   /// because I had problems to access the members of the class outside it.
   void print(raw_ostream &OS) const override;
@@ -518,17 +528,17 @@ private:
 public:
   BinaryOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst,
            VarNode *source1, VarNode *source2, unsigned int opcode);
-  ~BinaryOp() override;
+  ~BinaryOp() override = default;
   BinaryOp(const BinaryOp &) = delete;
   BinaryOp(BinaryOp &&) = delete;
   BinaryOp &operator=(const BinaryOp &) = delete;
   BinaryOp &operator=(BinaryOp &&) = delete;
 
   // Methods for RTTI
-  OperationId getValueId() const override { return BinaryOpId; }
+  OperationId getValueId() const override { return OperationId::BinaryOpId; }
   static bool classof(BinaryOp const * /*unused*/) { return true; }
   static bool classof(BasicOp const *BO) {
-    return BO->getValueId() == BinaryOpId;
+    return BO->getValueId() == OperationId::BinaryOpId;
   }
   /// Return the opcode of the operation.
   unsigned int getOpcode() const { return opcode; }
@@ -536,6 +546,49 @@ public:
   VarNode *getSource1() const { return source1; }
   /// Returns the second operand of this operation.
   VarNode *getSource2() const { return source2; }
+  /// Prints the content of the operation. I didn't it an operator overload
+  /// because I had problems to access the members of the class outside it.
+  void print(raw_ostream &OS) const override;
+};
+
+class TernaryOp : public BasicOp {
+private:
+  // The first operand.
+  VarNode *source1;
+  // The second operand.
+  VarNode *source2;
+  // The third operand.
+  VarNode *source3;
+  // The opcode of the operation.
+  unsigned int opcode;
+  /// Computes the interval of the sink based on the interval of the sources,
+  /// the operation and the interval associated to the operation.
+  Range eval() const override;
+
+public:
+  TernaryOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst,
+            VarNode *source1, VarNode *source2, VarNode *source3,
+            unsigned int opcode);
+  ~TernaryOp() override = default;
+  TernaryOp(const TernaryOp &) = delete;
+  TernaryOp(TernaryOp &&) = delete;
+  TernaryOp &operator=(const TernaryOp &) = delete;
+  TernaryOp &operator=(TernaryOp &&) = delete;
+
+  // Methods for RTTI
+  OperationId getValueId() const override { return OperationId::TernaryOpId; }
+  static bool classof(TernaryOp const * /*unused*/) { return true; }
+  static bool classof(BasicOp const *BO) {
+    return BO->getValueId() == OperationId::TernaryOpId;
+  }
+  /// Return the opcode of the operation.
+  unsigned int getOpcode() const { return opcode; }
+  /// Returns the first operand of this operation.
+  VarNode *getSource1() const { return source1; }
+  /// Returns the second operand of this operation.
+  VarNode *getSource2() const { return source2; }
+  /// Returns the third operand of this operation.
+  VarNode *getSource3() const { return source3; }
   /// Prints the content of the operation. I didn't it an operator overload
   /// because I had problems to access the members of the class outside it.
   void print(raw_ostream &OS) const override;
@@ -739,6 +792,8 @@ private:
 
   /// Adds a BinaryOp in the graph.
   void addBinaryOp(const Instruction *I);
+  /// Adds a TernaryOp in the graph.
+  void addTernaryOp(const Instruction *I);
   /// Adds a PhiOp in the graph.
   void addPhiOp(const PHINode *Phi);
   // Adds a SigmaOp to the graph.

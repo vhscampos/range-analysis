@@ -57,7 +57,8 @@ DenseMap<const Value *, unsigned> FerMap;
 // The min and max integer values for a given bit width.
 APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
 APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
-APInt Zero(MAX_BIT_INT, 0, true);
+APInt Zero(MAX_BIT_INT, 0UL, true);
+APInt One(MAX_BIT_INT, 1UL, true);
 
 // String used to identify sigmas
 // IMPORTANT: the range-analysis identifies sigmas by comparing
@@ -1568,9 +1569,6 @@ SigmaOp::SigmaOp(BasicInterval *intersect, VarNode *sink,
                  const Instruction *inst, VarNode *source, unsigned int opcode)
     : UnaryOp(intersect, sink, inst, source, opcode), unresolved(false) {}
 
-// The dtor.
-SigmaOp::~SigmaOp() = default;
-
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
 Range SigmaOp::eval() const {
@@ -1613,9 +1611,6 @@ BinaryOp::BinaryOp(BasicInterval *intersect, VarNode *sink,
                    unsigned int opcode)
     : BasicOp(intersect, sink, inst), source1(source1), source2(source2),
       opcode(opcode) {}
-
-/// The dtor.
-BinaryOp::~BinaryOp() = default;
 
 /// Computes the interval of the sink based on the interval of the sources,
 /// the operation and the interval associated to the operation.
@@ -1733,15 +1728,108 @@ void BinaryOp::print(raw_ostream &OS) const {
 }
 
 // ========================================================================== //
+// TernaryOp
+// ========================================================================== //
+
+// The ctor.
+TernaryOp::TernaryOp(BasicInterval *intersect, VarNode *sink,
+                     const Instruction *inst, VarNode *source1,
+                     VarNode *source2, VarNode *source3, unsigned int opcode)
+    : BasicOp(intersect, sink, inst), source1(source1), source2(source2),
+      source3(source3), opcode(opcode) {}
+
+Range TernaryOp::eval() const {
+
+  Range op1 = this->getSource1()->getRange();
+  Range op2 = this->getSource2()->getRange();
+  Range op3 = this->getSource3()->getRange();
+  Range result(Min, Max, Unknown);
+
+  // only evaluate if all operands are Regular
+  if (op1.isRegular() && op2.isRegular() && op3.isRegular()) {
+    switch (this->getOpcode()) {
+    case Instruction::Select: {
+      // Source1 is the selector
+      if (op1 == Range(One, One)) {
+        result = op2;
+      } else if (op1 == Range(Zero, Zero)) {
+        result = op3;
+      } else {
+        result = Range(Min, Max);
+      }
+    } break;
+    default:
+      break;
+    }
+
+    // If resulting interval has become inconsistent, set it to max range for
+    // safety
+    if (result.getLower().sgt(result.getUpper())) {
+      result = Range(Min, Max);
+    }
+
+    // FIXME: check if this intersection happens
+    bool test = this->getIntersect()->getRange().isMaxRange();
+
+    if (!test) {
+      Range aux = this->getIntersect()->getRange();
+      result = result.intersectWith(aux);
+    }
+  } else {
+    if (op1.isEmpty() || op2.isEmpty() || op3.isEmpty()) {
+      result = Range(Min, Max, Empty);
+    }
+  }
+
+  return result;
+}
+
+/// Pretty print.
+void TernaryOp::print(raw_ostream &OS) const {
+  const char *quot = R"(")";
+  const char *opcodeName = Instruction::getOpcodeName(this->getOpcode());
+  OS << " " << quot << this << quot << R"( [label=")" << opcodeName << "\"]\n";
+
+  const Value *V1 = this->getSource1()->getValue();
+  if (const ConstantInt *C = dyn_cast<ConstantInt>(V1)) {
+    OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
+  } else {
+    OS << " " << quot;
+    printVarName(V1, OS);
+    OS << quot << " -> " << quot << this << quot << "\n";
+  }
+
+  const Value *V2 = this->getSource2()->getValue();
+  if (const ConstantInt *C = dyn_cast<ConstantInt>(V2)) {
+    OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
+  } else {
+    OS << " " << quot;
+    printVarName(V2, OS);
+    OS << quot << " -> " << quot << this << quot << "\n";
+  }
+
+  const Value *V3 = this->getSource3()->getValue();
+  if (const ConstantInt *C = dyn_cast<ConstantInt>(V3)) {
+    OS << " " << C->getValue() << " -> " << quot << this << quot << "\n";
+  } else {
+    OS << " " << quot;
+    printVarName(V3, OS);
+    OS << quot << " -> " << quot << this << quot << "\n";
+  }
+
+  const Value *VS = this->getSink()->getValue();
+  OS << " " << quot << this << quot << " -> " << quot;
+  printVarName(VS, OS);
+  OS << quot << "\n";
+}
+
+// ========================================================================== //
 // PhiOp
 // ========================================================================== //
 
 // The ctor.
 PhiOp::PhiOp(BasicInterval *intersect, VarNode *sink, const Instruction *inst)
     : BasicOp(intersect, sink, inst) {}
-
-/// The dtor.
-PhiOp::~PhiOp() = default;
 
 // Add source to the vector of sources
 void PhiOp::addSource(const VarNode *newsrc) {
@@ -1901,6 +1989,7 @@ VarNode *ConstraintGraph::addVarNode(const Value *V) {
 
 /// Adds an UnaryOp in the graph.
 void ConstraintGraph::addUnaryOp(const Instruction *I) {
+  assert(I->getNumOperands() == 1U);
   // Create the sink.
   VarNode *sink = addVarNode(I);
   // Create the source.
@@ -2029,6 +2118,7 @@ void ConstraintGraph::addUnaryOp(const Instruction *I) {
 /// To have an intersect, we must have a Sigma instruction.
 /// Adds a BinaryOp in the graph.
 void ConstraintGraph::addBinaryOp(const Instruction *I) {
+  assert(I->getNumOperands() == 2U);
   // Create the sink.
   VarNode *sink = addVarNode(I);
 
@@ -2049,6 +2139,33 @@ void ConstraintGraph::addBinaryOp(const Instruction *I) {
   // Inserts the sources of the operation in the use map list.
   this->useMap.find(source1->getValue())->second.insert(BOp);
   this->useMap.find(source2->getValue())->second.insert(BOp);
+}
+
+void ConstraintGraph::addTernaryOp(const Instruction *I) {
+  assert(I->getNumOperands() == 3U);
+  // Create the sink.
+  VarNode *sink = addVarNode(I);
+
+  // Create the sources.
+  VarNode *source1 = addVarNode(I->getOperand(0));
+  VarNode *source2 = addVarNode(I->getOperand(1));
+  VarNode *source3 = addVarNode(I->getOperand(2));
+
+  // Create the operation using the intersect to constrain sink's interval.
+  BasicInterval *BI = new BasicInterval();
+  TernaryOp *TOp =
+      new TernaryOp(BI, sink, I, source1, source2, source3, I->getOpcode());
+
+  // Insert the operation in the graph.
+  this->oprs.insert(TOp);
+
+  // Insert this definition in defmap
+  this->defMap[sink->getValue()] = TOp;
+
+  // Inserts the sources of the operation in the use map list.
+  this->useMap.find(source1->getValue())->second.insert(TOp);
+  this->useMap.find(source2->getValue())->second.insert(TOp);
+  this->useMap.find(source3->getValue())->second.insert(TOp);
 }
 
 /// Add a phi node (actual phi, does not include sigmas)
@@ -2074,6 +2191,7 @@ void ConstraintGraph::addPhiOp(const PHINode *Phi) {
 }
 
 void ConstraintGraph::addSigmaOp(const PHINode *Sigma) {
+  assert(Sigma->getNumOperands() == 1U);
   // Create the sink.
   VarNode *sink = addVarNode(Sigma);
   BasicInterval *BItv = nullptr;
@@ -2154,6 +2272,14 @@ void ConstraintGraph::addSigmaOp(const PHINode *Sigma) {
    }
    }
    */
+
+namespace {
+// LLVM's Instructions.h doesn't provide a function like this, so I made one.
+bool isTernaryOp(const Instruction *I) {
+  return isa<SelectInst>(I);
+}
+}
+
 void ConstraintGraph::buildOperations(const Instruction *I) {
 
 #ifdef OVERFLOWHANDLER
@@ -2163,9 +2289,10 @@ void ConstraintGraph::buildOperations(const Instruction *I) {
   }
 #endif
 
-  // Handle binary instructions.
   if (I->isBinaryOp()) {
     addBinaryOp(I);
+  } else if (isTernaryOp(I)) {
+    addTernaryOp(I);
   } else {
     // Handle Phi functions.
     if (const PHINode *Phi = dyn_cast<PHINode>(I)) {
