@@ -12,13 +12,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "range-analysis"
-
 #include "RangeAnalysis.h"
 
-#include <utility>
+#include <stdint.h>
+#include <cassert>
+#include <iterator>
+#include <string>
+#include <system_error>
 
-namespace llvm {
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ilist_iterator.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/IR/Argument.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Use.h"
+#include "llvm/IR/User.h"
+#include "llvm/IR/Value.h"
+#include "llvm/PassAnalysisSupport.h"
+#include "llvm/PassSupport.h"
+#include "llvm/Support/FileSystem.h"
+
+int __builtin_clz(unsigned int);
+
+#define DEBUG_TYPE "range-analysis"
+
+namespace RangeAnalysis {
+
+using namespace llvm;
 
 // These macros are used to get stats regarding the precision of our analysis.
 STATISTIC(usedBits, "Initial number of bits.");
@@ -54,11 +83,7 @@ DenseMap<const Value *, unsigned> FerMap;
 // Static global functions and definitions
 // ========================================================================== //
 
-// The min and max integer values for a given bit width.
-APInt Min = APInt::getSignedMinValue(MAX_BIT_INT);
-APInt Max = APInt::getSignedMaxValue(MAX_BIT_INT);
-APInt Zero(MAX_BIT_INT, 0UL, true);
-APInt One(MAX_BIT_INT, 1UL, true);
+APInt Min, Max, Zero, One;
 
 // String used to identify sigmas
 // IMPORTANT: the range-analysis identifies sigmas by comparing
@@ -110,6 +135,7 @@ bool isValidInstruction(const Instruction *I) {
   case Instruction::Trunc:
   case Instruction::ZExt:
   case Instruction::SExt:
+  case Instruction::Select:
     return true;
   default:
     return false;
@@ -147,11 +173,12 @@ unsigned RangeAnalysis::getMaxBitWidth(const Function &F) {
   return max;
 }
 
-void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
+void RangeAnalysis::updateConstantIntegers(unsigned maxBitWidth) {
   // Updates the Min and Max values.
   Min = APInt::getSignedMinValue(maxBitWidth);
   Max = APInt::getSignedMaxValue(maxBitWidth);
-  Zero = APInt(MAX_BIT_INT, 0, true);
+  Zero = APInt(MAX_BIT_INT, 0UL, true);
+  One = APInt(MAX_BIT_INT, 1UL, true);
 }
 
 // unsigned RangeAnalysis::getBitWidth() {
@@ -161,6 +188,9 @@ void RangeAnalysis::updateMinMax(unsigned maxBitWidth) {
 // ========================================================================== //
 // IntraProceduralRangeAnalysis
 // ========================================================================== //
+template<class CGT>
+char IntraProceduralRA<CGT>::ID = 0;
+
 template <class CGT> APInt IntraProceduralRA<CGT>::getMin() { return Min; }
 
 template <class CGT> APInt IntraProceduralRA<CGT>::getMax() { return Max; }
@@ -174,7 +204,7 @@ template <class CGT> bool IntraProceduralRA<CGT>::runOnFunction(Function &F) {
   CG = new CGT();
 
   MAX_BIT_INT = getMaxBitWidth(F);
-  updateMinMax(MAX_BIT_INT);
+  updateConstantIntegers(MAX_BIT_INT);
 
 // Build the graph and find the intervals of the variables.
 #ifdef STATS
@@ -235,6 +265,9 @@ template <class CGT> IntraProceduralRA<CGT>::~IntraProceduralRA() {
 // ========================================================================== //
 // InterProceduralRangeAnalysis
 // ========================================================================== //
+template<class CGT>
+char InterProceduralRA<CGT>::ID = 0;
+
 template <class CGT> APInt InterProceduralRA<CGT>::getMin() { return Min; }
 
 template <class CGT> APInt InterProceduralRA<CGT>::getMax() { return Max; }
@@ -265,7 +298,7 @@ template <class CGT> bool InterProceduralRA<CGT>::runOnModule(Module &M) {
   CG = new CGT();
 
   MAX_BIT_INT = getMaxBitWidth(M);
-  updateMinMax(MAX_BIT_INT);
+  updateConstantIntegers(MAX_BIT_INT);
 
 // Build the Constraint Graph by running on each function
 #ifdef STATS
@@ -1755,7 +1788,7 @@ Range TernaryOp::eval() const {
       } else if (op1 == Range(Zero, Zero)) {
         result = op3;
       } else {
-        result = Range(Min, Max);
+        result = op2.unionWith(op3);
       }
     } break;
     default:
@@ -3787,4 +3820,4 @@ bool Nuutila::checkTopologicalSort(UseMap *useMap) {
 }
 
 #endif
-} // namespace llvm
+} // namespace RangeAnalysis

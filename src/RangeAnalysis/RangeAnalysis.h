@@ -37,30 +37,31 @@
 #ifndef _RANGEANALYSIS_RANGEANALYSIS_H
 #define _RANGEANALYSIS_RANGEANALYSIS_H
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/IR/CallSite.h"
-#include "llvm/IR/ConstantRange.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Timer.h"
-#include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <deque>
-#include <set>
 #include <sstream>
 #include <stack>
+#include <utility>
+
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/Pass.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Timer.h"
 
 namespace llvm {
+class BranchInst;
+class SwitchInst;
+raw_ostream & dbgs();
+} // namespace llvm
+
+namespace RangeAnalysis {
+
+using namespace llvm;
 
 // Comment the line below to disable the debug of SCCs and optimize the code
 // generated.
@@ -971,7 +972,7 @@ public:
    * the number of operands used in the function.
    */
   static unsigned getMaxBitWidth(const Function &F);
-  static void updateMinMax(unsigned maxBitWidth);
+  static void updateConstantIntegers(unsigned maxBitWidth);
 
   virtual APInt getMin() = 0;
   virtual APInt getMax() = 0;
@@ -1017,5 +1018,5 @@ public:
   APInt getMax() override;
   Range getRange(const Value *v) override;
 }; // end of class RangeAnalysis
-} // namespace llvm
+} // namespace RangeAnalysis
 #endif // _RANGEANALYSIS_RANGEANALYSIS_H
