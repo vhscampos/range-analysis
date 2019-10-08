@@ -1,8 +1,8 @@
 Please visit our former page for information about the Range Analysis:
 https://code.google.com/archive/p/range-analysis/
 
-I haven't had time to migrate our wiki pages to GitHub.
+Unfortunately I don't have time to keep this project up-to-date with LLVM.
 
-Note: I am in the process ot updating Range Analysis to work with the latest version of LLVM.
+If you are interested in contributing, please send me a message.
 
-Any question? Email me at victorsc -at dcc.ufmg.br
+Any question? Email me at vhscampos -at - gmail.com
